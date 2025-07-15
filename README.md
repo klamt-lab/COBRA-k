@@ -109,7 +109,9 @@ Programmatically, COBRA-k relies on the optimization framework pyomo [[GitHub]](
 
 ## Installation
 
-COBRA-k is provided [as a PyPI package]() and can be simply installed through the following command:
+Note: The pip command doesn't work yet, please follow the "Python code environment instructions" below
+
+COBRA-k will be provided as a PyPI package (follows) and can be simply installed through the following command:
 
 ```sh
 pip install cobrak
@@ -121,7 +123,7 @@ Note that COBRA-k requires Python≥3.10, making it work on Python-3.10-compatib
 
 Also note that only the open-source solvers SCIP and IPOPT are pre-installed. For more on how to install commercial solvers, visit the respective documentation page:
 
-[]()
+*(follows, in the emantime, look up the installation.md file in the ./docs subfolder)*
 
 COBRA-k is mainly tested on Ubuntu 20.04 on an x86-64 computer and on a MacBook with an ARM processor.
 
@@ -131,7 +133,7 @@ COBRA-k is mainly tested on Ubuntu 20.04 on an x86-64 computer and on a MacBook 
 
 An introduction to using COBRA-k, including a tutorial with integrated quickstart sections, is provided through its documentation:
 
-[]()
+*(follows, in the emantime, look up the .md files in the ./docs subfolder)*
 
 Also, you may check out COBRA-k's standard examples, provided in the "examples" subfolder of this repository. They also contain all the files to reproduce the results of COBRA-k's publication, as also further explained in the respective chapter in COBRA-k's documentation.
 
@@ -173,7 +175,7 @@ pip install uv
 uv pip install ruff
 ```
 
-2. Checkout the latest cnapy development version using git
+2. Checkout the latest COBRA-k development version using git
 
 ```
 git clone https://github.com/klamt-lan/COBRA-k.git
