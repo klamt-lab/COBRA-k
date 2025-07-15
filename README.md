@@ -4,35 +4,35 @@
     <tr>
         <td>
             <div style="background-color: #2E4053; padding: 4px 8px; border-radius: 4px; cursor: pointer; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
-            <a style="color: #FFFFFF; text-decoration: none; font-weight: bold;" href="XXXXX">
-            pip &#124; version preAlpha
+            <a style="color: #FFFFFF; text-decoration: none; font-weight: bold;" href="https://pypi.org/project/cobrak/">
+            pip &#124; version 0.0.1
             </a>
             </div>
         </td>
         <td>
             <div style="background-color: #964B00; padding: 4px 8px; border-radius: 4px; cursor: pointer; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
-            <a style="color: #FFFFFF; text-decoration: none; font-weight: bold;" href="XXXXX">
+            <a style="color: #FFFFFF; text-decoration: none; font-weight: bold;" href="https://klamt-lab.github.io/COBRA-k/">
             Documentation
             </a>
             </div>
         </td>
         <td>
             <div style="background-color: #3E8E41; padding: 4px 8px; border-radius: 4px; cursor: pointer; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
-            <a style="color: #FFFFFF; text-decoration: none; font-weight: bold;" href="XXXXX">
+            <a style="color: #FFFFFF; text-decoration: none; font-weight: bold;" href="https://github.com/klamt-lab/COBRA-k/issues">
             GitHub issues
             </a>
             </div>
         </td>
         <td>
             <div style="background-color: #666666; padding: 4px 8px; border-radius: 4px; cursor: pointer; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
-            <a style="color: #FFFFFF; text-decoration: none; font-weight: bold;" href="XXXXX">
+            <a style="color: #FFFFFF; text-decoration: none; font-weight: bold;" href="#troubleshooting-and-contact">
             Contact
             </a>
             </div>
         </td>
         <td>
             <div style="background-color: #444444; padding: 4px 8px; border-radius: 4px; cursor: pointer; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
-            <a style="color: #FFFFFF; text-decoration: none; font-weight: bold;" href="XXXXX">
+            <a style="color: #FFFFFF; text-decoration: none; font-weight: bold;" href="#publication">
             Publication
             </a>
             </div>
@@ -47,7 +47,7 @@
  * [Installation](#installation)
  * [Documentation](#documentation)
  * [Troubleshooting and contact](#troubleshooting-and-contact)
- * [Contributing](#contributing)
+ * [Contributing as developer](#contributing-as-developer)
  * [License](#license)
 </details>
 
@@ -109,8 +109,6 @@ Programmatically, COBRA-k relies on the optimization framework pyomo [[GitHub]](
 
 ## Installation
 
-Note: The pip command doesn't work yet, please follow the "Python code environment instructions" below
-
 COBRA-k will be provided as a PyPI package (follows) and can be simply installed through the following command:
 
 ```sh
@@ -133,7 +131,7 @@ COBRA-k is mainly tested on Ubuntu 20.04 on an x86-64 computer and on a MacBook 
 
 An introduction to using COBRA-k, including a tutorial with integrated quickstart sections, is provided through its documentation:
 
-*(follows, in the emantime, look up the .md files in the ./docs subfolder)*
+https://www.klamt-lab.github.io/COBRA-k/
 
 Also, you may check out COBRA-k's standard examples, provided in the "examples" subfolder of this repository. They also contain all the files to reproduce the results of COBRA-k's publication, as also further explained in the respective chapter in COBRA-k's documentation.
 
@@ -145,11 +143,11 @@ If you encounter any issues with COBRA-k, don't hesitate to open a GitHub issue 
 
 [https://github.com/klamt-lab/COBRA-k/issues](https://github.com/klamt-lab/COBRA-k/issues)
 
-Or write  an e-mail, which is provided on the COBRA-k package's main maintainer [employer page profile](https://www.mpi-magdeburg.mpg.de/person/98416).
+Or write an e-mail, which is provided on the COBRA-k package's main maintainer [employer page profile](https://www.mpi-magdeburg.mpg.de/person/98416).
 
 <br>
 
-## Contributing to COBRA-k
+## Contributing as developer
 
 You're welcome to contribute to COBRA-k :-), feel free to open pull requests. Keep in mind that you have to be ok with COBRA-k's open-source license (see next paragraph).
 
