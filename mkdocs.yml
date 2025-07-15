@@ -1,0 +1,71 @@
+site_name: COBRAk
+
+theme:
+  name: material
+  font: false # No Google fonts included
+  palette:
+    # Palette toggle for automatic mode
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
+
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to system preference
+  features:
+    - content.code.copy
+
+
+plugins:
+  - search
+  - offline
+  - privacy:
+     cache_dir:
+      "./docs/javascript/.cache"
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_submodules: true
+
+nav:
+  - Start: index.md
+  - 1. Installation: installation.md
+  - 2. Create model from scratch: model_from_scratch.md
+  - 3. Load/Save models: model_io.md
+  - 4. Linear Programs & Pretty-Print: lps.md
+  - 5. Mixed-Integer Linear Programs: milps.md
+  - 6. Nonlinear COBRA-k Programs: nlps.md
+  - 7. Evolutionary Optimization: evolutionary.md
+  - 8. Construct Own Optimizations: construct_own.md
+  - 9. Automatic data collection: add_data.md
+  - 10. Parameter corrections: parameter_corrections.md
+  - 11. More utilities: utilities.md
+  - 12. Paper result reproduction: paper_reproduction.md
+  - API Reference: api.md
+
+markdown_extensions:
+  - pymdownx.arithmatex:
+      generic: true
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+extra_css:
+  - javascript/katex/katex.min.css
+  - css-extra.css
+extra_javascript:
+  - javascript/katex/katex.min.js
+  - javascript/katex/contrib/auto-render.min.js
+  - javascript/init_katex.js

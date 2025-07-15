@@ -1,0 +1,75 @@
+[project]
+name = "cobrak"
+version = "0.0.1"
+authors = [
+  { name="Pavlos Stephanos Bekiaris" },
+]
+description = "Implementation of COBRA-k"
+readme = "README.md"
+requires-python = "==3.10.*"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "dataclasses-json",
+    "matplotlib",
+    "numpy",
+    "openpyxl",
+    "pyomo",
+    "requests",
+    "pyscipopt",
+    "cobra",
+    "equilibrator_api",
+    "tellurium",
+    "joblib",
+    "rich",
+    "pydantic",
+    # "copasi-basico",
+    # "ruff",
+    # "mkdocs",
+    # "mkdocs-material",
+    # "pymdown-extensions",
+    # "mkdocstrings[python]",
+]
+
+[project.urls]
+Homepage = "https://github.com/klamt-lab/cobrak"
+Issues = "https://github.com/klamt-lab/cobrak/issues"
+
+[tool.ruff]
+lint.select = [
+  "A",
+  "ANN",
+  "ARG",
+  "C4",
+  "D1",
+  # "DOC",
+  "E1",
+  "E2",
+  "E3",
+  "E4",
+  "E7",
+  "E9",
+  "F",
+  "FIX",
+  "FURB",
+  "FLY",
+  "G",
+  "LOG",
+  "PIE",
+  "PLC",
+  "PLE",
+  "PLW",
+  # "PTH",
+  "Q",
+  "NPY",
+  "RET",
+  "RSE",
+  "SIM",
+  "TC",
+  "UP",
+  "W",
+  "YTT",
+]

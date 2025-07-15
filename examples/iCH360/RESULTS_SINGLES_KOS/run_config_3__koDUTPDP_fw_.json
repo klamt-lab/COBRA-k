@@ -1,0 +1,39 @@
+{
+    "manually_changed_kms": {},
+    "manually_changed_kcats": {
+        "NADTRHD_fw": 70605.66952036729,
+        "ME1_fw": 11812.250119759632
+    },
+    "results_folder": "/examples/iCH360/RESULTS_SINGLES_KOS/",
+    "ectfva_active_reacs": [
+        "Biomass_fw",
+        "EX_ac_e_fw"
+    ],
+    "round_num": 3,
+    "objective_target": {
+        "Biomass_fw": 1.0,
+        "prot_pool_delivery": -0.01
+    },
+    "objective_sense": 1,
+    "deactivated_reacs": [],
+    "set_bounds": {
+        "EX_glc__D_e_bw": [
+            0.0,
+            1000
+        ]
+    },
+    "working_results": [],
+    "sampling_rounds_per_metaround": 2,
+    "sampling_wished_num_feasible_starts": 5,
+    "sampling_max_metarounds": 3,
+    "evolution_num_gens": 100,
+    "pop_size": 64,
+    "protein_pool": 0.224,
+    "uses_bennett_concs": false,
+    "max_conc_sum": 0.4,
+    "nameaddition": "_koDUTPDP_fw_",
+    "kicked_reacs": [
+        "DUTPDP_fw",
+        ""
+    ]
+}

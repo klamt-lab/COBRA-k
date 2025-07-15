@@ -1,0 +1,72 @@
+# Bennett data
+From:
+'Bennett, Bryson D., et al. "Absolute metabolite concentrations and implied enzyme active site occupancy in Escherichia coli."
+Nature chemical biology 5.8 (2009): 593-599.'
+
+
+# BiGG models metabolites
+bigg_models_metabolites.txt was downloaded from
+http://bigg.ucsd.edu/data_access
+
+For more about BiGG, see:
+Schellenberger, J., Park, J.O., Conrad, T.M. et al. BiGG: a Biochemical Genetic and Genomic knowledgebase of
+large scale metabolic reconstructions. BMC Bioinformatics 11, 213 (2010). https://doi.org/10.1186/1471-2105-11-213
+
+
+# BRENDA file
+brenda_2023_1.json (here in a zipped form) was downloaded from:
+https://www.brenda-enzymes.org/download.php
+and is made by the BRENDA team at:
+https://www.brenda-enzymes.org/index.php
+
+BRENDA's data is released under the following licensing terms,
+namely the Creative Commons Attribution License 4.0 (CC BY 4.0):
+https://creativecommons.org/licenses/by/4.0/
+
+
+# ECC2comp
+Compressed version of ECC2, as published in:
+Hädicke, O., Klamt, S. EColiCore2: a reference network model of the central metabolism of
+Escherichia coli and relationships to its genome-scale parent model. Sci Rep 7, 39647 (2017).
+https://doi.org/10.1038/srep39647
+
+Enriched with annotation data from iJO1366, as found in:
+Orth, J. D., Conrad, T. M., Na, J., Lerman, J. A., Nam, H., Feist, A. M., & Palsson, B. Ø. (2011).
+A comprehensive genome‐scale reconstruction of Escherichia coli metabolism—2011. Molecular systems biology, 7(1), 535.
+https://doi.org/10.1038/msb.2011.65
+
+This ECC2comp version (with annotations) can also be found as a CNApy model in the following repository:
+https://github.com/cnapy-org/CNApy-projects
+
+# taxdmp.zip
+This zip file contains the 24 Jun 2024 dump file of NCBI TAXONOMY:
+https://www.ncbi.nlm.nih.gov/taxonomy
+The file was downloaded from NCBI TAXONOMY's FTP server:
+https://ftp.ncbi.nih.gov/pub/taxonomy/
+
+
+# enzyme.rdf
+Downloaded from:
+https://ftp.expasy.org/databases/enzyme/enzyme.rdf
+See Expasy's paper:
+ExPASy: the proteomics server for in-depth protein knowledge and analysis
+Nucleic Acids Research, Volume 31, Issue 13, 1 July 2003, Pages 3784–3788, https://doi.org/10.1093/nar/gkg563
+(
+Internal note:
+A (slightly more complicated) alternative would be
+https://www.enzyme-database.org/downloads/enzyme-data.xml.gz
+See ExploreEnz's paper:
+ExplorEnz: the primary source of the IUBMB enzyme list
+Nucleic Acids Research, Volume 37, Issue suppl_1, 1 January 2009, Pages D593–D597, https://doi.org/10.1093/nar/gkn582
+)
+
+
+# examples/common_needed_external_resources/schmidt_2016_mass_abundance_mapped_NNLS.csv
+Downloaded from:
+https://github.com/marco-corrao/iCH360_paper
+Associated papers:
+* Corrao et al. A compact model of Escherichia Coli core and biosynthetic metabolism
+  https://arxiv.org/abs/2406.16596
+* Alexander Schmidt et al. “The quantitative and condition-dependent Escherichia coli proteome”. en. In:
+  Nature Biotechnology 34.1 (Jan. 2016). Number: 1 Publisher: Nature Publishing Group, pp. 104–110. ISSN: 1546-1696.
+  DOI: 10.1038/nbt.3418. URL: https://www.nature.com/articles/nbt.3418
