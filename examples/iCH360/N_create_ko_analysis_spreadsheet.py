@@ -76,7 +76,7 @@ for eligible_json in eligible_jsons:
     kotarget = eligible_json.split("__")[2].replace(".json", "")
     print(number, kotarget)
     if kotarget not in checkdict:
-        checkdict[kotarget] = [None, None, None]
+        checkdict[kotarget] = [None, None, None, None, None]
     data = json_load("examples/iCH360/RESULTS_SINGLES_KOS/" + eligible_json)
     checkdict[kotarget][number - 1] = [
         round(data[OBJECTIVE_VAR_NAME], 4),
@@ -84,23 +84,26 @@ for eligible_json in eligible_jsons:
         round(data[acetate_reac_id], 4),
     ]
 
+
 kotarget_to_max_obj = {}
 for key, value in checkdict.items():
-    for index in (0, 1, 2):
+    for index in (0, 1, 2,):
         try:
-            assert value[0][index] == value[1][index] and value[0][index] == value[2][index]
+            valuelist = [value[i][index] for i in range(len(value))]
+            assert len(set(valuelist)) == 1
         except AssertionError:
             print(key, value, index)
-            print(value[0][index], value[1][index], value[2][index])
+            print(valuelist)
             print("---")
     objvalues = [value[0][0], value[0][1], value[0][2]]
     kotarget_to_max_obj[key] = objvalues.index(max(objvalues))
-print(kotarget_to_max_obj)
-"""
+
 needed_prefixes = [
     "final_best_result__1__ko",
     "final_best_result__2__ko",
     "final_best_result__3__ko",
+    "final_best_result__4__ko",
+    "final_best_result__5__ko",
 ]
 for ko_target in ko_targets:
     for needed_prefix in needed_prefixes:
@@ -117,7 +120,7 @@ for ko_target in ko_targets:
                 needed_prefix.split("__")[1].replace("__", ""),
                 "),",
             )
-"""
+    print("===")
 
 results: dict[str, dict[str, float]] = {
     "(Wild-type)": json_load(
