@@ -257,6 +257,11 @@
     )
     ```
 
+!!! warning
+    As explained in the Installation chapter, you might have to install the quite capable mixed-integer linear open-source solver [SCIP](https://scipopt.org/) on your system to run the examples of this documentation. That's because, although the COBRA-k package installs the SCIP Python package, SCIP itself might be missing.
+
+    If SCIP is not available on your system, you may try to switch to installing and using the free and open-source solver [GLPK](https://www.gnu.org/software/glpk/) by (i) adding ```from cobrak.dataclasses import Solver``` as first line in all your scripts and then, in all optimization functions (such as ```perform_lp_optimization```), using the argument ```solver=Solver(name="glpk")```.
+
 ## Introduction
 
 COBRA-k's analyses are all based on the framework of "**C**onstraint-**B**ased **R**econstruction and **A**nalysis" [[Review]](https://doi.org/10.1038/nrg3643), enriched with **k**inetics []() - in short COBRA-k. We performed the Constraint-Based *Reconstruction* by creating our small toy model. Some constraints that we set were minimal and maximal fluxes and concentrations. And now, we perform some Constraint-Based *Analysis* :D

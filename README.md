@@ -109,21 +109,19 @@ Programmatically, COBRA-k relies on the optimization framework pyomo [[GitHub]](
 
 ## Installation
 
-COBRA-k will be provided as a PyPI package (follows) and can be simply installed through the following command:
+COBRA-k is provided as a PyPI package (follows) and can be installed through the following command:
 
 ```sh
 pip install cobrak
 ```
 
+*Note:* If you encounter any trouble due to a missing SCIP installation (which may happen on some systems), you have to install the free and open-source mixed-integer linear solver [SCIP](https://scipopt.org/) on your system. To do so, follow the SCIP download instructions [here](https://scipopt.org/index.php#download) or or, if no matching download is provided for your system, the compilation instructions [here](https://scipopt.org/doc/html/INSTALL.php).
+
 After the installation, which should just take a few minutes, the package can be imported as ```cobrak```.
 
-Note that COBRA-k requires Python≥3.10, making it work on Python-3.10-compatible OS such as Windows, MacOS and Linux.
+Also note that only the free and open-source solver [IPOPT](https://github.com/coin-or/Ipopt) (and on some systems, also automatically the solver SCIP) come pre-installed. For more on how to install other solvers, [visit the respective documentation page here](https://klamt-lab.github.io/COBRA-k/installation.html#installation-of-third-party-solvers).
 
-Also note that only the open-source solvers SCIP and IPOPT are pre-installed. For more on how to install commercial solvers, visit the respective documentation page:
-
-*(follows, in the emantime, look up the installation.md file in the ./docs subfolder)*
-
-COBRA-k is mainly tested on Ubuntu 20.04 on an x86-64 computer and on a MacBook with an ARM processor.
+COBRA-k requires Python≥3.10, making it work on Python-3.10-compatible OS such as Windows, MacOS and Linux. Thereby, COBRA-k is mainly tested on Ubuntu on an x86-64 computer and on a MacBook with an ARM processor.
 
 <br>
 

@@ -30,6 +30,11 @@ CPLEX_FOR_VARIABILITY_ANALYSIS = Solver(
     },
 )
 
+GLPK = Solver(
+    name="glpk",
+    solver_attrs={"_version_timeout": 180},
+)
+
 GUROBI = Solver(
     name="gurobi_direct",
 )

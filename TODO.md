@@ -1,9 +1,5 @@
 # COBRA-k TODOs
 
-## Short-term
-
-* Documentation with full examples and quickstart, also README quickstart and remove GLPK references
-
 ## Mid-term
 
 * Add @validate_call where possible

@@ -112,11 +112,11 @@ First, we identify all stoichiometric couples in our model's stoichiometric matr
 
 The *outer* optimization is affecting a binary (or $\[0,1\]$) vector which we'll call $\mathbf{β}$. This vector is as long as the number of the previously identified stoichiometric couples. If an element $i$ of $\mathbf{β}$ is 0 (or close to 0), then the flux of all reactions in the respective $i$th stoichiometric couple is set to 0. Otherwise, the reactions are allowed to run.
 
-$\mathbf{β}$ is optmized either through a genetic algorithm [[Wikipedia]]() or a particle swarm optimization (PSO) [[Wikipedia]](). Both of these algorithms work in *rounds* and have a given *population size*:
+$\mathbf{β}$ is optmized through a genetic algorithm [[Wikipedia]](https://en.wikipedia.org/wiki/Genetic_algorithm). This algorithm works in *rounds* and has a given *population (or candidate) size*:
 
 1. In each round, as many inner optimizations (see next subparagraph) as there are population members are run. Thus, we actually have as many $\mathbf{β}$ as there are population members.
 2. Then, the fitnesses (here, the final NLP optimization value from the inner optimizations) are collected for each population member.
-3. Using these fitness values, the $\mathbf{β}$ of the population members are mutated according to the genetic or PSO algorithm, with the intention and hope that better $\mathbf{β}$ are found. Then, we start again with step 1 unless the maximal number of rounds or the maximal number of rounds without an increase in the best optimal value is reached.
+3. Using these fitness values, the $\mathbf{β}$ of the population members are mutated according to the genetic algorithm, with the intention and hope that better $\mathbf{β}$ are found. Then, we start again with step 1 unless the maximal number of rounds or the maximal number of rounds without an increase in the best optimal value is reached.
 
 #### Inner optimization
 
@@ -150,7 +150,6 @@ complete_result = perform_nlp_evolutionary_optimization(
     objective_target="EX_ATP",
     objective_sense=+1,
     variability_dict={}, # No variability dict given -> An ecTFVA is automatically run for us
-    algorithm="pso", # Alternatice algorithm is "genetic"
 )
 print_dict(complete_result)
 best_result = complete_result[list(complete_result.keys())[0]][0] # 0->The first element is the best

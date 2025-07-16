@@ -1,10 +1,17 @@
 # Installation
 
-COBRA-k is a Python package [hosted on PyPI](https://pypi.org/project/cobrak/), compatible with Python version 3.10 or later. If you have already installed an appropriate Python version on your system, you can easily install COBRA-k with pip:
+COBRA-k is a Python package [hosted on PyPI](https://pypi.org/project/cobrak/), compatible with Python version 3.10 or later. If you have already installed an appropriate Python version on your system, you can install COBRA-k with pip:
 
 ```sh
 pip install cobrak
 ```
+*Note:* If you encounter any trouble due to a missing SCIP installation (which may happen on some systems), you have to install the free and open-source mixed-integer linear solver [SCIP](https://scipopt.org/) on your system. To do so, follow the SCIP download instructions here:
+
+https://scipopt.org/index.php#download
+
+or, if no matching download is provided for your system, the compilation instructions here:
+
+https://scipopt.org/doc/html/INSTALL.php
 
 ??? info "Optional alternative installation for conda or mamba users"
     If you're using conda or mamba and want to have a clean COBRA-k environment, create an empty environment with Python and pip, activate it and install COBRA-k afterwards. E.g., on a plain bash console, the steps are as follows (again, any Python≥3.10 should work):
@@ -22,7 +29,7 @@ pip install cobrak
 
 ## Installation of third-party solvers
 
-COBRA-k always comes pre-packaged with the quite capable open source mixed-integer (non-)linear program solver [SCIP](https://scipopt.org/) and the non-linear program solver [IPOPT](https://github.com/coin-or/Ipopt). With these solvers, all optimizations provided by COBRA-k can be run.
+COBRA-k always comes pre-packaged with the quite capable open source linear and non-linear program solver [IPOPT](https://github.com/coin-or/Ipopt) (and on some systems, also automatically the solver SCIP). With this solver, all optimizations without integer variables provided by COBRA-k can be run.
 
 !!! note
     IPOPT comes pre-packages with the free linear subsolver MA27. However, for larger models, the much faster linear subsolver MA57 or one of its alternatives are highly recommended. See here on how to obtain them (e.g. a free academic license is provided):

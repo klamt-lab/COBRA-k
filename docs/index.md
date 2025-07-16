@@ -11,4 +11,4 @@ For more about COBRA-k's features, code and license, visit its [GitHub repositor
 
 If you use COBRA-k in your academic work, please cite its publication:
 
-[1] Bekiaris & Klamt, *in submission* []()
+[1] Bekiaris PS & Klamt S (2025). COBRA-k: a powerful framework bridging constraint-based and kinetic metabolic modeling. *Submitted*.

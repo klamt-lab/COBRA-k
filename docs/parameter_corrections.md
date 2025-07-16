@@ -192,7 +192,7 @@ $ \tilde{s}_i = \ln ( \bar{s} ) = \sum_{j ∈ 𝖲_i} ( |N_{j,i}| ⋅ x̃_j ) - 
 
 becomes
 
-$ \tilde{s}_i = \ln ( \bar{s} ) = \sum_{j ∈ 𝖲_i} ( |N_{j,i}| ⋅ x̃_j ) - \sum_{j ∈ 𝖲_i} ( |N_{j,i}| ⋅  \ln K_{M,j,i} - corr^{k_M}_{j,i} ) $
+$ \tilde{s}_i = \ln ( \bar{s} ) = \sum_{j ∈ 𝖲_i} ( |N_{j,i}| ⋅ x̃_j ) - \sum_{j ∈ 𝖲_i} ( |N_{j,i}| ⋅  \ln K_{M,j,i} - corr^{k_{M,j,i}} ) $
 
 
 * If a metabolite is a product (i.e. where a *higher* $k_M$ could raise $κ_i$):
@@ -201,14 +201,14 @@ $ \tilde{p}_i ≥ \ln ( \bar{p} ) = \sum_{k ∈ 𝖯_i} ( N_{k,i} ⋅ x̃ ) - \s
 
 becomes
 
-$ \tilde{s}_i = \ln ( \bar{s} ) = \sum_{j ∈ 𝖲_i} ( |N_{j,i}| ⋅ x̃_j ) - \sum_{j ∈ 𝖲_i} ( |N_{j,i}| ⋅  \ln K_{M,j,i} + corr^{k_M}_{j,i} ) $
+$ \tilde{s}_i = \ln ( \bar{s} ) = \sum_{j ∈ 𝖲_i} ( |N_{j,i}| ⋅ x̃_j ) - \sum_{j ∈ 𝖲_i} ( |N_{j,i}| ⋅  \ln K_{M,j,i} + corr^{k_{M,j,i}} ) $
 
 !!! warning
     All these $k_M$ corrections work in the logarithmic space. To get the "real" correction, you have to apply the exponential function on the respective correction value.
 
 Hence, the full sum of $k_M$ corrections is:
 
-$corr^{k_M} = \sum_{j,i} {k_M_{j,i}} $
+$corr^{k_M} = \sum_{j,i} {k_{M,j,i}} $
 
 #### Optional Weights
 
@@ -225,7 +225,7 @@ Therefore, COBRA-k optionally allows one to set weights according to the followi
 
 As an alternative to the linear correction value sum (see above), one can also use a quadratic sum. Such a sum automatically penalizes larger absolute changes and prefers (potentially more) smaller changes. This changes our linear objective function into a quadratic one. E.g., the sum of flux corrections becomes:
 
-$corr^{fluxes} = \sum_i {corr^{fluxes,+}_i^2 + corr^{fluxes,-}_i^2} $
+$corr^{fluxes} = \sum_i {(corr^{fluxes,+}_i)^2 + (corr^{fluxes,-}_i)^2} $
 
 !!! warning
     Using a quadratic instead of a linear objective function makes the correction optmization much more computationally complex.
