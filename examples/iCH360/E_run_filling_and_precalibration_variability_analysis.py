@@ -14,7 +14,7 @@ from cobrak.utilities import get_model_with_filled_missing_parameters
 # RUNNING SCRIPT SECTION #
 biomass_reac_id = "Biomass_fw"
 cobrak_model: Model = json_load(
-    "examples/iCH360/prepared_external_resources/iCH360_cobrak.json",
+    "examples/iCH360/prepared_external_resources/iCH360_cobrak_prestepB_unfilled_uncalibrated.json",
     Model,
 )
 

@@ -2,15 +2,32 @@
 
 # IMPORTS SECTION #
 from copy import deepcopy
+from dataclasses import asdict
 
 import cobra
 
-from .constants import REAC_ENZ_SEPARATOR, REAC_FWD_SUFFIX, REAC_REV_SUFFIX
+from .constants import (
+    REAC_ENZ_SEPARATOR,
+    REAC_FWD_SUFFIX,
+    REAC_REV_SUFFIX,
+    STANDARD_R,
+    STANDARD_T,
+)
+from .dataclasses import ExtraLinearConstraint
 
 
 # FUNCTIONS SECTION #
 def get_fullsplit_cobra_model(
     cobra_model: cobra.Model,
+    fwd_suffix: str = REAC_FWD_SUFFIX,
+    rev_suffix: str = REAC_REV_SUFFIX,
+    add_cobrak_sbml_annotation: bool = False,
+    cobrak_default_min_conc: float = 1e-6,
+    cobrak_default_max_conc: float = 0.2,
+    cobrak_extra_linear_constraints: list[ExtraLinearConstraint] = [],
+    cobrak_kinetic_ignored_metabolites: list[str] = [],
+    cobrak_no_extra_versions: bool = False,
+    reac_lb_ub_cap: float = float("inf"),
 ) -> cobra.Model:
     """Return a COBRApy model where reactions are split according to reversibility and enzymes.
 
@@ -36,6 +53,31 @@ def get_fullsplit_cobra_model(
     """
     fullsplit_cobra_model = cobra.Model(cobra_model.id)
 
+    if add_cobrak_sbml_annotation:
+        settings_reac = cobra.Reaction(
+            id="cobrak_global_settings",
+            name="Global COBRA-k settings",
+            lower_bound=0.0,
+            upper_bound=0.0,
+        )
+        settings_reac.annotation["cobrak_max_prot_pool"] = 1000.0
+        settings_reac.annotation["cobrak_R"] = STANDARD_R
+        settings_reac.annotation["cobrak_T"] = STANDARD_T
+        settings_reac.annotation["cobrak_kinetic_ignored_metabolites"] = {}
+        settings_reac.annotation["cobrak_reac_rev_suffix"] = (
+            rev_suffix  # A "special" suffix to show that this is added
+        )
+        settings_reac.annotation["cobrak_reac_fwd_suffix"] = fwd_suffix
+        settings_reac.annotation["cobrak_reac_enz_separator"] = REAC_ENZ_SEPARATOR
+        settings_reac.annotation["cobrak_extra_linear_constraints"] = str(
+            [asdict(x) for x in cobrak_extra_linear_constraints]
+        )
+        settings_reac.annotation["cobrak_kinetic_ignored_metabolites"] = str(
+            cobrak_kinetic_ignored_metabolites
+        )
+
+        fullsplit_cobra_model.add_reactions([settings_reac])
+
     fullsplit_cobra_model.add_metabolites(cobra_model.metabolites)
 
     for gene in cobra_model.genes:
@@ -44,14 +86,33 @@ def get_fullsplit_cobra_model(
     for reaction_x in cobra_model.reactions:
         reaction: cobra.Reaction = reaction_x
 
+        if add_cobrak_sbml_annotation:
+            for old_name, new_name in (
+                ("dG0", "cobrak_dG0"),
+                ("dG0_uncertainty", "cobrak_dG0_uncertainty"),
+            ):
+                if old_name in reaction.annotation:
+                    reaction.annotation[new_name] = reaction.annotation[old_name]
+
+            fwd_dG0 = (
+                float(reaction.annotation["cobrak_dG0"])
+                if "cobrak_dG0" in reaction.annotation
+                else None
+            )
+            dG0_uncertainty = (
+                abs(float(reaction.annotation["cobrak_dG0_uncertainty"]))
+                if "cobrak_dG0_uncertainty" in reaction.annotation
+                else None
+            )
+
         is_reversible = False
-        if reaction.lower_bound < 0.0:  # and (not reaction.id.startswith("EX_")):
+        if reaction.lower_bound < 0.0:
             is_reversible = True
 
         single_enzyme_blocks = (
             reaction.gene_reaction_rule.replace("(", "").replace(")", "").split(" or ")
         )
-
+        current_reac_version = 0
         for single_enzyme_block in single_enzyme_blocks:
             if single_enzyme_block:
                 new_reac_base_id = (
@@ -64,9 +125,21 @@ def get_fullsplit_cobra_model(
             new_reaction_1 = cobra.Reaction(
                 id=new_reac_base_id,
                 lower_bound=reaction.lower_bound,
-                upper_bound=reaction.upper_bound,
+                upper_bound=min(reac_lb_ub_cap, reaction.upper_bound),
             )
             new_reaction_1.annotation = deepcopy(reaction.annotation)
+            if add_cobrak_sbml_annotation:
+                if fwd_dG0 is not None:
+                    new_reaction_1.annotation[f"cobrak_dG0_V{current_reac_version}"] = (
+                        fwd_dG0
+                    )
+                if dG0_uncertainty is not None:
+                    new_reaction_1.annotation[
+                        f"cobrak_dG0_uncertainty_V{current_reac_version}"
+                    ] = dG0_uncertainty
+                new_reaction_1.annotation[f"cobrak_id_V{current_reac_version}"] = (
+                    new_reaction_1.id + (fwd_suffix if is_reversible else "")
+                )
             if single_enzyme_block:
                 new_reaction_1.gene_reaction_rule = single_enzyme_block
             new_reaction_1_met_addition = {}
@@ -75,25 +148,55 @@ def get_fullsplit_cobra_model(
             new_reaction_1.add_metabolites(new_reaction_1_met_addition)
 
             if is_reversible:
+                current_reac_version += 1
+
                 original_lb = new_reaction_1.lower_bound
                 new_reaction_2 = cobra.Reaction(
                     id=new_reac_base_id,
                 )
                 new_reaction_2.annotation = deepcopy(reaction.annotation)
+                if add_cobrak_sbml_annotation:
+                    if fwd_dG0 is not None:
+                        new_reaction_2.annotation[
+                            f"cobrak_dG0_V{current_reac_version}"
+                        ] = -fwd_dG0
+                    if dG0_uncertainty is not None:
+                        new_reaction_2.annotation[
+                            f"cobrak_dG0_uncertainty_V{current_reac_version}"
+                        ] = dG0_uncertainty
+                    new_reaction_2.annotation[f"cobrak_id_V{current_reac_version}"] = (
+                        new_reaction_2.id + rev_suffix
+                    )
                 if single_enzyme_block:
                     new_reaction_2.gene_reaction_rule = single_enzyme_block
-                new_reaction_1.id += REAC_FWD_SUFFIX
+                new_reaction_1.id += fwd_suffix
                 new_reaction_1.lower_bound = 0
-                new_reaction_2.id += REAC_REV_SUFFIX
+                new_reaction_2.id += rev_suffix
                 new_reaction_2.lower_bound = 0
-                new_reaction_2.upper_bound = abs(original_lb)
+                new_reaction_2.upper_bound = min(reac_lb_ub_cap, abs(original_lb))
 
                 new_reaction_2_met_addition = {}
                 for met, stoichiometry in new_reaction_1.metabolites.items():
                     new_reaction_2_met_addition[met] = -stoichiometry
                 new_reaction_2.add_metabolites(new_reaction_2_met_addition)
+
                 fullsplit_cobra_model.add_reactions([new_reaction_2])
             fullsplit_cobra_model.add_reactions([new_reaction_1])
+            current_reac_version += 1
+            if cobrak_no_extra_versions and (
+                ("cobrak_k_cat_V0" not in reaction.annotation)
+                or ("cobrak_k_cat" not in reaction.annotation)
+            ):
+                break
+
+    for metabolite in fullsplit_cobra_model.metabolites:
+        for old_name, new_name in (("Cmin", "cobrak_Cmin"), ("Cmax", "cobrak_Cmax")):
+            if old_name in metabolite.annotation:
+                metabolite.annotation[new_name] = metabolite.annotation[old_name]
+        if "cobrak_Cmin" not in metabolite.annotation:
+            metabolite.annotation["cobrak_Cmin"] = cobrak_default_min_conc
+        if "cobrak_Cmax" not in metabolite.annotation:
+            metabolite.annotation["cobrak_Cmax"] = cobrak_default_max_conc
 
     return fullsplit_cobra_model
 

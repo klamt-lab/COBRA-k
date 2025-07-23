@@ -1,6 +1,7 @@
 """General (COBRAk-independent) helper functions, primarily for I/O tasks such as pickle and JSON file handlings."""
 
 # IMPORTS SECTION #
+import contextlib
 import json
 import os
 import pickle
@@ -136,10 +137,8 @@ def ensure_folder_existence(folder: str) -> None:
     """
     if os.path.isdir(folder):
         return
-    try:
+    with contextlib.suppress(FileExistsError):
         os.makedirs(folder)
-    except FileExistsError:
-        pass
 
 
 def ensure_json_existence(path: str) -> None:
@@ -306,10 +305,8 @@ def convert_cobrak_model_to_annotated_cobrapy_model(
     if add_enzyme_constraints:
         enzyme_complexes: set[tuple[str, ...]] = {
             tuple(
-                [
-                    enzyme_id
-                    for enzyme_id in reaction_data.enzyme_reaction_data.identifiers
-                ]
+                enzyme_id
+                for enzyme_id in reaction_data.enzyme_reaction_data.identifiers
             )
             for reaction_data in cobrak_model.reactions.values()
             if reaction_data.enzyme_reaction_data is not None
@@ -330,7 +327,7 @@ def convert_cobrak_model_to_annotated_cobrapy_model(
                 {
                     cobra_model.metabolites.get_by_id(enzyme_id): -1
                     for enzyme_id in enzyme_complex
-                    if enzyme_id != ""
+                    if enzyme_id
                 }
             )
             complex_reac.add_metabolites(
@@ -361,21 +358,19 @@ def convert_cobrak_model_to_annotated_cobrapy_model(
             # Add full annotation
             _add_annotation_to_cobra_reaction(cobra_reaction, reac_id, reac_data, "V0")
 
-            if reac_data.enzyme_reaction_data is not None:
-                # If set: Add enzyme consumption metabolite
-                if add_enzyme_constraints and (
-                    reac_data.enzyme_reaction_data.identifiers != []
-                ):
-                    complex_met_id = "_".join(
-                        reac_data.enzyme_reaction_data.identifiers
+            if (
+                reac_data.enzyme_reaction_data is not None
+                and add_enzyme_constraints
+                and reac_data.enzyme_reaction_data.identifiers != []
+            ):
+                complex_met_id = "_".join(reac_data.enzyme_reaction_data.identifiers)
+                if complex_met_id:
+                    cobra_reaction.add_metabolites(
+                        {
+                            cobra_model.metabolites.get_by_id(complex_met_id): -1
+                            / reac_data.enzyme_reaction_data.k_cat
+                        }
                     )
-                    if complex_met_id != "":
-                        cobra_reaction.add_metabolites(
-                            {
-                                cobra_model.metabolites.get_by_id(complex_met_id): -1
-                                / reac_data.enzyme_reaction_data.k_cat
-                            }
-                        )
             added_reactions.append(cobra_reaction)
     else:
         base_id_to_reac_ids: dict[str, list[str]] = {}
@@ -404,16 +399,16 @@ def convert_cobrak_model_to_annotated_cobrapy_model(
 
             if len(rev_ids) > 0:
                 min_flux = -max(
-                    [cobrak_model.reactions[rev_id].max_flux for rev_id in rev_ids]
+                    cobrak_model.reactions[rev_id].max_flux for rev_id in rev_ids
                 )
                 name = cobrak_model.reactions[rev_ids[0]].name
             else:
                 min_flux = max(
-                    [cobrak_model.reactions[fwd_id].min_flux for fwd_id in fwd_ids]
+                    cobrak_model.reactions[fwd_id].min_flux for fwd_id in fwd_ids
                 )
             if len(fwd_ids) > 0:
                 max_flux = max(
-                    [cobrak_model.reactions[fwd_id].max_flux for fwd_id in fwd_ids]
+                    cobrak_model.reactions[fwd_id].max_flux for fwd_id in fwd_ids
                 )
                 met_stoichiometries = {
                     cobra_model.metabolites.get_by_id(met_id): stoich
@@ -424,7 +419,7 @@ def convert_cobrak_model_to_annotated_cobrapy_model(
                 name = cobrak_model.reactions[fwd_ids[0]].name
             else:
                 max_flux = min(
-                    [cobrak_model.reactions[rev_id].max_flux for rev_id in rev_ids]
+                    cobrak_model.reactions[rev_id].max_flux for rev_id in rev_ids
                 )
                 met_stoichiometries = {
                     cobra_model.metabolites.get_by_id(met_id): -stoich
@@ -589,7 +584,7 @@ def json_load(path: str, dataclass_type: T = Any) -> T:
     return TypeAdapter(dataclass_type).validate_json(data)
 
 
-def json_write(path: str, json_data: Any) -> None:
+def json_write(path: str, json_data: Any) -> None:  # noqa: ANN401
     """Writes a JSON file at the given path with the given data as content.
 
     Can be also used for any of COBRAk's dataclasses as well as any
@@ -610,7 +605,7 @@ def json_write(path: str, json_data: Any) -> None:
         with open(path, "w+", encoding="utf-8") as f:
             f.write(json_output)
     elif isinstance(json_data, dict) and sum(
-        [is_dataclass(value) for value in json_data.values()]
+        is_dataclass(value) for value in json_data.values()
     ):
         json_dict: dict[str, dict[str, Any] | None] = {}
         for key, data in json_data.items():
@@ -659,7 +654,9 @@ def json_zip_load(path: str) -> dict:
 
 
 def json_zip_write(
-    path: str, json_data: Any, zip_method: int = zipfile.ZIP_LZMA
+    path: str,
+    json_data: Any,
+    zip_method: int = zipfile.ZIP_LZMA,  # noqa: ANN401
 ) -> None:
     """Writes a zipped JSON file at the given path with the given dictionary as content.
 
@@ -736,7 +733,7 @@ def load_annotated_cobrapy_model_as_cobrak_model(
     cobrak_metabolites: dict[str, Metabolite] = {}
     for metabolite in cobra_model.metabolites:
         if exclude_enzyme_constraints and sum(
-            [met_split in gene_ids for met_split in metabolite.id.split("_")]
+            met_split in gene_ids for met_split in metabolite.id.split("_")
         ):
             continue
 
@@ -858,10 +855,8 @@ def load_annotated_cobrapy_model_as_cobrak_model(
                     if (not exclude_enzyme_constraints)
                     or (
                         not sum(
-                            [
-                                met_split in gene_ids
-                                for met_split in metabolite.id.split("_")
-                            ]
+                            met_split in gene_ids
+                            for met_split in metabolite.id.split("_")
                         )
                     )
                 },
@@ -893,7 +888,7 @@ def load_annotated_cobrapy_model_as_cobrak_model(
                 name=gene.name,
             )
 
-    cobrak_model = Model(
+    return Model(
         reactions=cobrak_reactions,
         metabolites=cobrak_metabolites,
         enzymes=cobrak_enzymes,
@@ -906,8 +901,6 @@ def load_annotated_cobrapy_model_as_cobrak_model(
         rev_suffix=reac_rev_suffix,
         reac_enz_separator=reac_enz_separator,
     )
-
-    return cobrak_model
 
 
 def load_annotated_sbml_model_as_cobrak_model(
@@ -949,7 +942,7 @@ def load_unannotated_sbml_as_cobrapy_model(path: str) -> cobra.Model:
     return cobra.io.read_sbml_model(path)
 
 
-def pickle_load(path: str) -> Any:
+def pickle_load(path: str) -> Any:  # noqa: ANN401
     """Returns the value of the given pickle file.
 
     Arguments
@@ -962,7 +955,7 @@ def pickle_load(path: str) -> Any:
     return pickled_object
 
 
-def pickle_write(path: str, pickled_object: Any) -> None:
+def pickle_write(path: str, pickled_object: Any) -> None:  # noqa: ANN401
     """Writes the given object as pickled file with the given path
 
     Arguments
@@ -987,7 +980,7 @@ def standardize_folder(folder: str) -> str:
     * folder: str ~ The folder path that shall be standardized.
     """
     # Catch empty folders as they don't need to be standardized
-    if folder == "":
+    if not folder:
         return ""
 
     # Standardize for \ or / as path separator character.

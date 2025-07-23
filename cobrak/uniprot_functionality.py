@@ -45,6 +45,7 @@ def uniprot_get_enzyme_molecular_weights(
     for gene in model.genes:
         # Without a UniProt ID, no mass mapping can be found
         if "uniprot" not in gene.annotation:
+            uniprot_id_protein_id_mapping[gene.id] = [gene.id]
             continue
         uniprot_id = gene.annotation["uniprot"]
         if uniprot_id in uniprot_id_protein_id_mapping:

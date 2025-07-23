@@ -45,9 +45,9 @@
         tba_model.reactions["Glycolysis"].dG0 = 100 # A bottleneck :O
 
         # Perform TBA
-        list_of_bottleneck_reactions = perform_lp_thermodynamic_bottleneck_analysis(
+        list_of_bottleneck_reactions, _ = perform_lp_thermodynamic_bottleneck_analysis(
             tba_model,
-        )
+        ) # The second returned value is the full solution (with fluxes, concentrations, ...) which we don't need here
 
     # Print list of thermodynamic bottlenecks
     print(list_of_bottleneck_reactions)
@@ -332,9 +332,9 @@ with toy_model as tba_model:
     tba_model.reactions["Glycolysis"].dG0 = 100 # A bottleneck :O
 
     # Perform TBA
-    list_of_bottleneck_reactions = perform_lp_thermodynamic_bottleneck_analysis(
+    list_of_bottleneck_reactions, _ = perform_lp_thermodynamic_bottleneck_analysis(
         tba_model,
-    )
+    ) # The second returned value is the full solution (with fluxes, concentrations, ...) which we don't need here
 
 # Print list of thermodynamic bottlenecks
 print(list_of_bottleneck_reactions)

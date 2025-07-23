@@ -15,6 +15,7 @@ from typing import Any
 
 from joblib import Parallel, cpu_count, delayed
 from numpy import percentile
+from pyomo.common.errors import ApplicationError
 from pyomo.environ import (
     Binary,
     ConcreteModel,
@@ -35,6 +36,7 @@ from pyomo.opt.base.solvers import SolverFactoryClass
 from cobrak.pyomo_functionality import add_linear_approximation_to_pyomo_model
 
 from .constants import (
+    ALL_OK_KEY,
     BIG_M,
     DF_VAR_PREFIX,
     DG0_VAR_PREFIX,
@@ -55,6 +57,7 @@ from .constants import (
     QUASI_INF,
     STANDARD_MIN_MDF,
     Z_VAR_PREFIX,
+    ZB_VAR_PREFIX,
 )
 from .dataclasses import CorrectionConfig, Model, Reaction, Solver
 from .pyomo_functionality import get_model_var_names, get_objective, get_solver
@@ -1549,7 +1552,7 @@ def perform_lp_thermodynamic_bottleneck_analysis(
     min_mdf: float = STANDARD_MIN_MDF,
     verbose: bool = False,
     solver: Solver = SCIP,
-) -> list[str]:
+) -> tuple[list[str], dict[str, float]]:
     """Perform thermodynamic bottleneck analysis on a COBRAk model using mixed-integer linear programming.
 
     This function identifies a minimal set of thermodynamic bottlenecks in a COBRAk model by minimizing the sum of
@@ -1570,7 +1573,7 @@ def perform_lp_thermodynamic_bottleneck_analysis(
                                                                  and LP method. Defaults to an empty dictionary.
 
     Returns:
-        list[str]: A list of reaction IDs identified as thermodynamic bottlenecks.
+        list[str], dict[str, float]: A list of reaction IDs identified as thermodynamic bottlenecks, and the associated solution dict.
     """
     cobrak_model = deepcopy(cobrak_model)
     thermo_constraint_lp = get_lp_from_cobrak_model(
@@ -1588,17 +1591,22 @@ def perform_lp_thermodynamic_bottleneck_analysis(
         objective_sense=-1,
     )
     pyomo_solver = get_solver(solver.name, solver.solver_options, solver.solver_attrs)
-    pyomo_solver.solve(thermo_constraint_lp, tee=verbose, **solver.solve_extra_options)
-    solution_dict = get_pyomo_solution_as_dict(thermo_constraint_lp)
+    try:
+        pyomo_solver.solve(
+            thermo_constraint_lp, tee=verbose, **solver.solve_extra_options
+        )
+        solution_dict = get_pyomo_solution_as_dict(thermo_constraint_lp)
+    except (ApplicationError, AttributeError, ValueError):
+        solution_dict = {ALL_OK_KEY: False}
 
     bottleneck_counter = 1
     bottleneck_reactions = []
     for var_id, var_value in solution_dict.items():
-        if not var_id.startswith("zb_var_"):
+        if not var_id.startswith(ZB_VAR_PREFIX):
             continue
         if var_value <= 0.01:
             continue
-        bottleneck_reac_id = var_id.replace("zb_var_", "")
+        bottleneck_reac_id = var_id.replace(ZB_VAR_PREFIX, "")
         bottleneck_reactions.append(bottleneck_reac_id)
         if verbose:
             bottleneck_dG0 = cobrak_model.reactions[bottleneck_reac_id].dG0
@@ -1610,7 +1618,7 @@ def perform_lp_thermodynamic_bottleneck_analysis(
             )
         bottleneck_counter += 1
 
-    return bottleneck_reactions
+    return bottleneck_reactions, solution_dict
 
 
 def perform_lp_variability_analysis(

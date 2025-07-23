@@ -160,3 +160,6 @@ USED_IDENTIFIERS_FOR_EQUILIBRATOR = [
 
 Z_VAR_PREFIX = "z_var_"
 """Prefix of z variables (used with thermodynamic constraints in MI(N)LPs)"""
+
+ZB_VAR_PREFIX = "zb_var_"
+"""Extra zb variable prefix for thermodynamic bottleneck analyses"""

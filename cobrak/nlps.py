@@ -235,7 +235,11 @@ def get_nlp_from_cobrak_model(
                 max_abs_dG0_correction=correction_config.max_abs_dG0_correction,
             )
 
-            if not irreversible_mode and variability_data[reac_id][0] == 0.0 and variability_data[reac_id][1] != 0.0:
+            if (
+                not irreversible_mode
+                and variability_data[reac_id][0] == 0.0
+                and variability_data[reac_id][1] != 0.0
+            ):
                 z_varname = f"{Z_VAR_PREFIX}{reac_id_to_reac_couple_id[reac_id]}"
                 if z_varname not in created_z_vars:
                     setattr(model, z_varname, Var(within=Binary))
@@ -604,7 +608,9 @@ def perform_nlp_reversible_optimization(
     if show_variable_count:
         float_vars = [v for v in nlp_model.component_objects(Var) if v.domain == Reals]
         num_float_vars = sum(1 for v in float_vars for i in v)
-        binary_vars = [v for v in nlp_model.component_objects(Var) if v.domain == Binary]
+        binary_vars = [
+            v for v in nlp_model.component_objects(Var) if v.domain == Binary
+        ]
         num_binary_vars = sum(1 for v in binary_vars for i in v)
         print("# FLOAT VARS:", num_float_vars)
         print("# BINARY VARS:", num_binary_vars)

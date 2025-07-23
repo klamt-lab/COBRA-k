@@ -1353,8 +1353,6 @@ def get_model_with_filled_missing_parameters(
     all_kms = substrate_kms + product_kms
     all_abs_dG0s = [abs(dG0) for dG0 in get_model_dG0s(cobrak_model)]
     dG0_reverse_couples: set[tuple[str]] = set()
-    print(len(all_abs_dG0s))
-    input("A")
     for reac_id in cobrak_model.reactions:
         if sum(reac_id.startswith(ignore_prefix) for ignore_prefix in ignore_prefixes):
             continue

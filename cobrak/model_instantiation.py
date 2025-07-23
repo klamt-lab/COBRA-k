@@ -571,4 +571,5 @@ def get_cobrak_model_with_kinetic_data_from_sbml_model_alone(
             R=R,
             T=T,
             keep_parameter_refs=keep_parameter_refs,
+            do_delete_enzymatically_suboptimal_reactions=False,
         )
