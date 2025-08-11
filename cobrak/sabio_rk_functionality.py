@@ -135,7 +135,7 @@ class SabioThread(threading.Thread):
             timeout=1e6,
         )
         request.raise_for_status()
-        with open(
+        with open(  # noqa: FURB103
             f"{self.temp_folder}zzz{self.start_number}.txt", "w", encoding="utf-8"
         ) as f:
             f.write(request.text)
@@ -430,7 +430,7 @@ def sabio_select_enzyme_kinetic_data_for_model(
     transfered_ec_number_json: str = "",
     max_taxonomy_level: int = float("inf"),
 ) -> dict[str, EnzymeReactionData | None]:
-    """Selects enzyme kinetic data for a given COBRA model using SABIO-RK data.
+    """Selects enzyme kinetic data for a given COBRA-k model using SABIO-RK data.
 
     If this data cannot be found, an internet connection is built to SABIO-RK and the relevant
     data is downloaded, which may take some time in the order of dozens of minutes.
@@ -441,7 +441,7 @@ def sabio_select_enzyme_kinetic_data_for_model(
     occur in the model's BiGG-compliant EC number annotation.
 
     Args:
-        cobra_model (cobra.Model): The COBRA model for which enzyme kinetic data is to be selected.
+        cobra_model (cobra.Model): The COBRA-k model for which enzyme kinetic data is to be selected.
         sabio_target_folder (str): The path to the folder containing SABIO-RK data.
         base_species (str): The base species for taxonomy comparison.
         ncbi_parsed_json_path (str): The path to the NCBI parsed JSON file.

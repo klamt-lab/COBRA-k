@@ -1,3 +1,5 @@
+"""Functions for exporting COBRA-k model and solution to a kinetic model."""
+
 # IMPORTS SECION #
 from numpy import exp
 

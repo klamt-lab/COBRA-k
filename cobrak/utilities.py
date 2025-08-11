@@ -1,6 +1,6 @@
 """General utility functions for COBRAk dataclasses and more.
 
-This includes I/O functions which are found in COBRAk's "io" module.
+This module does not include I/O functions which are found in COBRAk's "io" module.
 """
 
 # IMPORT SECTION #
@@ -68,7 +68,7 @@ def _compare_two_results_with_statistics(
     The absolute flux differences are then calculated and used to compute the statistics.
 
     Args:
-        cobrak_model (Model): The COBRA model used for the optimization.
+        cobrak_model (Model): The COBRA-k model used for the optimization.
         result_1 (dict[str, float]): The first optimization result.
         result_2 (dict[str, float]): The second optimization result.
         min_reac_flux (float): The minimum reaction flux.
@@ -120,6 +120,23 @@ def add_objective_value_as_extra_linear_constraint(
     objective_target: str | dict[str, float],
     objective_sense: int,
 ) -> Model:
+    """Adds a linear constraint to a COBRA-k model that enforces the objective value.
+
+    This function creates an extra linear constraint that limits the objective
+    value to be within a small range around the original objective value. This
+    can be useful for enforcing constraints during model manipulation or
+    optimization.
+
+    Args:
+        cobrak_model: The COBRA-k Model object to be modified.
+        objective_value: The original objective value.
+        objective_target: A string representing the objective variable or a dictionary
+            mapping variables to their coefficients in the objective function.
+        objective_sense: The sense of the objective function (1 for maximization, -1 for minimization).
+
+    Returns:
+        The modified COBRA-k Model object with the extra linear constraint added.
+    """
     if is_objsense_maximization(objective_sense):
         lower_value = objective_value - 1e-12
         upper_value = None
@@ -269,7 +286,7 @@ def apply_error_correction_on_model(
 
 def apply_variability_dict(
     model: ConcreteModel,
-    cobrak_model: Model,
+    cobrak_model: Model,  # noqa: ARG001
     variability_dict: dict[str, tuple[float, float]],
     error_scenario: dict[str, tuple[float, float]] = {},
     abs_epsilon: float = 1e-5,
@@ -302,11 +319,6 @@ def apply_variability_dict(
                         variability[0] - getattr(model, lbchange_var_id).value
                     )
                 else:
-                    # if var_id.startswith(ENZYME_VAR_PREFIX):
-                    #     getattr(model, var_id).setlb(
-                    #         0.0
-                    #     )
-                    # else:
                     getattr(model, var_id).setlb(variability[0])
             if abs(variability[1]) < abs_epsilon:
                 getattr(model, var_id).setub(0.0)
@@ -317,14 +329,6 @@ def apply_variability_dict(
                         variability[1] + getattr(model, ubchange_var_id).value
                     )
                 else:
-                    # if var_id.startswith(ENZYME_VAR_PREFIX):
-                    #     reac_id = var_id.split(ENZYME_VAR_INFIX)[1]
-                    #     full_enzyme_mw = get_full_enzyme_mw(cobrak_model, cobrak_model.reactions[reac_id])
-                    #     getattr(model, var_id).setub(
-                    #         1200 * (cobrak_model.max_prot_pool / full_enzyme_mw)
-                    #     )
-                    #     print(f"Max conc of {var_id} with {full_enzyme_mw} kDa is ", 1000 * (cobrak_model.max_prot_pool / full_enzyme_mw))
-                    # else:
                     getattr(model, var_id).setub(variability[1])
         except AttributeError:
             pass
@@ -475,7 +479,7 @@ def compare_optimization_result_fluxes(
     Reactions with fluxes below the minimum reaction flux threshold are ignored.
 
     Args:
-    cobrak_model (Model): The COBRA model used for the optimization.
+    cobrak_model (Model): The COBRA-k model used for the optimization.
     result_1 (dict[str, float]): The first optimization result.
     result_2 (dict[str, float]): The second optimization result.
     min_reac_flux (float, optional): The minimum reaction flux to consider. Defaults to 1e-8.
@@ -539,7 +543,7 @@ def compare_multiple_results_to_best(
     Reactions with fluxes below the minimum reaction flux threshold are ignored.
 
     Args:
-    cobrak_model (Model): The COBRA model used for the optimization.
+    cobrak_model (Model): The COBRA-k model used for the optimization.
     results (list[dict[str, float]]): A list of optimization results.
     is_maximization (bool): Whether the optimization is a maximization problem.
     min_reac_flux (float, optional): The minimum reaction flux to consider. Defaults to 1e-8.
@@ -659,7 +663,7 @@ def create_cnapy_scenario_out_of_variability_dict(
 
     Args:
         path (str): The file path where the CNApy scenario file will be saved.
-        cobrak_model (Model): The COBRA model containing reactions.
+        cobrak_model (Model): The COBRA-k model containing reactions.
         variability_dict (dict[str, list[float]]): A dictionary mapping reaction IDs to their minimum and maximum flux values.
         desplit_reactions: bool: Whether or not the fluxes of split reversible reaction
                                  shall be recombined. Defaults to True.
@@ -797,7 +801,7 @@ def delete_unused_reactions_in_variability_dict(
 ) -> Model:
     """Delete unused reactions in a COBRAk model based on a variability dictionary.
 
-    This function creates a deep copy of the provided COBRA model and removes reactions that have both minimum and maximum flux values
+    This function creates a deep copy of the provided COBRA-k model and removes reactions that have both minimum and maximum flux values
     equal to zero, as indicated in the variability dictionary.
     Additionally, any extra reactions specified in the `extra_reacs_to_delete` list are also removed.
     Orphaned metabolites (those not used in any remaining reactions) are subsequently deleted, too.
@@ -1116,7 +1120,7 @@ def get_full_enzyme_mw(cobrak_model: Model, reaction: Reaction) -> float:
     - The function sums up the molecular weights of all enzymes, multiplied by their respective stoichiometries, to compute the total.
 
     Args:
-        cobrak_model (Model): The COBRA model containing enzyme data.
+        cobrak_model (Model): The COBRA-k model containing enzyme data.
         reaction (Reaction): The reaction for which the full enzyme molecular weight is to be calculated.
 
     Returns:
@@ -1146,6 +1150,28 @@ def get_df_kappa_and_gamma_sorted_lists(
 ) -> tuple[
     dict[str, float], dict[str, float], dict[str, float], dict[str, tuple[float, int]]
 ]:
+    """Extracts and sorts lists of flux values (df), kappa values, and gamma values from a result dictionary.
+
+    This function processes a dictionary of results ( a COBRA-k optimization)
+    to extract and sort lists of flux values (df), kappa values, and gamma values.  It filters
+    these values based on a minimum flux threshold and returns them as sorted dictionaries.
+    The function also calculates and returns a dictionary of kappa times gamma values,
+    along with a status indicator representing the number of these values present for each reaction.
+
+    Args:
+        cobrak_model: The COBRA Model object.
+        result: A dictionary containing the simulation or optimization results.  Keys are expected to
+            start with prefixes like 'DF_VAR_PREFIX', 'KAPPA_VAR_PREFIX', and 'GAMMA_VAR_PREFIX'.
+        min_flux: The minimum flux value to consider when filtering the results.  Values below this
+            threshold are excluded.  Defaults to 0.0.
+
+    Returns:
+        A tuple containing four dictionaries:
+        1. A dictionary of sorted flux values (df) above the minimum flux.
+        2. A dictionary of sorted kappa values above the minimum flux.
+        3. A dictionary of sorted gamma values above the minimum flux.
+        4. A dictionary of sorted kappa times gamma values, along with a status indicator.
+    """
     dfs: dict[str, float] = {}
     kappas: dict[str, float] = {}
     gammas: dict[str, float] = {}
@@ -1256,6 +1282,20 @@ def get_model_kms(cobrak_model: Model) -> list[float]:
 
 
 def get_model_kms_by_usage(cobrak_model: Model) -> tuple[list[float], list[float]]:
+    """Collects k_M values from a COBRA-k model, separating them into substrate and product lists.
+
+    This function iterates through the reactions in a COBRA-k model and extracts the
+    k_M values associated with each metabolite. It distinguishes between substrates
+    (metabolites with negative stoichiometry) and products (metabolites with positive
+    stoichiometry) and separates the corresponding Kms values into two lists.
+
+    Args:
+        cobrak_model: The COBRA-k Model object.
+
+    Returns:
+        A tuple containing two lists: the first list contains k_M values for substrates,
+        and the second list contains k_M values for products.
+    """
     substrate_kms = []
     product_kms = []
     for reaction in cobrak_model.reactions.values():
@@ -1345,6 +1385,28 @@ def get_model_with_filled_missing_parameters(
     use_median_for_kms: bool = True,
     use_median_for_kcats: bool = True,
 ) -> Model:
+    """Fills missing parameters in a COBRA-k model, including dG0, k_cat, and k_ms values.
+
+    This function iterates through the reactions in a COBRA-k model and fills in missing
+    parameters based on percentile values from the entire model.  Missing dG0 values
+    are filled using a percentile of the absolute dG0 values.  Missing k_cat values
+    are filled using a percentile or median of the k_cat values.  Missing k_ms values
+    are filled using a percentile or median of the k_ms values, depending on whether
+    the metabolite is a substrate or a product.  Optionally, extra linear constraints
+    can be added to enforce consistency between the dG0 values of coupled reversible
+    reactions.
+
+    Args:
+        cobrak_model: The COBRA-k Model object to be modified.
+        add_dG0_extra_constraints: Whether to add extra linear constraints for reversible reactions. Defaults to False.
+        param_percentile: The percentile to use for filling missing parameters. Defaults to 90.
+        ignore_prefixes: List of prefixes to ignore when processing reactions. Defaults to ["EX_"] (i.e. exchange reactions).
+        use_median_for_kms: Whether to use the median instead of the percentile for k_ms values. Defaults to True.
+        use_median_for_kcats: Whether to use the median instead of the percentile for k_cat values. Defaults to True.
+
+    Returns:
+        A deep copy of the input COBRA-k model with missing parameters filled.
+    """
     cobrak_model = deepcopy(cobrak_model)
 
     all_mws = get_model_mws(cobrak_model)
@@ -1538,75 +1600,78 @@ def get_metabolites_in_elementary_conservation_relations(
 
 def get_model_with_varied_parameters(
     model: Model,
-    max_variation_fraction: float,
-    max_variation_value: float,
-    vary_kcat: bool,
-    vary_km: bool,
-    vary_dG0: bool,
-    vary_ki: bool = False,
-    vary_ka: bool = False,
+    max_km_variation: float | None = None,
+    max_kcat_variation: float | None = None,
+    max_ki_variation: float | None = None,
+    max_ka_variation: float | None = None,
+    max_dG0_variation: float | None = None,
 ) -> Model:
-    """
-    Creates a copy of the input model with specified parameters varied within given bounds.
+    """Generates a modified copy of the input Model with varied reaction parameters.
 
-    This function generates a new model by introducing variations to selected kinetic and thermodynamic parameters.
-    The variations are applied to the parameters of each reaction in the model based on the flags provided.
-
-    - The function creates a deep copy of the input model and modifies only the specified parameters.
-    - For k_cat, k_m, k_i, and k_a, the variation is applied multiplicatively using a uniform distribution within the range
-      [1.0 - max_variation_fraction, 1.0 + max_variation_fraction].
-    - For dG0, the variation is applied additively using a uniform distribution within the range [-max_variation_value, +max_variation_value].
-    - The original model remains unchanged, and all variations are applied to the new model copy.
-
+    This function creates a deep copy of the input Model and introduces random variations
+    to several reaction parameters, including dG0, k_cat, k_ms, k_is, and k_as.  The
+    magnitude of the variation is controlled by the provided `max_..._variation`
+    parameters.  If a `max_..._variation` parameter is not provided (i.e., is None),
+    the corresponding parameter will not be varied.  Variations are applied randomly
+    using a uniform distribution.  For reactions with a reverse reaction, the dG0 values
+    of the forward and reverse reactions are updated to maintain thermodynamic consistency.
 
     Args:
-        model (Model): The input COBRAk model to be varied.
-        max_variation_fraction (float): The maximum relative variation as a fraction of the original value (e.g., 0.1 for ±10% variation).
-        max_variation_value (float): The maximum absolute variation to apply to parameters.
-        vary_kcat (bool): If True, vary the k_cat (turnover number) of enzymes.
-        vary_km (bool): If True, vary the k_m (Michaelis-Menten) values for substrates and products.
-        vary_dG0 (bool): If True, vary the standard Gibbs free energy change (dG0) of reactions.
-        vary_ki (bool, optional): If True, vary the k_i (inhibition constants). Defaults to False.
-        vary_ka (bool, optional): If True, vary the k_a (activation constants). Defaults to False.
+        model: The Model object to be modified.
+        max_km_variation: Maximum factor by which to vary Kms.  Defaults to None.
+        max_kcat_variation: Maximum factor by which to vary k_cat. Defaults to None.
+        max_ki_variation: Maximum factor by which to vary k_is. Defaults to None.
+        max_ka_variation: Maximum factor by which to vary k_as. Defaults to None.
+        max_dG0_variation: Maximum factor by which to vary dG0. Defaults to None.
 
     Returns:
-        Model: A new model with the specified parameters varied within the given bounds.
-
-    Example:
-        To vary k_cat and k_m by up to 10% and dG0 by up to 100 J/mol:
-        >>> varied_model = get_model_with_varied_parameters(
-        ...     model,
-        ...     max_variation_fraction=0.1,
-        ...     max_variation_value=100,
-        ...     vary_kcat=True,
-        ...     vary_km=True,
-        ...     vary_dG0=True,
-        ... )
+        A deep copy of the input model with varied reaction parameters.
     """
     varied_model = deepcopy(model)
-    for reaction in model.reactions.values():
-        if vary_dG0 and reaction.dG0 is not None:
-            reaction.dG0 += uniform(-max_variation_value, +max_variation_value)
+    tested_rev_reacs: list[str] = []
+    for reac_id, reaction in varied_model.reactions.items():
+        if (
+            max_dG0_variation is not None
+            and reaction.dG0 is not None
+            and reac_id not in tested_rev_reacs
+        ):
+            reaction.dG0 += uniform(-max_dG0_variation, +max_dG0_variation)  # noqa: NPY002
+            rev_id = get_reverse_reac_id_if_existing(
+                reac_id=reac_id,
+                fwd_suffix=varied_model.fwd_suffix,
+                rev_suffix=varied_model.rev_suffix,
+            )
+            if rev_id in varied_model.reactions:
+                varied_model.reactions[rev_id].dG0 = -reaction.dG0
+                tested_rev_reacs.append(rev_id)
         if reaction.enzyme_reaction_data is not None:
-            if vary_kcat:
-                reaction.enzyme_reaction_data.k_cat *= uniform(
-                    1.0 - max_variation_fraction, 1.0 + max_variation_fraction
-                )
-            if vary_km:
+            if max_kcat_variation is not None:
+                reaction.enzyme_reaction_data.k_cat *= max_kcat_variation ** (
+                    uniform(-1, 1)
+                )  # noqa: NPY002
+            if max_km_variation is not None:
                 for met_id in reaction.enzyme_reaction_data.k_ms:
-                    reaction.enzyme_reaction_data.k_ms[met_id] *= uniform(
-                        1.0 - max_variation_fraction, 1.0 + max_variation_fraction
-                    )
-            if vary_ki:
+                    if (
+                        met_id in reaction.stoichiometries
+                        and reaction.stoichiometries[met_id] < 0.0
+                    ):
+                        reaction.enzyme_reaction_data.k_ms[met_id] *= (
+                            max_km_variation ** (uniform(-1, 1))
+                        )  # noqa: NPY002
+                    else:
+                        reaction.enzyme_reaction_data.k_ms[met_id] *= (
+                            max_km_variation ** (uniform(-1, 1.0))
+                        )  # noqa: NPY002
+            if max_ki_variation is not None:
                 for met_id in reaction.enzyme_reaction_data.k_is:
-                    reaction.enzyme_reaction_data.k_is[met_id] *= uniform(
-                        1.0 - max_variation_fraction, 1.0 + max_variation_fraction
-                    )
-            if vary_ka:
+                    reaction.enzyme_reaction_data.k_is[met_id] *= max_ki_variation ** (
+                        uniform(-1, 1)
+                    )  # noqa: NPY002
+            if max_ka_variation is not None:
                 for met_id in reaction.enzyme_reaction_data.k_as:
-                    reaction.enzyme_reaction_data.k_as[met_id] *= uniform(
-                        1.0 - max_variation_fraction, 1.0 + max_variation_fraction
-                    )
+                    reaction.enzyme_reaction_data.k_as[met_id] *= max_ka_variation ** (
+                        uniform(-1, 1)
+                    )  # noqa: NPY002
     return varied_model
 
 
@@ -2056,6 +2121,19 @@ def have_all_unignored_km(
 
 
 def is_any_error_term_active(correction_config: CorrectionConfig) -> bool:
+    """Checks if any error term is active in the correction configuration.
+
+    This function determines whether any of the error terms specified in the
+    `CorrectionConfig` object are enabled.  It sums the boolean values of the
+    flags indicating whether each error term is active.  If the sum is greater
+    than zero, it means at least one error term is active.
+
+    Args:
+        correction_config: The CorrectionConfig object to check.
+
+    Returns:
+        True if at least one error term is active, False otherwise.
+    """
     return sum(
         [
             correction_config.add_flux_error_term,
@@ -2193,6 +2271,20 @@ def parse_external_resources(path: str, brenda_version: str) -> None:
 
 
 def print_model_parameter_statistics(cobrak_model: Model) -> None:
+    """Prints statistics about reaction parameters (kcats and kms) in a COBRA-k model.
+
+    This function calculates and prints statistics about the kcat and Km values
+    associated with reactions in a COBRA-k model. It groups these values by their
+    taxonomic distance (as indicated by references) and prints the counts for each
+    distance group.  It also prints the median kcat and the median Km values for
+    substrates and products separately.
+
+    Args:
+        cobrak_model: The COBRA Model object.
+
+    Returns:
+        None.  Prints statistics to the console.
+    """
     substrate_kms, product_kms = get_model_kms_by_usage(cobrak_model)
     all_kms = substrate_kms + product_kms
     all_kcats = get_model_kcats(cobrak_model)

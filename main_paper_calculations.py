@@ -247,7 +247,7 @@ if __name__ == "__main__":
                     round_num=round_num,
                     objective_target={
                         "Biomass_fw": 1.0,
-                        "prot_pool_delivery": -.01,
+                        "prot_pool_delivery": -0.01,
                     },
                     objective_sense=+1,
                     deactivated_reacs=[],
@@ -257,7 +257,7 @@ if __name__ == "__main__":
                     set_bounds={
                         "EX_glc__D_e_bw": (0.0, maxglcvalue),
                     },
-                    protein_pool=.224,
+                    protein_pool=0.224,
                     max_conc_sum=0.4,
                     nameaddition=f"maxglc{maxglcvalue}",
                     uses_bennett_concs=False,
@@ -335,7 +335,7 @@ if __name__ == "__main__":
                     round_num=round_num,
                     objective_target={
                         "EX_ac_e_fw": 1.0,
-                        "prot_pool_delivery": -.01,
+                        "prot_pool_delivery": -0.01,
                     },
                     objective_sense=+1,
                     deactivated_reacs=[],
@@ -346,7 +346,7 @@ if __name__ == "__main__":
                         "Biomass_fw": (0.1, 2.0),
                         "EX_glc__D_e_bw": (0.0, 1_000),
                     },
-                    protein_pool=.224,
+                    protein_pool=0.224,
                     max_conc_sum=0.4,
                     nameaddition="_maxac_minmu0.1",
                     uses_bennett_concs=False,
@@ -364,7 +364,7 @@ if __name__ == "__main__":
                     round_num=round_num,
                     objective_target={
                         "EX_ac_e_fw": 1.0,
-                        "prot_pool_delivery": -.01,
+                        "prot_pool_delivery": -0.01,
                     },
                     objective_sense=+1,
                     deactivated_reacs=[],
@@ -374,7 +374,7 @@ if __name__ == "__main__":
                     set_bounds={
                         "EX_glc__D_e_bw": (0.0, 1_000),
                     },
-                    protein_pool=.224,
+                    protein_pool=0.224,
                     max_conc_sum=0.4,
                     nameaddition="_maxac",
                     uses_bennett_concs=False,
@@ -384,18 +384,23 @@ if __name__ == "__main__":
         )
         minmu_ac_ectfva_data = json_load(
             "AutoCOBRAK/examples/iCH360/prepared_external_resources/variability_dict_enforced_growth_and_ac.json"
-            if argv[-1] != "local" else
-            "./examples/iCH360/prepared_external_resources/variability_dict_enforced_growth_and_ac.json"
+            if argv[-1] != "local"
+            else "./examples/iCH360/prepared_external_resources/variability_dict_enforced_growth_and_ac.json"
         )
         cobrak_model = json_load(
             "AutoCOBRAK/examples/iCH360/prepared_external_resources/iCH360_cobrak.json"
-            if argv[-1] != "local" else
-            "./examples/iCH360/prepared_external_resources/iCH360_cobrak.json"
+            if argv[-1] != "local"
+            else "./examples/iCH360/prepared_external_resources/iCH360_cobrak.json"
         )
         raw_ko_targets = [
-            reac_id for reac_id, (min_flux, max_flux) in minmu_ac_ectfva_data.items()
-            if (min_flux <= 0.0) and (max_flux != 0.0) and (reac_id in cobrak_model["reactions"])
-            and ("EX_" not in reac_id)  # ("PPS_fw" in reac_id)  # ("pp_" not in reac_id) and ("tex" not in reac_id) and ("EX_" not in reac_id)
+            reac_id
+            for reac_id, (min_flux, max_flux) in minmu_ac_ectfva_data.items()
+            if (min_flux <= 0.0)
+            and (max_flux != 0.0)
+            and (reac_id in cobrak_model["reactions"])
+            and (
+                "EX_" not in reac_id
+            )  # ("PPS_fw" in reac_id)  # ("pp_" not in reac_id) and ("tex" not in reac_id) and ("EX_" not in reac_id)
         ]
         found_ko_targets = []
         ko_targets = []
@@ -409,7 +414,9 @@ if __name__ == "__main__":
                 tried_other_id = (raw_ko_target + "\b").replace("_bw\b", "_fw")
             ko_target_1 = raw_ko_target
 
-            if (tried_other_id in cobrak_model["reactions"]) and (tried_other_id not in found_ko_targets):
+            if (tried_other_id in cobrak_model["reactions"]) and (
+                tried_other_id not in found_ko_targets
+            ):
                 ko_target_2 = tried_other_id
             else:
                 ko_target_2 = ""
@@ -425,7 +432,7 @@ if __name__ == "__main__":
                     round_num=round_num,
                     objective_target={
                         "Biomass_fw": 1.0,
-                        "prot_pool_delivery": -.01,
+                        "prot_pool_delivery": -0.01,
                     },
                     objective_sense=+1,
                     deactivated_reacs=[],
@@ -439,7 +446,7 @@ if __name__ == "__main__":
                         ko_target[0],
                         ko_target[1],
                     ],
-                    protein_pool=.224,
+                    protein_pool=0.224,
                     max_conc_sum=0.4,
                     nameaddition=f"_ko{ko_target[0]}_{ko_target[1]}",
                     uses_bennett_concs=False,

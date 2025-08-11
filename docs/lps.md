@@ -123,7 +123,7 @@
     # 2. ATP optimization
     max_atp_result = perform_lp_optimization(
         toy_model,
-        "EX_ATP",
+        "ATP_Consumption",
         +1,
     )
     # 2. Overflow optimization
@@ -250,7 +250,7 @@
     print("Now we solve with the solver IPOPT :D")
     perform_lp_optimization(
         toy_model,
-        "EX_ATP",
+        "ATP_Consumption",
         +1,
         solver=ipopt,
         verbose=True, # Show explicitly the IPOPT output
@@ -258,9 +258,11 @@
     ```
 
 !!! warning
-    As explained in the Installation chapter, you might have to install the quite capable mixed-integer linear open-source solver [SCIP](https://scipopt.org/) on your system to run the examples of this documentation. That's because, although the COBRA-k package installs the SCIP Python package, SCIP itself might be missing.
+    As explained in the Installation chapter, you might have to install the quite capable mixed-integer (non-)linear open-source solver [SCIP](https://scipopt.org/) on your system to run the examples of this documentation. That's because, although the COBRA-k package installs the SCIP Python package, SCIP itself might be missing on some systems.
 
-    If SCIP is not available on your system, you may try to switch to installing and using the free and open-source solver [GLPK](https://www.gnu.org/software/glpk/) by (i) adding ```from cobrak.dataclasses import Solver``` as first line in all your scripts and then, in all optimization functions (such as ```perform_lp_optimization```), using the argument ```solver=Solver(name="glpk")```.
+    If SCIP is not available on your system, you may try to use the pre-installed HiGHS solver by (i) adding ```from cobrak.dataclasses import HIGHS``` as first line in all your scripts and then, in all optimization functions (such as ```perform_lp_optimization```), using the argument ```solver=HIGHS```.
+
+    If HiGHS also does not work, try installing and using the free and open-source solver [GLPK](https://www.gnu.org/software/glpk/) by (i) adding ```from cobrak.dataclasses import Solver``` as first line in all your scripts and then, in all optimization functions (such as ```perform_lp_optimization```), using the argument ```solver=Solver(name="glpk")```.
 
 ## Introduction
 
@@ -625,7 +627,7 @@ var_result = perform_lp_variability_analysis(
 # 2. ATP optimization
 max_atp_result = perform_lp_optimization(
     toy_model,
-    "EX_ATP",
+    "ATP_Consumption",
     +1,
 )
 # 2. Overflow optimization
@@ -795,7 +797,7 @@ ipopt = Solver(
 print("Now we solve with the solver IPOPT :D")
 perform_lp_optimization(
     toy_model,
-    "EX_ATP",
+    "ATP_Consumption",
     +1,
     solver=ipopt,
     verbose=True, # Show explicitly the IPOPT output :-)

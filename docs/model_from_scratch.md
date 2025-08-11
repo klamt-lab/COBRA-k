@@ -2,10 +2,11 @@
 
 ??? abstract "Quickstart code"
     ```py
+    # IMPORT SECTION
     from math import log
 
-    from cobrak.constants import STANDARD_R, STANDARD_T
-    from cobrak.dataclasses import (
+    from .constants import STANDARD_R, STANDARD_T
+    from .dataclasses import (
         Enzyme,
         EnzymeReactionData,
         ExtraLinearConstraint,
@@ -14,7 +15,7 @@
         Reaction,
     )
 
-    # Construct our toy model
+    # EXAMPLE MODEL DEFINITION SECTION
     toy_model = Model(
         reactions={
             # Metabolic reactions
@@ -22,6 +23,7 @@
                 # Stoichiometrically relevant member variables
                 stoichiometries={
                     "S": -1,  # Negative stoichiometry → S is consumed by Glycolysis
+                    "ADP": -2,
                     "M": +1,  # Positive stoichiometry → M is produced by Glycolysis
                     "ATP": +2,  # Two ATP molecules are produced by Glycolysis
                 },
@@ -38,9 +40,10 @@
                     identifiers=[
                         "E_glyc"
                     ],  # Subunit(s) which constitute the reaction's catalyst
-                    k_cat=70_000.0,  # Turnover number in h⁻¹
+                    k_cat=140_000.0,  # Turnover number in h⁻¹
                     k_ms={  # Michaelis-Menten constants in M=mol⋅l⁻¹; Default is {}
-                        "S": 0.0001,  # e.g., K_m of reaction Glycolysis regarding metabolite S
+                        "S": 0.0001,  # e.g., K_m of reaction Glycolysis regarding metabolite A
+                        "ADP": 0.0001,
                         "M": 0.0001,
                         "ATP": 0.0001,
                     },
@@ -53,17 +56,19 @@
             "Respiration": Reaction(
                 stoichiometries={
                     "M": -1,
+                    "ADP": -4,
                     "C": +1,
-                    "ATP": +6,
+                    "ATP": +4,
                 },
                 min_flux=0.0,
                 max_flux=1_000.0,
                 dG0=-10.0,
                 enzyme_reaction_data=EnzymeReactionData(
                     identifiers=["E_resp"],
-                    k_cat=70_000.0,
+                    k_cat=140_000.0,
                     k_ms={
-                        "M": 0.03,
+                        "ADP": 0.00027,
+                        "M": 0.00027,
                         "C": 0.0001,
                         "ATP": 0.0001,
                     },
@@ -79,9 +84,9 @@
                 dG0=-10.0,
                 enzyme_reaction_data=EnzymeReactionData(
                     identifiers=["E_over"],
-                    k_cat=70_000.0,
+                    k_cat=140_000.0,
                     k_ms={
-                        "M": 0.005,
+                        "M": 0.001,
                         "P": 0.0001,
                     },
                 ),
@@ -108,9 +113,10 @@
                 min_flux=0.0,
                 max_flux=1_000.0,
             ),
-            "EX_ATP": Reaction(
+            "ATP_Consumption": Reaction(
                 stoichiometries={
                     "ATP": -1,
+                    "ADP": +1,
                 },
                 min_flux=0.0,
                 max_flux=1_000.0,
@@ -125,7 +131,7 @@
                     0.02
                 ),  # optional, maximal ln(concentration); Default is ln(0.02 M)
                 annotation={
-                    "description": "This is metabolite A"
+                    "description": "This is metabolite S"
                 },  # optional, default is ""
                 name="Metabolite S",  # optional, default is ""
                 formula="X",  # optional, default is ""
@@ -135,6 +141,7 @@
             "C": Metabolite(),
             "P": Metabolite(),
             "ATP": Metabolite(),
+            "ADP": Metabolite(),
         },
         enzymes={
             "E_glyc": Enzyme(
@@ -149,11 +156,11 @@
         },
         max_prot_pool=0.4,  # In g⋅gDW⁻¹; This value is used for our analyses with enzyme constraints
         # We set the following two constraints:
-        # 1.0 * EX_S - 1.0 * Glycolysis ≤ 0.0
+        # 1.0 * EX_A - 1.0 * Glycolysis ≤ 0.0
         # and
-        # 1.0 * EX_S + 1.0 * Glycolysis ≥ 0.0
+        # 1.0 * EX_A + 1.0 * Glycolysis ≥ 0.0
         # in other words, effectively,
-        # 1.0 * EX_S = 1.0 * Glycolysis
+        # 1.0 * EX_A = 1.0 * Glycolysis
         extra_linear_constraints=[
             ExtraLinearConstraint(
                 stoichiometries={
@@ -179,7 +186,7 @@ To encode a metabolic network in COBRA-k, you can:
 
 Here, we recreate the toymodel from COBRA-k's publication [](). It looks as follows:
 
-<img src="img/toymodel.jpg" alt="Toymodel visualization" class="img-border img-half">
+<img src="img/toymodel.001.png" alt="Toymodel visualization" class="img-border img-half">
 
 Arrows stand for toy *reactions* with the name given in italic letters. Bold letters for toy *metabolites*. The numbers at the begin and end of arrows stand for the stoichiometry of each metabolite. E.g. the toy reaction "Respiration" looks as follows:
 ```
@@ -274,6 +281,7 @@ toy_model.metabolites = {
     "C": Metabolite(),
     "P": Metabolite(),
     "ATP": Metabolite(),
+    "ADP": Metabolite(),
 }
 ```
 
@@ -311,13 +319,13 @@ The (optional) Metabolite member variables are:
 
 Now, we create the toy model's reactions together (if given) with their parameters:
 
-1. Glycolysis: S ⇒ M
-2. Respiration: M ⇒ C
+1. Glycolysis: S + 2 ADP ⇒ M + 2 ATP
+2. Respiration: M + 4 ADP ⇒ C + 4 ATP
 3. Overflow: M ⇒ P
-4. EX_A: ⇒ A
+4. EX_S: ⇒ S
 5. EX_C: C ⇒
 6. EX_P: P ⇒
-7. EX_ATP: ATP ⇒
+7. ATP_Consumption: ATP ⇒ ADP
 
 This can be done using COBRA-k's Reaction and EnzymeReactionData dataclasses and setting our toy model Model instance's ```reaction``` member variable:
 
@@ -330,50 +338,53 @@ toy_model.reactions = {
     "Glycolysis": Reaction(
         # Stoichiometrically relevant member variables
         stoichiometries={
-            "S": -1, # Negative stoichiometry i.e. S is consumed by Glycolysis
-            "M": +1, # Positive stoichiometry i.e. M is produced by Glycolysis
-            "ATP": +2, # Two ATP molecules are produced by Glycolysis
+            "S": -1,  # Negative stoichiometry → S is consumed by Glycolysis
+            "ADP": -2,
+            "M": +1,  # Positive stoichiometry → M is produced by Glycolysis
+            "ATP": +2,  # Two ATP molecules are produced by Glycolysis
         },
-        min_flux=0.0, # Minimal flux in mmol⋅gDW⁻¹⋅h⁻¹; should be ≥0 for most analyses
-        max_flux=1_000.0, # Maximal flux in mmol⋅gDW⁻¹⋅h⁻¹
-
+        min_flux=0.0,  # Minimal flux in mmol⋅gDW⁻¹⋅h⁻¹; should be ≥0 for most analyses
+        max_flux=1_000.0,  # Maximal flux in mmol⋅gDW⁻¹⋅h⁻¹
         # Thermodynamically relevant member variables
         # (only neccessary if thermodynamic constraints are used)
-        dG0=-10.0, # Standard Gibb's free energy ΔG'° in kJ⋅mol⁻¹; Default is None (no ΔG'°)
-        dG0_uncertainty=None, # ΔG'° uncertainty in kJ⋅mol⁻¹; Default is None (no uncertainty)
-
+        dG0=-10.0,  # Standard Gibb's free energy ΔG'° in kJ⋅mol⁻¹; Default is None (no ΔG'°)
+        dG0_uncertainty=None,  # ΔG'° uncertainty in kJ⋅mol⁻¹; Default is None (no uncertainty)
         # Let's set the variable for enzyme-kinetic parameters
         # of the dataclass EnzymeReactionData
         # (Default is None, i.e. no enzyme parameters given)
         enzyme_reaction_data=EnzymeReactionData(
-            identifiers=["E_glyc"], # Subunit(s) which constitute the reaction's catalyst
-            k_cat=70_000.0, # Turnover number in h⁻¹
+            identifiers=[
+                "E_glyc"
+            ],  # Subunit(s) which constitute the reaction's catalyst
+            k_cat=140_000.0,  # Turnover number in h⁻¹
             k_ms={  # Michaelis-Menten constants in M=mol⋅l⁻¹; Default is {}
-                "S": 0.0001,  # e.g., K_m of reaction Glycolysis regarding metabolite S
+                "S": 0.0001,  # e.g., K_m of reaction Glycolysis regarding metabolite A
+                "ADP": 0.0001,
                 "M": 0.0001,
                 "ATP": 0.0001,
             },
+            special_stoichiometries={},  # No special stoichiometry, all subunits occur once
         ),
-        special_stoichiometries={}, # No special stoichiometry, all subunits occur once
-
         # Extra information member variables
-        annotation={"description": "This is reaction Glycolysis"}, # Default is {}
-        name="Reaction Glycolysis", # Default is ""
+        annotation={"description": "This is reaction Glycolysis"},  # Default is {}
+        name="Reaction Glycolysis",  # Default is ""
     ),
     "Respiration": Reaction(
         stoichiometries={
             "M": -1,
+            "ADP": -4,
             "C": +1,
-            "ATP": +6,
+            "ATP": +4,
         },
         min_flux=0.0,
         max_flux=1_000.0,
         dG0=-10.0,
         enzyme_reaction_data=EnzymeReactionData(
             identifiers=["E_resp"],
-            k_cat=70_000.0,
+            k_cat=140_000.0,
             k_ms={
-                "M": 0.03,
+                "ADP": 0.00027,
+                "M": 0.00027,
                 "C": 0.0001,
                 "ATP": 0.0001,
             },
@@ -389,15 +400,14 @@ toy_model.reactions = {
         dG0=-10.0,
         enzyme_reaction_data=EnzymeReactionData(
             identifiers=["E_over"],
-            k_cat=70_000.0,
+            k_cat=140_000.0,
             k_ms={
-                "M": 0.005,
+                "M": 0.001,
                 "P": 0.0001,
             },
         ),
     ),
-
-    # Exchange reactions with no thermodynamic and kinetic data
+    # Exchange reactions
     "EX_S": Reaction(
         stoichiometries={
             "S": +1,
@@ -419,9 +429,11 @@ toy_model.reactions = {
         min_flux=0.0,
         max_flux=1_000.0,
     ),
-    "EX_ATP": Reaction(
+    # ATP "maintenance" reaction
+    "ATP_Consumption": Reaction(
         stoichiometries={
             "ATP": -1,
+            "ADP": +1,
         },
         min_flux=0.0,
         max_flux=1_000.0,

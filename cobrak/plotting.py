@@ -664,8 +664,8 @@ def scatterplot_with_labels(
     save_path: str = None,
     title: str | None = None,
     extratext: str | None = None,
-    x_labelsize: float = 14,
-    y_labelsize: float = 14,
+    x_labelsize: float = 13,
+    y_labelsize: float = 13,
 ) -> plt.Axes:
     """
     Generates a scatter plot with error bars and optional point labels.

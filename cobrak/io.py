@@ -151,7 +151,7 @@ def ensure_json_existence(path: str) -> None:
     """
     if os.path.isfile(path):
         return
-    with open(path, "w", encoding="utf-8") as f:
+    with open(path, "w", encoding="utf-8") as f:  # noqa: FURB103
         f.write("{}")
 
 
@@ -578,7 +578,7 @@ def json_load(path: str, dataclass_type: T = Any) -> T:
     >>> print(person.name, person.age)
     John Doe 30
     """
-    with open(path, encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:  # noqa: FURB101
         data = f.read()
 
     return TypeAdapter(dataclass_type).validate_json(data)
@@ -655,7 +655,7 @@ def json_zip_load(path: str) -> dict:
 
 def json_zip_write(
     path: str,
-    json_data: Any,
+    json_data: Any,  # noqa: ANN401
     zip_method: int = zipfile.ZIP_LZMA,  # noqa: ANN401
 ) -> None:
     """Writes a zipped JSON file at the given path with the given dictionary as content.
@@ -949,10 +949,8 @@ def pickle_load(path: str) -> Any:  # noqa: ANN401
     ----------
     * path: str ~ The path to the pickle file.
     """
-    pickle_file = open(path, "rb")
-    pickled_object = pickle.load(pickle_file)
-    pickle_file.close()
-    return pickled_object
+    with open(path, "rb") as pickle_file:
+        return pickle.load(pickle_file)
 
 
 def pickle_write(path: str, pickled_object: Any) -> None:  # noqa: ANN401
@@ -963,9 +961,8 @@ def pickle_write(path: str, pickled_object: Any) -> None:  # noqa: ANN401
     * path: str ~ The path of the pickled file that shall be created
     * pickled_object: Any ~ The object which shall be saved in the pickle file
     """
-    pickle_file = open(path, "wb")
-    pickle.dump(pickled_object, pickle_file)
-    pickle_file.close()
+    with open(path, "wb") as pickle_file:
+        pickle.dump(pickled_object, pickle_file)
 
 
 def standardize_folder(folder: str) -> str:

@@ -1,3 +1,8 @@
+"""Includes definitions of some (MI)LP and NLP solvers.
+
+Instead of these pre-definitions, you can also use pyomo's solver definitions.
+"""
+
 from platform import platform
 
 from joblib import cpu_count
@@ -44,6 +49,10 @@ GUROBI_FOR_VARIABILITY_ANALYSIS = Solver(
     solver_options={
         "threads": 1,
     },
+)
+
+HIGHS = Solver(
+    name="appsi_highs",
 )
 
 hsllib = "/scratch/CoinHSL/coinhsl-2024.05.15/BUILD/lib/x86_64-linux-gnu/libcoinhsl.so"

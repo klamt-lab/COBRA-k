@@ -12,7 +12,7 @@ from equilibrator_api import Q_, ComponentContribution, Reaction
 from .constants import USED_IDENTIFIERS_FOR_EQUILIBRATOR
 
 
-## PUBLIC FUNCTIONS ##
+# PUBLIC FUNCTIONS #
 def equilibrator_get_model_dG0_and_uncertainty_values(
     sbml_path: str,
     inner_to_outer_compartments: list[str],
@@ -69,13 +69,13 @@ def equilibrator_get_model_dG0_and_uncertainty_values(
         compartments: list[str] = []
         identifiers: list[str] = []
         identifier_keys: list[str] = []
-        for metabolite_x in reaction.metabolites.keys():
+        for metabolite_x in reaction.metabolites:
             metabolite: cobra.Metabolite = metabolite_x
             stoichiometries.append(reaction.metabolites[metabolite])
             compartments.append(metabolite.compartment)
             identifier = ""
             for used_identifier in USED_IDENTIFIERS_FOR_EQUILIBRATOR:
-                if used_identifier not in metabolite.annotation.keys():
+                if used_identifier not in metabolite.annotation:
                     continue
                 metabolite_identifiers = metabolite.annotation[used_identifier]
                 identifier_temp = ""
@@ -87,10 +87,7 @@ def equilibrator_get_model_dG0_and_uncertainty_values(
                     compound = cc.get_compound_by_inchi(identifier_temp)
                 elif used_identifier == "inchi_key":
                     compound_list = cc.search_compound_by_inchi_key(identifier_temp)
-                    if len(compound_list) > 0:
-                        compound = compound_list[0]
-                    else:
-                        compound = None
+                    compound = compound_list[0] if len(compound_list) > 0 else None
                 else:
                     identifier_temp = used_identifier + ":" + identifier_temp
                     compound = cc.get_compound(identifier_temp)
@@ -98,12 +95,12 @@ def equilibrator_get_model_dG0_and_uncertainty_values(
                     identifier_key = used_identifier
                     identifier = identifier_temp
                     break
-            if identifier == "":
+            if not identifier:
                 break
             identifier_keys.append(identifier_key)
             identifiers.append(identifier)
 
-        if identifier == "":
+        if not identifier:
             print(
                 f"ERROR: Metabolite {metabolite_x.id} has no identifier of the given types!"
             )

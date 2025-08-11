@@ -1,5 +1,5 @@
-import z_add_path  # noqa: F401
 import matplotlib.pyplot as plt
+import z_add_path  # noqa: F401
 
 from cobrak.dataclasses import Model
 from cobrak.io import ensure_folder_existence, json_load

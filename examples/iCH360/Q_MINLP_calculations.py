@@ -1,8 +1,9 @@
 import z_add_path  # noqa: F401
+
 from cobrak.dataclasses import Model, VarResult
 from cobrak.io import json_load
 from cobrak.nlps import perform_nlp_reversible_optimization
-from cobrak.standard_solvers import SCIP, BARON
+from cobrak.standard_solvers import BARON, SCIP  # noqa: F401
 
 cobrak_model: Model = json_load(
     "examples/iCH360/RESULTS_GLCUPTAKE/used_cobrak_model__1_maxglc1000.json",

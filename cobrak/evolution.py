@@ -1,3 +1,8 @@
+"""Includes functions for calling COBRA-k's genetic algorithm for global NLP-based optimization.
+
+The actual genetic algorithm can be found in the module 'genetic'.
+"""
+
 from copy import deepcopy
 from random import sample
 from tempfile import TemporaryDirectory
@@ -7,18 +12,32 @@ from typing import Any, Literal
 from joblib import Parallel, cpu_count, delayed
 from numpy.random import randint
 from pyomo.common.errors import ApplicationError
+from pyomo.environ import Binary, Constraint, Reals, Var
 
-from .constants import ALL_OK_KEY, OBJECTIVE_VAR_NAME, Z_VAR_PREFIX
+from .constants import ALL_OK_KEY, BIG_M, OBJECTIVE_VAR_NAME, Z_VAR_PREFIX
 from .dataclasses import CorrectionConfig, ExtraLinearConstraint, Model, Solver
 from .genetic import COBRAKGENETIC
 from .io import json_load, json_write
-from .lps import perform_lp_optimization, perform_lp_variability_analysis
+from .lps import (
+    add_statuses_to_optimziation_dict,
+    get_lp_from_cobrak_model,
+    perform_lp_optimization,
+    perform_lp_variability_analysis,
+)
 from .nlps import perform_nlp_irreversible_optimization_with_active_reacs_only
 from .pso_parallel import COBRAKPAPSO
+from .pyomo_functionality import (
+    add_objective_to_model,
+    get_solver,
+)
 from .standard_solvers import IPOPT, SCIP
 from .utilities import (
+    add_objective_value_as_extra_linear_constraint,
+    apply_variability_dict,
+    delete_orphaned_metabolites_and_enzymes,
     get_active_reacs_from_optimization_dict,
     get_files,
+    get_pyomo_solution_as_dict,
     get_stoichiometrically_coupled_reactions,
     is_objsense_maximization,
     split_list,
@@ -27,6 +46,47 @@ from .utilities import (
 
 
 class COBRAKProblem:
+    """Represents a problem to be solved using evolutionary optimization techniques.
+
+    Args:
+        cobrak_model (Model): The original COBRA-k model to optimize.
+        objective_target (dict[str, float]): The target values for the objectives.
+        objective_sense (int): The sense of the objective function (1 for maximization, -1 for minimization).
+        variability_dict (dict[str, tuple[float, float]]): The variability data for each reaction.
+        nlp_dict_list (list[dict[str, float]]): A list of initial NLP solutions.
+        best_value (float): The best value found so far.
+        with_kappa (bool, optional): Whether to use kappa parameter. Defaults to True.
+        with_gamma (bool, optional): Whether to use gamma parameter. Defaults to True.
+        with_iota (bool, optional): Whether to use iota parameter. Defaults to True.
+        with_alpha (bool, optional): Whether to use alpha parameter. Defaults to True.
+        num_gens (int, optional): The number of generations in the evolutionary algorithm. Defaults to 5.
+        algorithm (Literal["pso", "genetic"], optional): The type of optimization algorithm to use. Defaults to "pso".
+        lp_solver (Solver, optional): The linear programming solver to use. Defaults to SCIP.
+        nlp_solver (Solver, optional): The nonlinear programming solver to use. Defaults to IPOPT.
+        objvalue_json_path (str, optional): The path to the JSON file for storing objective values. Defaults to "".
+        max_rounds_same_objvalue (float, optional): The maximum number of rounds with the same objective value before stopping. Defaults to float("inf").
+        correction_config (CorrectionConfig, optional): Configuration for corrections during optimization. Defaults to CorrectionConfig().
+        min_abs_objvalue (float, optional): The minimum absolute value of the objective function to consider as valid. Defaults to 1e-6.
+        pop_size (int | None, optional): The population size for the evolutionary algorithm. Defaults to None.
+
+    Attributes:
+        original_cobrak_model (Model): A deep copy of the original COBRA-k model.
+        blocked_reacs (list[str]): List of blocked reactions.
+        initial_xs_list (list[list[int | float]]): Initial list of solutions for each NLP.
+        minimal_xs_dict (dict[float, list[float]]): Dictionary to store minimal solutions.
+        variability_data (dict[str, tuple[float, float]]): A deep copy of the variability data.
+        idx_to_reac_ids (dict[int, tuple[str, ...]]): Mapping from index to reaction IDs.
+        dim (int): The dimension of the problem.
+        lp_solver (Solver): The linear programming solver.
+        nlp_solver (Solver): The nonlinear programming solver.
+        temp_directory_name (str): Name of the temporary directory for storing results.
+        best_value (float): The best value found so far.
+        objvalue_json_path (str): Path to the JSON file for objective values.
+        max_rounds_same_objvalue (float): Maximum number of rounds with same objective value.
+        correction_config (CorrectionConfig): Configuration for corrections.
+        min_abs_objvalue (float): Minimum absolute value of objective function to consider valid.
+    """
+
     def __init__(
         self,
         cobrak_model: Model,
@@ -49,6 +109,29 @@ class COBRAKProblem:
         min_abs_objvalue: float = 1e-6,
         pop_size: int | None = None,
     ) -> None:
+        """Initializes a COBRAKProblem object.
+
+        Args:
+            cobrak_model (Model): The original COBRA-k model to optimize.
+            objective_target (dict[str, float]): The target values for the objectives.
+            objective_sense (int): The sense of the objective function (1 for maximization, -1 for minimization).
+            variability_dict (dict[str, tuple[float, float]]): The variability data for each reaction.
+            nlp_dict_list (list[dict[str, float]]): A list of initial NLP solutions.
+            best_value (float): The best value found so far.
+            with_kappa (bool, optional): Whether to use kappa parameter. Defaults to True.
+            with_gamma (bool, optional): Whether to use gamma parameter. Defaults to True.
+            with_iota (bool, optional): Whether to use iota parameter. Defaults to True.
+            with_alpha (bool, optional): Whether to use alpha parameter. Defaults to True.
+            num_gens (int, optional): The number of generations in the evolutionary algorithm. Defaults to 5.
+            algorithm (Literal["pso", "genetic"], optional): The type of optimization algorithm to use. Defaults to "pso".
+            lp_solver (Solver, optional): The linear programming solver to use. Defaults to SCIP.
+            nlp_solver (Solver, optional): The nonlinear programming solver to use. Defaults to IPOPT.
+            objvalue_json_path (str, optional): The path to the JSON file for storing objective values. Defaults to "".
+            max_rounds_same_objvalue (float, optional): The maximum number of rounds with the same objective value before stopping. Defaults to float("inf").
+            correction_config (CorrectionConfig, optional): Configuration for corrections during optimization. Defaults to CorrectionConfig().
+            min_abs_objvalue (float, optional): The minimum absolute value of the objective function to consider as valid. Defaults to 1e-6.
+            pop_size (int | None, optional): The population size for the evolutionary algorithm. Defaults to None.
+        """
         self.original_cobrak_model: Model = deepcopy(cobrak_model)
         self.objective_target = objective_target
         self.objective_sense = objective_sense
@@ -132,6 +215,14 @@ class COBRAKProblem:
         self,
         x: list[float | int],
     ) -> list[tuple[float, list[float | int]]]:
+        """Calculates the fitness of a given solution.
+
+        Args:
+            x (list[float | int]): The solution to evaluate.
+
+        Returns:
+            list[tuple[float, list[float | int]]]: A list of tuples, where each tuple contains the fitness value and the corresponding solution.
+        """
         # Preliminary TFBA :3
         deactivated_reactions: list[str] = []
         for couple_idx, reac_ids in self.idx_to_reac_ids.items():
@@ -316,7 +407,7 @@ class COBRAKProblem:
             objective_value = opt_nlp_dict[OBJECTIVE_VAR_NAME]
 
             if self.temp_directory_name:
-                filename = f"{self.temp_directory_name}{objective_value}{time()}{randint(0, 1_000_000_000)}.json"
+                filename = f"{self.temp_directory_name}{objective_value}{time()}{randint(0, 1_000_000_000)}.json"  # noqa: NPY002
                 json_write(filename, opt_nlp_dict)
 
             if is_objsense_maximization(self.objective_sense):
@@ -339,6 +430,11 @@ class COBRAKProblem:
         return output
 
     def optimize(self) -> dict[float, list[dict[str, float]]]:
+        """Performs the optimization process.
+
+        Returns:
+            dict[float, list[dict[str, float]]]: A dictionary containing the optimization results.
+        """
         temp_directory = TemporaryDirectory()
         self.temp_directory_name = standardize_folder(temp_directory.name)
 
@@ -385,22 +481,6 @@ class COBRAKProblem:
         }
 
 
-from pyomo.environ import Binary, Constraint, Reals, Var
-
-from .constants import BIG_M
-from .lps import add_statuses_to_optimziation_dict, get_lp_from_cobrak_model
-from .pyomo_functionality import (
-    add_objective_to_model,
-    get_solver,
-)
-from .utilities import (
-    add_objective_value_as_extra_linear_constraint,
-    apply_variability_dict,
-    delete_orphaned_metabolites_and_enzymes,
-    get_pyomo_solution_as_dict,
-)
-
-
 def _postprocess_batch(
     reac_couples: list[str],
     target_couples: list[tuple[str, list[str]]],
@@ -409,7 +489,7 @@ def _postprocess_batch(
     objective_target: str | dict[str, float],
     objective_sense: int,
     variability_data: dict[str, tuple[float, float]],
-    pyomo_lp_solver,
+    pyomo_lp_solver,  # noqa: ANN001
     with_kappa: bool = True,
     with_gamma: bool = True,
     with_iota: bool = False,
@@ -419,9 +499,34 @@ def _postprocess_batch(
     verbose: bool = False,
     correction_config: CorrectionConfig = CorrectionConfig(),
     onlytested: str = "",
-):
+) -> list[str, tuple[str], dict[str, float], str, int]:
+    """Postprocesses a batch of reactions to find feasible switches.
+
+    Args:
+        reac_couples (list[str]): List of reaction couples.
+        target_couples (list[tuple[str, list[str]]]): List of target couples with types and maximum changes allowed.
+        active_reacs (list[str]): List of active reactions.
+        cobrak_model (Model): The COBRA-k model to optimize.
+        objective_target (str | dict[str, float]): Target value(s) for the objective function.
+        objective_sense (int): Sense of the objective function (1 for maximization, -1 for minimization).
+        variability_data (dict[str, tuple[float, float]]): Variability data for each reaction.
+        pyomo_lp_solver: The Pyomo solver to use.
+        with_kappa (bool, optional): Whether to use kappa parameter. Defaults to True.
+        with_gamma (bool, optional): Whether to use gamma parameter. Defaults to True.
+        with_iota (bool, optional): Whether to use iota parameter. Defaults to False.
+        with_alpha (bool, optional): Whether to use alpha parameter. Defaults to False.
+        lp_solver (Solver, optional): The linear programming solver to use. Defaults to SCIP.
+        nlp_solver (Solver, optional): The nonlinear programming solver to use. Defaults to IPOPT.
+        verbose (bool, optional): Whether to enable verbose output. Defaults to False.
+        correction_config (CorrectionConfig, optional): Configuration for corrections during optimization. Defaults to CorrectionConfig().
+        onlytested (str, optional): Specific reactions to test during postprocessing. Defaults to "".
+
+    Returns:
+        list[str, tuple[str], dict[str, float], str, int]: List of feasible switches found with extra data, as follows:
+            0) The switched couple, 1) the active z vars, 3) the NLP result, 4) switch name, 5) number of allowed switches.
+    """
     original_var_data = deepcopy(variability_data)
-    feasible_switches = []
+    feasible_switches: list[str, tuple[str], dict[str, float], str, int] = []
     for target_type, target_couple, max_allowed_changes in target_couples:
         if onlytested and (not any(onlytested in reac_id for reac_id in target_couple)):
             continue
@@ -669,6 +774,27 @@ def postprocess(
     correction_config: CorrectionConfig = CorrectionConfig(),
     onlytested: str = "",
 ) -> tuple[float, list[float | int]]:
+    """Postprocesses the optimization results to find feasible switches.
+
+    Args:
+        cobrak_model (Model): The COBRA-k model to optimize.
+        opt_dict (dict[str, float]): Optimization result dictionary.
+        objective_target (str | dict[str, float]): Target value(s) for the objective function.
+        objective_sense (int): Sense of the objective function (1 for maximization, -1 for minimization).
+        variability_data (dict[str, tuple[float, float]]): Variability data for each reaction.
+        with_kappa (bool, optional): Whether to use kappa parameter. Defaults to True.
+        with_gamma (bool, optional): Whether to use gamma parameter. Defaults to True.
+        with_iota (bool, optional): Whether to use iota parameter. Defaults to False.
+        with_alpha (bool, optional): Whether to use alpha parameter. Defaults to False.
+        lp_solver (Solver, optional): The linear programming solver to use. Defaults to SCIP.
+        nlp_solver (Solver, optional): The nonlinear programming solver to use. Defaults to IPOPT.
+        verbose (bool, optional): Whether to enable verbose output. Defaults to False.
+        correction_config (CorrectionConfig, optional): Configuration for corrections during optimization. Defaults to CorrectionConfig().
+        onlytested (str, optional): Specific reactions to test during postprocessing. Defaults to "".
+
+    Returns:
+        tuple[float, list[float | int]]: Best result and a list of feasible switches.
+    """
     if variability_data == {}:
         variability_data = perform_lp_variability_analysis(
             cobrak_model=cobrak_model,
@@ -781,6 +907,26 @@ def _sampling_routine(
     correction_config: CorrectionConfig,
     min_abs_objvalue: float,
 ) -> list[dict[str, float]]:
+    """Runs the sampling routine to find feasible initial solutions.
+
+    Args:
+        cobrak_model (Model): The COBRA-k model to optimize.
+        objective_target (str): Target value for the objective function.
+        objective_sense (int): Sense of the objective function (1 for maximization, -1 for minimization).
+        variability_dict (dict[str, tuple[float, float]]): Variability data for each reaction.
+        with_kappa (bool): Whether to use kappa parameter.
+        with_gamma (bool): Whether to use gamma parameter.
+        with_iota (bool): Whether to use iota parameter.
+        with_alpha (bool): Whether to use alpha parameter.
+        deactivated_reaction_lists (list[list[str]]): List of deactivated reaction lists.
+        lp_solver (Solver): The linear programming solver to use.
+        nlp_solver (Solver): The nonlinear programming solver to use.
+        correction_config (CorrectionConfig): Configuration for corrections during optimization.
+        min_abs_objvalue (float): Minimum absolute value of objective function to consider valid.
+
+    Returns:
+        list[dict[str, float]]: List of feasible solutions found.
+    """
     working_dicts: list[dict[str, float]] = []
     for deactivated_reaction_set in deactivated_reaction_lists:
         try:
@@ -868,6 +1014,36 @@ def perform_nlp_evolutionary_optimization(
     pop_size: int | None = None,
     working_results: list[dict[str, float]] = [],
 ) -> dict[float, list[dict[str, float]]]:
+    """Performs NLP evolutionary optimization on the given COBRA-k model.
+
+    Args:
+        cobrak_model (Model): The COBRA-k model to optimize.
+        objective_target (str | dict[str, float]): Target value(s) for the objective function.
+        objective_sense (int): Sense of the objective function (1 for maximization, -1 for minimization).
+        variability_dict (dict[str, tuple[float, float]], optional): Variability data for each reaction. Defaults to {}.
+        with_kappa (bool, optional): Whether to use kappa parameter. Defaults to True.
+        with_gamma (bool, optional): Whether to use gamma parameter. Defaults to True.
+        with_iota (bool, optional): Whether to use iota parameter. Defaults to False.
+        with_alpha (bool, optional): Whether to use alpha parameter. Defaults to False.
+        sampling_wished_num_feasible_starts (int, optional): The number of wished feasible start solutions. Defaults to 3.
+        sampling_max_metarounds (int, optional): Maximum number of meta rounds for sampling. Defaults to 3.
+        sampling_rounds_per_metaround (int, optional): Number of rounds per meta round for sampling. Defaults to 2.
+        sampling_max_deactivated_reactions (int, optional): Maximum number of deactivated reactions allowed. Defaults to 5.
+        sampling_always_deactivated_reactions (list[str], optional): List of reactions that should always be deactivated. Defaults to [].
+        evolution_num_gens (int, optional): Number of generations for the evolutionary algorithm. Defaults to 5.
+        algorithm (Literal["pso", "genetic"], optional): Type of optimization algorithm to use. Defaults to "genetic", which is also the only algorithm currently available.
+        lp_solver (Solver, optional): The linear programming solver to use. Defaults to SCIP.
+        nlp_solver (Solver, optional): The nonlinear programming solver to use. Defaults to IPOPT.
+        objvalue_json_path (str, optional): Path to the JSON file for objective values. Defaults to "".
+        max_rounds_same_objvalue (float, optional): Maximum number of rounds with same objective value before stopping. Defaults to float("inf").
+        correction_config (CorrectionConfig, optional): Configuration for corrections during optimization. Defaults to CorrectionConfig().
+        min_abs_objvalue (float, optional): Minimum absolute value of objective function to consider valid. Defaults to 1e-13.
+        pop_size (int | None, optional): Population size for the evolutionary algorithm. Defaults to None.
+        working_results (list[dict[str, float]], optional): List of initial feasible results. Defaults to [].
+
+    Returns:
+        dict[float, list[dict[str, float]]]: Dictionary of objective values and corresponding solutions.
+    """
     if variability_dict == {}:
         variability_dict = perform_lp_variability_analysis(
             cobrak_model=cobrak_model,
@@ -900,7 +1076,7 @@ def perform_nlp_evolutionary_optimization(
             [
                 sample(
                     deactivatable_reactions,
-                    randint(1, sampling_max_deactivated_reactions + 1),
+                    randint(1, sampling_max_deactivated_reactions + 1),  # noqa: NPY002
                 )
                 + sampling_always_deactivated_reactions
                 for _ in range(sampling_rounds_per_metaround)

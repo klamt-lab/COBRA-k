@@ -278,11 +278,11 @@ def _add_error_sum_to_model(
     correction_config: CorrectionConfig,
 ) -> Model:
     """Adds an error sum to the model, which can be either a quadratic or linear sum of error variables,
-       optionally weighted based on certain parameters from the COBRA model.
+       optionally weighted based on certain parameters from the COBRA-k model.
 
     Args:
         model (ConcreteModel): The Pyomo model to which the error sum will be added.
-        cobrak_model (Model): The COBRA model containing the necessary parameters for weighting.
+        cobrak_model (Model): The COBRA-k model containing the necessary parameters for weighting.
         correction_config (CorrectionConfig): The correction configuration determining how the sum is built.
 
     Returns:
@@ -866,7 +866,7 @@ def _apply_error_scenario(
 
     Args:
         model (ConcreteModel): The Pyomo model to which the error scenario will be applied.
-        cobrak_model (Model): The COBRA model containing information about reactions and metabolites.
+        cobrak_model (Model): The COBRA-k model containing information about reactions and metabolites.
         correction_config (CorrectionConfig): The corrrection configuration determining which errors are appliued.
 
     Raises:
@@ -1026,11 +1026,11 @@ def _batch_variability_optimization(
 def _get_dG0_highbound(cobrak_model: Model, dG0_error_cutoff: float) -> float:
     """Calculate the high bound for dG0 values based on a specified error cutoff.
 
-    This function retrieves all dG0 values from the COBRA model, sorts them, and determines
+    This function retrieves all dG0 values from the COBRA-k model, sorts them, and determines
     the high bound by selecting the value at the percentile defined by $1 - dG0_error_cutoff$.
 
     Args:
-        cobrak_model (Model): The COBRA model containing the dG0 values.
+        cobrak_model (Model): The COBRA-k model containing the dG0 values.
         dG0_error_cutoff (float): The fraction of dG0 values to consider for the high bound.
 
     Returns:
@@ -1044,12 +1044,12 @@ def _get_dG0_highbound(cobrak_model: Model, dG0_error_cutoff: float) -> float:
 def _get_km_bounds(cobrak_model: Model, km_error_cutoff: float) -> tuple[float, float]:
     """Determine the low and high bounds for km values based on a specified error cutoff.
 
-    This function collects all km values from the reactions in the COBRA model, sorts them,
+    This function collects all km values from the reactions in the COBRA-k model, sorts them,
     and calculates both the low and high bounds by selecting the values at the percentiles
     defined by km_error_cutoff and $1 - km_error_cutoff$, respectively.
 
     Args:
-        cobrak_model (Model): The COBRA model containing the enzyme reaction data with km values.
+        cobrak_model (Model): The COBRA-k model containing the enzyme reaction data with km values.
         km_error_cutoff (float): The fraction of km values to consider for the bounds.
 
     Returns:
@@ -1272,7 +1272,7 @@ def get_lp_from_cobrak_model(
     ConcreteModel
         The constructed LP model with the specified constraints and configurations.
     """
-    # Initialize the steady-state LP model from the COBRA model, ignoring specified reactions
+    # Initialize the steady-state LP model from the COBRA-k model, ignoring specified reactions
     model: ConcreteModel = _get_steady_state_lp_from_cobrak_model(
         cobrak_model=cobrak_model,
         ignored_reacs=ignored_reacs,
@@ -1370,7 +1370,7 @@ def perform_lp_min_active_reactions_analysis(
     Parameters
     ----------
     cobrak_model : Model
-        The COBRA model containing the metabolic network and reaction data.
+        The COBRA-k model containing the metabolic network and reaction data.
     with_enzyme_constraints : bool
         If True, includes enzyme-pool constraints in the model.
     variability_dict : dict[str, tuple[float, float]]
@@ -1793,8 +1793,7 @@ def perform_lp_variability_analysis(
                 objective_targets.append((+1, enzyme_delivery_var_name))
 
     for further_tested_var in further_tested_vars:
-        objective_targets.append((+1, further_tested_var))
-        objective_targets.append((-1, further_tested_var))
+        objective_targets.extend(((+1, further_tested_var), (-1, further_tested_var)))
 
     objectives_data: list[tuple[str, str]] = []
     for obj_sense, target_id in objective_targets:

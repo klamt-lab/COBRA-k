@@ -27,7 +27,7 @@
     # Run MINLP (by default, with the SCIP solver)
     minlp_result = perform_nlp_reversible_optimization(
         cobrak_model=toy_model,
-        objective_target="EX_ATP", # Let's maximize ATP production
+        objective_target="ATP_Consumption", # Let's maximize ATP production
         objective_sense=+1,
         # Set the variable bounds from our preparatory variability analysis
         variability_dict=variability_dict,
@@ -45,7 +45,7 @@
     # Run (local and fast) NLP (by default, with the IPOPT solver)
     nlp_result = perform_nlp_irreversible_optimization_with_active_reacs_only(
         toy_model,
-        objective_target="EX_ATP",
+        objective_target="ATP_Consumption",
         objective_sense=+1,
         # Set the suitable set of thermodynamically active reactions
         optimization_dict=minlp_result,
@@ -231,7 +231,7 @@ variability_dict = perform_lp_variability_analysis(
 # Run MINLP (by default, with the SCIP solver)
 minlp_result = perform_nlp_reversible_optimization(
     cobrak_model=toy_model,
-    objective_target="EX_ATP", # Let's maximize ATP production
+    objective_target="ATP_Consumption", # Let's maximize ATP production
     objective_sense=+1,
     # Set the variable bounds from our preparatory variability analysis
     variability_dict=variability_dict,
@@ -284,7 +284,7 @@ variability_dict = perform_lp_variability_analysis(
 # Find suitable set of thermodynamically active reactions
 ectfba_result = perform_lp_optimization(
     cobrak_model=toy_model,
-    objective_target="EX_ATP",
+    objective_target="ATP_Consumption",
     objective_sense=+1,
     # Set enzyme constraints as they are also used in the NLP
     with_enzyme_constraints=True,
@@ -295,7 +295,7 @@ ectfba_result = perform_lp_optimization(
 # Run (local and fast) NLP (by default, with the IPOPT solver)
 nlp_result = perform_nlp_irreversible_optimization_with_active_reacs_only(
     toy_model,
-    objective_target="EX_ATP",
+    objective_target="ATP_Consumption",
     objective_sense=+1,
     # Set the suitable set of thermodynamically active reactions
     optimization_dict=ectfba_result,

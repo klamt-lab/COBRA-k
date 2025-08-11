@@ -16,7 +16,7 @@
     # value as values.
     complete_result = perform_nlp_evolutionary_optimization(
         cobrak_model=toy_model,
-        objective_target="EX_ATP",
+        objective_target="ATP_Consumption",
         objective_sense=+1,
         variability_dict={}, # No variability dict given -> An ecTFVA is automatically run for us
     )
@@ -30,7 +30,7 @@
     postprocess_results, best_postprocess_result = postprocess(
         cobrak_model=toy_model,
         opt_dict=best_result,
-        objective_target="EX_ATP",
+        objective_target="ATP_Consumption",
         objective_sense=+1,
         variability_data={}, # No variability dict given -> An ecTFVA is automatically run for us
     )
@@ -147,7 +147,7 @@ from cobrak.printing import print_dict, print_optimization_result
 # value as values.
 complete_result = perform_nlp_evolutionary_optimization(
     cobrak_model=toy_model,
-    objective_target="EX_ATP",
+    objective_target="ATP_Consumption",
     objective_sense=+1,
     variability_dict={}, # No variability dict given -> An ecTFVA is automatically run for us
 )
@@ -174,7 +174,7 @@ from cobrak.evolution import postprocess
 postprocess_results, best_postprocess_result = postprocess(
     cobrak_model=toy_model,
     opt_dict=best_result,
-    objective_target="EX_ATP",
+    objective_target="ATP_Consumption",
     objective_sense=+1,
     variability_data={}, # No variability dict given -> An ecTFVA is automatically run for us
 )

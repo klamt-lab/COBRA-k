@@ -1,5 +1,6 @@
-import z_add_path  # noqa: F401
 from statistics import mean
+
+import z_add_path  # noqa: F401
 
 from cobrak.io import get_files, json_load, standardize_folder
 
@@ -7,9 +8,7 @@ roundnumsdict: dict[str, list[int]] = {
     "Raven": [1, 2, 3, 4, 5],
     "MacBook": [6],
 }
-datafolder = standardize_folder(
-    "examples/iCH360/RESULTS_GLCUPTAKE"
-)
+datafolder = standardize_folder("examples/iCH360/RESULTS_GLCUPTAKE")
 
 
 for computer_id, roundnums in roundnumsdict.items():

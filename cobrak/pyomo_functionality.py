@@ -2,6 +2,7 @@
 
 from collections.abc import Callable
 
+from joblib import cpu_count
 from numpy import linspace
 from pydantic.dataclasses import dataclass
 from pyomo.environ import (
@@ -22,6 +23,15 @@ from .constants import OBJECTIVE_VAR_NAME, QUASI_INF
 
 @dataclass
 class ApproximationPoint:
+    """Represents a point in a linear approximation.
+
+    This dataclass is used to store the slope, intercept, and x-coordinate of a point in a linear approximation.
+
+    Attributes:
+    - slope (float): The slope of the line passing through this point.
+    - intercept (float): The y-intercept of the line passing through this point.
+    - x_point (float): The x-coordinate of this point.
+    """
     slope: float
     intercept: float
     x_point: float
@@ -39,6 +49,28 @@ def add_linear_approximation_to_pyomo_model(
     max_num_segments: int = float("inf"),
     min_abs_error: float = 1e-6,
 ) -> ConcreteModel:
+    """Add a linear approximation of a given function to a Pyomo model.
+
+    This function approximates the provided function `y_function` with a piecewise linear function
+    and adds the approximation to the given Pyomo model. The approximation is based on the derivative
+    of the function `y_function_derivative`. The approximation is added as a new variable and a set
+    of constraints to the model.
+
+    Parameters:
+    - model (ConcreteModel): The Pyomo model to which the approximation will be added.
+    - y_function (Callable[[float], float]): The function to be approximated.
+    - y_function_derivative (Callable[[float], float]): The derivative of the function to be approximated.
+    - x_reference_var_id (str): The name of the variable in the model that will be used as the independent variable for the approximation.
+    - new_y_var_name (str): The name of the new variable that will be added to the model to represent the approximation.
+    - min_x (float): The minimum value of the independent variable for the approximation.
+    - max_x (float): The maximum value of the independent variable for the approximation.
+    - max_rel_difference (float): The maximum allowed relative difference between the approximation and the original function.
+    - max_num_segments (int, optional): The maximum number of segments to use for the piecewise linear approximation. Defaults to infinity.
+    - min_abs_error (float, optional): The minimum absolute error allowed between the approximation and the original function. Defaults to 1e-6.
+
+    Returns:
+    - ConcreteModel: The Pyomo model with the added approximation.
+    """
     # Find fitting approximation
     num_segments = 2
     approximation_points: list[ApproximationPoint] = []
@@ -133,6 +165,20 @@ def set_target_as_var_and_value(
     var_name: str,
     constraint_name: str,
 ) -> tuple[ConcreteModel, Expression]:
+    """Set a target as a variable and its value in a Pyomo model.
+
+    This function adds a new variable to the given Pyomo model and sets its value to the provided target.
+    The target can be either a single variable name or a dictionary of variable names with their corresponding multipliers.
+
+    Parameters:
+    - model (ConcreteModel): The Pyomo model to which the variable and constraint will be added.
+    - target (str | dict[str, float]): The target for the new variable. It can be a single variable name or a dictionary of variable names with their corresponding multipliers.
+    - var_name (str): The name of the new variable that will be added to the model.
+    - constraint_name (str): The name of the new constraint that will be added to the model to set the value of the new variable.
+
+    Returns:
+    - tuple[ConcreteModel, Expression]: The Pyomo model with the added variable and constraint, and the expression representing the target.
+    """
     if isinstance(target, str):
         expr = getattr(model, target)
     else:
@@ -155,6 +201,22 @@ def add_objective_to_model(
     objective_name: str,
     objective_var_name: str = OBJECTIVE_VAR_NAME,
 ) -> ConcreteModel:
+    """Add an objective function to a Pyomo model.
+
+    This function adds an objective function to the given Pyomo model based on the provided target and sense.
+    The target can be a single variable name or a dictionary of variable names with their corresponding multipliers.
+    The sense can be either maximization (as int, value > 0) or minimization (as int, value < 0).
+
+    Parameters:
+    - model (ConcreteModel): The Pyomo model to which the objective function will be added.
+    - objective_target (str | dict[str, float]): The target for the objective function. It can be a single variable name or a dictionary of variable names with their corresponding multipliers.
+    - objective_sense (int): The sense of the objective function. It can be an integer (positive for maximization, negative for minimization, zero for no objective).
+    - objective_name (str): The name of the new objective function that will be added to the model.
+    - objective_var_name (str, optional): The name of the new variable that will be added to the model to represent the objective function. Defaults to OBJECTIVE_VAR_NAME.
+
+    Returns:
+    - ConcreteModel: The Pyomo model with the added objective function.
+    """
     setattr(
         model,
         objective_name,
@@ -238,9 +300,6 @@ def get_model_var_names(model: ConcreteModel) -> list[str]:
     return [v.name for v in model.component_objects(Var)]
 
 
-from joblib import cpu_count
-
-
 def get_solver(
     solver_name: str,
     solver_options: dict[str, float | int | str],
@@ -248,19 +307,15 @@ def get_solver(
 ) -> SolverFactoryClass:
     """Create and configure a solver for the given solver name and options.
 
-    This function returns a pyomo solver using the specified solver name and applies the provided options to it.
+    This function returns a Pyomo solver using the specified solver name and applies the provided options to it.
 
     Parameters:
     - solver_name (str): The name of the solver to be used (e.g., 'glpk', 'cbc').
     - solver_options (dict[str, float | int | str]): A dictionary of solver options where keys are option names and values are the corresponding option values.
+    - solver_attrs (dict[str, float | int | str]): A dictionary of solver attributes where keys are attribute names and values are the corresponding attribute values.
 
     Returns:
     - SolverFactoryClass: The configured solver instance.
-
-    Example:
-    ```
-    solver = get_solver('glpk', {'timelimit': 600, 'mipgap': 0.01})
-    ```
     """
     if solver_name == "ipopt" and cpu_count() > 16:
         solver = SolverFactory(solver_name)

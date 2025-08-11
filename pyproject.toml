@@ -1,6 +1,6 @@
 [project]
 name = "cobrak"
-version = "0.0.2"
+version = "0.0.3"
 authors = [
   { name="Pavlos Stephanos Bekiaris" },
 ]
@@ -26,6 +26,7 @@ dependencies = [
     "joblib",
     "rich",
     "pydantic",
+    "highspy",
     # "copasi-basico",
     # "ruff",
     # "mkdocs",

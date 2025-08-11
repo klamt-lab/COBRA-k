@@ -29,7 +29,7 @@ https://scipopt.org/doc/html/INSTALL.php
 
 ## Installation of third-party solvers
 
-COBRA-k always comes pre-packaged with the quite capable open source linear and non-linear program solver [IPOPT](https://github.com/coin-or/Ipopt) (and on some systems, also automatically the solver SCIP). With this solver, all optimizations without integer variables provided by COBRA-k can be run.
+COBRA-k always comes pre-packaged with the quite capable open source linear (mixed-integer) solver [HiGHS](https://github.com/ERGO-Code/HiGHS) and the linear and non-linear program solver [IPOPT](https://github.com/coin-or/Ipopt) (and on some systems, also automatically the solver SCIP). With this solver, all optimizations without integer variables provided by COBRA-k can be run.
 
 !!! note
     IPOPT comes pre-packages with the free linear subsolver MA27. However, for larger models, the much faster linear subsolver MA57 or one of its alternatives are highly recommended. See here on how to obtain them (e.g. a free academic license is provided):

@@ -2,11 +2,10 @@ import z_add_path  # noqa: F401
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill
 
+from cobrak.constants import OBJECTIVE_VAR_NAME
 from cobrak.io import ensure_folder_existence, get_files, json_load, standardize_folder
 from cobrak.spreadsheet_functionality import BG_COLOR_GREEN, BG_COLOR_RED
 from cobrak.utilities import sort_dict_keys
-from cobrak.constants import OBJECTIVE_VAR_NAME
-
 
 BG_COLOR_GREY = PatternFill(start_color="d3d3d3", end_color="d3d3d3", fill_type="solid")
 
@@ -87,7 +86,11 @@ for eligible_json in eligible_jsons:
 
 kotarget_to_max_obj = {}
 for key, value in checkdict.items():
-    for index in (0, 1, 2,):
+    for index in (
+        0,
+        1,
+        2,
+    ):
         try:
             valuelist = [value[i][index] for i in range(len(value))]
             assert len(set(valuelist)) == 1
@@ -138,7 +141,8 @@ further_results: dict[str, dict[str, float]] = sort_dict_keys(
 further_results = {
     key[2:]: json_load(
         f"examples/iCH360/RESULTS_SINGLES_KOS/final_best_result__{kotarget_to_max_obj[key]}__{key}.json"
-    ) for key in kotarget_to_max_obj
+    )
+    for key in kotarget_to_max_obj
 }
 for key, value in further_results.items():
     results[key] = value

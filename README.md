@@ -5,7 +5,7 @@
         <td>
             <div style="background-color: #2E4053; padding: 4px 8px; border-radius: 4px; cursor: pointer; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
             <a style="color: #FFFFFF; text-decoration: none; font-weight: bold;" href="https://pypi.org/project/cobrak/">
-            pip &#124; version 0.0.1
+            pip &#124; version 0.0.3
             </a>
             </div>
         </td>
@@ -119,7 +119,7 @@ pip install cobrak
 
 After the installation, which should just take a few minutes, the package can be imported as ```cobrak```.
 
-Also note that only the free and open-source solver [IPOPT](https://github.com/coin-or/Ipopt) (and on some systems, also automatically the solver SCIP) come pre-installed. For more on how to install other solvers, [visit the respective documentation page here](https://klamt-lab.github.io/COBRA-k/installation.html#installation-of-third-party-solvers).
+Also note that only the free and open-source solvers [HiGHS](https://github.com/ERGO-Code/HiGHS) (for *linear* (also mixed-integer) problems) and [IPOPT](https://github.com/coin-or/Ipopt) (for linear and *non*-linear problems) - and on some systems, also automatically the solver SCIP - come pre-installed. For more on how to install other solvers, [visit the respective documentation page here](https://klamt-lab.github.io/COBRA-k/installation.html#installation-of-third-party-solvers).
 
 COBRA-k requires Python≥3.10, making it work on Python-3.10-compatible OS such as Windows, MacOS and Linux. Thereby, COBRA-k is mainly tested on Ubuntu on an x86-64 computer and on a MacBook with an ARM processor.
 

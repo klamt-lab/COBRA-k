@@ -85,6 +85,20 @@
           </rdf:RDF>
         </annotation>
       </species>
+      <species metaid="meta_M_ADP" id="M_ADP" compartment="c" hasOnlySubstanceUnits="false" boundaryCondition="false" constant="false" fbc:charge="0">
+        <annotation>
+          <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:vCard="http://www.w3.org/2001/vcard-rdf/3.0#" xmlns:vCard4="http://www.w3.org/2006/vcard/ns#" xmlns:bqbiol="http://biomodels.net/biology-qualifiers/" xmlns:bqmodel="http://biomodels.net/model-qualifiers/">
+            <rdf:Description rdf:about="#meta_M_ADP">
+              <bqbiol:is>
+                <rdf:Bag>
+                  <rdf:li rdf:resource="https://identifiers.org/cobrak_Cmin/1.0000000000000004e-06"/>
+                  <rdf:li rdf:resource="https://identifiers.org/cobrak_Cmax/0.02"/>
+                </rdf:Bag>
+              </bqbiol:is>
+            </rdf:Description>
+          </rdf:RDF>
+        </annotation>
+      </species>
     </listOfSpecies>
     <listOfParameters>
       <parameter sboTerm="SBO:0000626" id="cobra_default_lb" value="-1000" constant="true"/>
@@ -103,8 +117,8 @@
                   <rdf:li rdf:resource="https://identifiers.org/description/This is reaction Glycolysis"/>
                   <rdf:li rdf:resource="https://identifiers.org/cobrak_id_V0/Glycolysis"/>
                   <rdf:li rdf:resource="https://identifiers.org/cobrak_dG0_V0/-10.0"/>
-                  <rdf:li rdf:resource="https://identifiers.org/cobrak_k_cat_V0/70000.0"/>
-                  <rdf:li rdf:resource="https://identifiers.org/cobrak_k_ms_V0/{&apos;S&apos;: 0.0001, &apos;M&apos;: 0.0001, &apos;ATP&apos;: 0.0001}"/>
+                  <rdf:li rdf:resource="https://identifiers.org/cobrak_k_cat_V0/140000.0"/>
+                  <rdf:li rdf:resource="https://identifiers.org/cobrak_k_ms_V0/{&apos;S&apos;: 0.0001, &apos;ADP&apos;: 0.0001, &apos;M&apos;: 0.0001, &apos;ATP&apos;: 0.0001}"/>
                   <rdf:li rdf:resource="https://identifiers.org/cobrak_k_is_V0/{}"/>
                   <rdf:li rdf:resource="https://identifiers.org/cobrak_k_as_V0/{}"/>
                   <rdf:li rdf:resource="https://identifiers.org/cobrak_special_stoichiometries_V0/{}"/>
@@ -115,6 +129,7 @@
         </annotation>
         <listOfReactants>
           <speciesReference species="M_S" stoichiometry="1" constant="true"/>
+          <speciesReference species="M_ADP" stoichiometry="2" constant="true"/>
         </listOfReactants>
         <listOfProducts>
           <speciesReference species="M_M" stoichiometry="1" constant="true"/>
@@ -132,8 +147,8 @@
                 <rdf:Bag>
                   <rdf:li rdf:resource="https://identifiers.org/cobrak_id_V0/Respiration"/>
                   <rdf:li rdf:resource="https://identifiers.org/cobrak_dG0_V0/-10.0"/>
-                  <rdf:li rdf:resource="https://identifiers.org/cobrak_k_cat_V0/70000.0"/>
-                  <rdf:li rdf:resource="https://identifiers.org/cobrak_k_ms_V0/{&apos;M&apos;: 0.03, &apos;C&apos;: 0.0001, &apos;ATP&apos;: 0.0001}"/>
+                  <rdf:li rdf:resource="https://identifiers.org/cobrak_k_cat_V0/140000.0"/>
+                  <rdf:li rdf:resource="https://identifiers.org/cobrak_k_ms_V0/{&apos;ADP&apos;: 0.00027, &apos;M&apos;: 0.00027, &apos;C&apos;: 0.0001, &apos;ATP&apos;: 0.0001}"/>
                   <rdf:li rdf:resource="https://identifiers.org/cobrak_k_is_V0/{}"/>
                   <rdf:li rdf:resource="https://identifiers.org/cobrak_k_as_V0/{}"/>
                   <rdf:li rdf:resource="https://identifiers.org/cobrak_special_stoichiometries_V0/{}"/>
@@ -144,10 +159,11 @@
         </annotation>
         <listOfReactants>
           <speciesReference species="M_M" stoichiometry="1" constant="true"/>
+          <speciesReference species="M_ADP" stoichiometry="4" constant="true"/>
         </listOfReactants>
         <listOfProducts>
           <speciesReference species="M_C" stoichiometry="1" constant="true"/>
-          <speciesReference species="M_ATP" stoichiometry="6" constant="true"/>
+          <speciesReference species="M_ATP" stoichiometry="4" constant="true"/>
         </listOfProducts>
         <fbc:geneProductAssociation>
           <fbc:geneProductRef fbc:geneProduct="G_E_resp"/>
@@ -161,8 +177,8 @@
                 <rdf:Bag>
                   <rdf:li rdf:resource="https://identifiers.org/cobrak_id_V0/Overflow"/>
                   <rdf:li rdf:resource="https://identifiers.org/cobrak_dG0_V0/-10.0"/>
-                  <rdf:li rdf:resource="https://identifiers.org/cobrak_k_cat_V0/70000.0"/>
-                  <rdf:li rdf:resource="https://identifiers.org/cobrak_k_ms_V0/{&apos;M&apos;: 0.005, &apos;P&apos;: 0.0001}"/>
+                  <rdf:li rdf:resource="https://identifiers.org/cobrak_k_cat_V0/140000.0"/>
+                  <rdf:li rdf:resource="https://identifiers.org/cobrak_k_ms_V0/{&apos;M&apos;: 0.001, &apos;P&apos;: 0.0001}"/>
                   <rdf:li rdf:resource="https://identifiers.org/cobrak_k_is_V0/{}"/>
                   <rdf:li rdf:resource="https://identifiers.org/cobrak_k_as_V0/{}"/>
                   <rdf:li rdf:resource="https://identifiers.org/cobrak_special_stoichiometries_V0/{}"/>
@@ -229,13 +245,13 @@
           <speciesReference species="M_P" stoichiometry="1" constant="true"/>
         </listOfReactants>
       </reaction>
-      <reaction metaid="meta_R_EX_ATP" id="R_EX_ATP" reversible="false" fast="false" fbc:lowerFluxBound="cobra_0_bound" fbc:upperFluxBound="cobra_default_ub">
+      <reaction metaid="meta_R_ATP_Consumption" id="R_ATP_Consumption" reversible="false" fast="false" fbc:lowerFluxBound="cobra_0_bound" fbc:upperFluxBound="cobra_default_ub">
         <annotation>
           <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:vCard="http://www.w3.org/2001/vcard-rdf/3.0#" xmlns:vCard4="http://www.w3.org/2006/vcard/ns#" xmlns:bqbiol="http://biomodels.net/biology-qualifiers/" xmlns:bqmodel="http://biomodels.net/model-qualifiers/">
-            <rdf:Description rdf:about="#meta_R_EX_ATP">
+            <rdf:Description rdf:about="#meta_R_ATP_Consumption">
               <bqbiol:is>
                 <rdf:Bag>
-                  <rdf:li rdf:resource="https://identifiers.org/cobrak_id_V0/EX_ATP"/>
+                  <rdf:li rdf:resource="https://identifiers.org/cobrak_id_V0/ATP_Consumption"/>
                 </rdf:Bag>
               </bqbiol:is>
             </rdf:Description>
@@ -244,6 +260,9 @@
         <listOfReactants>
           <speciesReference species="M_ATP" stoichiometry="1" constant="true"/>
         </listOfReactants>
+        <listOfProducts>
+          <speciesReference species="M_ADP" stoichiometry="1" constant="true"/>
+        </listOfProducts>
       </reaction>
       <reaction metaid="meta_R_cobrak_global_settings" id="R_cobrak_global_settings" reversible="false" fast="false" fbc:lowerFluxBound="cobra_0_bound" fbc:upperFluxBound="cobra_0_bound">
         <annotation>
@@ -251,7 +270,7 @@
             <rdf:Description rdf:about="#meta_R_cobrak_global_settings">
               <bqbiol:is>
                 <rdf:Bag>
-                  <rdf:li rdf:resource="https://identifiers.org/cobrak_max_prot_pool/0.25"/>
+                  <rdf:li rdf:resource="https://identifiers.org/cobrak_max_prot_pool/0.4"/>
                   <rdf:li rdf:resource="https://identifiers.org/cobrak_R/0.008314"/>
                   <rdf:li rdf:resource="https://identifiers.org/cobrak_T/298.15"/>
                   <rdf:li rdf:resource="https://identifiers.org/cobrak_kinetic_ignored_metabolites/[]"/>

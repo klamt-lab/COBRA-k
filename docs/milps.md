@@ -10,7 +10,7 @@
     # Perform TFBA
     tfba_result = perform_lp_optimization(
         cobrak_model=toy_model,
-        objective_target="EX_ATP",
+        objective_target="ATP_Consumption",
         objective_sense=+1,
         with_thermodynamic_constraints=True,
     )
@@ -72,7 +72,7 @@
     # Run ecTFBA
     ectfba_result = perform_lp_optimization(
         cobrak_model=toy_model,
-        objective_target="EX_ATP",
+        objective_target="ATP_Consumption",
         objective_sense=+1,
         with_thermodynamic_constraints=True,
         with_enzyme_constraints=True,
@@ -256,7 +256,7 @@ from cobrak.printing import print_dict, print_optimization_result
 # Perform TFBA
 tfba_result = perform_lp_optimization(
     cobrak_model=toy_model,
-    objective_target="EX_ATP",
+    objective_target="ATP_Consumption",
     objective_sense=+1,
     with_thermodynamic_constraints=True,
 )
@@ -386,7 +386,7 @@ from cobrak.printing import print_dict, print_optimization_result
 # Perform ecTFBA
 ectfba_result = perform_lp_optimization(
     cobrak_model=toy_model,
-    objective_target="EX_ATP",
+    objective_target="ATP_Consumption",
     objective_sense=+1,
     with_thermodynamic_constraints=True,
     with_enzyme_constraints=True,

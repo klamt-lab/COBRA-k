@@ -241,14 +241,13 @@ class Model:
     conc_sum_min_abs_error: float = 1e-6
     """[Optional and only works with MILPs with thermodynamic constraints] Maximal absolute concentration sum approximation error"""
 
-    def __enter__(self):
+    def __enter__(self):  # noqa: ANN204
         """Method called when entering 'with' blocks"""
         # Return a deep copy of self
         return deepcopy(self)
 
-    def __exit__(self, a, b, c):
+    def __exit__(self, a, b, c):  # noqa: ANN001, ANN204
         """Method called when leaving a 'with' block"""
-        # Cleanup can be performed here if needed
         return  # Return None to propagate any exceptions
 
 

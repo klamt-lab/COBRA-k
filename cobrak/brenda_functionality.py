@@ -498,7 +498,7 @@ def brenda_select_enzyme_kinetic_data_for_model(
       - Merge with any custom enzyme kinetic data provided.
 
     Parameters:
-        cobra_model (cobra.Model): A COBRA model object representing the metabolic network.
+        cobra_model (cobra.Model): A COBRApy model object representing the metabolic network.
         brenda_json_targz_file_path (str): Path to the compressed JSON file containing
             BRENDA enzyme kinetic data.
         bigg_metabolites_json_path (str): Path to the JSON file mapping metabolite IDs to
@@ -531,7 +531,7 @@ def brenda_select_enzyme_kinetic_data_for_model(
 
     Returns:
         dict[str, EnzymeReactionData | None]:
-            A dictionary mapping reaction IDs (str) from the COBRA model to their corresponding
+            A dictionary mapping reaction IDs (str) from the COBRApy model to their corresponding
             EnzymeReactionData instances. If no suitable kinetic data are found (or if the enzyme
             is in the ignore list), the value will be None for that reaction.
 

@@ -21,6 +21,7 @@ toy_model = Model(
             # Stoichiometrically relevant member variables
             stoichiometries={
                 "S": -1,  # Negative stoichiometry → S is consumed by Glycolysis
+                "ADP": -2,
                 "M": +1,  # Positive stoichiometry → M is produced by Glycolysis
                 "ATP": +2,  # Two ATP molecules are produced by Glycolysis
             },
@@ -37,9 +38,10 @@ toy_model = Model(
                 identifiers=[
                     "E_glyc"
                 ],  # Subunit(s) which constitute the reaction's catalyst
-                k_cat=70_000.0,  # Turnover number in h⁻¹
+                k_cat=140_000.0,  # Turnover number in h⁻¹
                 k_ms={  # Michaelis-Menten constants in M=mol⋅l⁻¹; Default is {}
                     "S": 0.0001,  # e.g., K_m of reaction Glycolysis regarding metabolite A
+                    "ADP": 0.0001,
                     "M": 0.0001,
                     "ATP": 0.0001,
                 },
@@ -52,17 +54,19 @@ toy_model = Model(
         "Respiration": Reaction(
             stoichiometries={
                 "M": -1,
+                "ADP": -4,
                 "C": +1,
-                "ATP": +6,
+                "ATP": +4,
             },
             min_flux=0.0,
             max_flux=1_000.0,
             dG0=-10.0,
             enzyme_reaction_data=EnzymeReactionData(
                 identifiers=["E_resp"],
-                k_cat=70_000.0,
+                k_cat=140_000.0,
                 k_ms={
-                    "M": 0.03,
+                    "ADP": 0.00027,
+                    "M": 0.00027,
                     "C": 0.0001,
                     "ATP": 0.0001,
                 },
@@ -78,9 +82,9 @@ toy_model = Model(
             dG0=-10.0,
             enzyme_reaction_data=EnzymeReactionData(
                 identifiers=["E_over"],
-                k_cat=70_000.0,
+                k_cat=140_000.0,
                 k_ms={
-                    "M": 0.005,
+                    "M": 0.001,
                     "P": 0.0001,
                 },
             ),
@@ -107,9 +111,11 @@ toy_model = Model(
             min_flux=0.0,
             max_flux=1_000.0,
         ),
-        "EX_ATP": Reaction(
+        # ATP "maintenance" reaction
+        "ATP_Consumption": Reaction(
             stoichiometries={
                 "ATP": -1,
+                "ADP": +1,
             },
             min_flux=0.0,
             max_flux=1_000.0,
@@ -134,6 +140,7 @@ toy_model = Model(
         "C": Metabolite(),
         "P": Metabolite(),
         "ATP": Metabolite(),
+        "ADP": Metabolite(),
     },
     enzymes={
         "E_glyc": Enzyme(
@@ -146,7 +153,7 @@ toy_model = Model(
         "E_resp": Enzyme(molecular_weight=2_500.0),
         "E_over": Enzyme(molecular_weight=500.0),
     },
-    max_prot_pool=0.25,  # In g⋅gDW⁻¹; This value is used for our analyses with enzyme constraints
+    max_prot_pool=0.4,  # In g⋅gDW⁻¹; This value is used for our analyses with enzyme constraints
     # We set the following two constraints:
     # 1.0 * EX_A - 1.0 * Glycolysis ≤ 0.0
     # and
@@ -167,5 +174,5 @@ toy_model = Model(
     R=STANDARD_R,
     T=STANDARD_T,
     max_conc_sum=float("inf"),
-    annotation={"description": "COBRAk toy model"},
+    annotation={"description": "COBRA-k toy model"},
 )

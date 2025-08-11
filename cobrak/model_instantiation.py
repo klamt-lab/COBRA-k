@@ -65,13 +65,13 @@ def delete_enzymatically_suboptimal_reactions_in_fullsplit_cobrapy_model(
     PGK variants will be retained in the returned model.
 
     Args:
-        cobra_model (cobra.Model): The COBRA model from which suboptimal reactions will be removed.
+        cobra_model (cobra.Model): The COBRA-k model from which suboptimal reactions will be removed.
         enzyme_reaction_data (dict[str, EnzymeReactionData | None]): A dictionary mapping reaction IDs to
             ```EnzymeReactionData``` objects or ```None``` if the data is missing.
         enzyme_molecular_weights (dict[str, float]): A dictionary mapping enzyme identifiers to their molecular weights.
 
     Returns:
-        cobra.Model: The modified COBRA model with suboptimal reactions removed.
+        cobra.Model: The modified COBRA-k model with suboptimal reactions removed.
     """
     reac_ids: list[str] = [reaction.id for reaction in cobra_model.reactions]
     ignored_reac_ids: list[str] = []
@@ -129,9 +129,9 @@ def delete_enzymatically_suboptimal_reactions_in_fullsplit_cobrapy_model(
 def delete_enzymatically_suboptimal_reactions_in_cobrak_model(
     cobrak_model: Model,
 ) -> Model:
-    """Delete enzymatically suboptimal reactions in a COBRA model, similar to the idea in sMOMENT/AutoPACMEN [1].
+    """Delete enzymatically suboptimal reactions in a COBRA-k model, similar to the idea in sMOMENT/AutoPACMEN [1].
 
-    This function processes each reaction in the provided COBRA model to
+    This function processes each reaction in the provided COBRA-k model to
     determine if it is enzymatically suboptimal based on Molecular Weight by k_cat (MW/kcat).
     Suboptimal reactions are identified by comparing their MW/kcat value with that of other reactions
     sharing the same base identifier, retaining only those with the lowest MW/kcat.
@@ -145,10 +145,10 @@ def delete_enzymatically_suboptimal_reactions_in_cobrak_model(
     [1] https://doi.org/10.1186/s12859-019-3329-9
 
     Parameters:
-        cobrak_model (cobra.Model): A COBRA model containing biochemical reactions.
+        cobrak_model (cobra.Model): A COBRA-k model containing biochemical reactions.
 
     Returns:
-        cobra.Model: The updated COBRA model after removing enzymatically suboptimal reactions.
+        cobra.Model: The updated COBRA-k model after removing enzymatically suboptimal reactions.
     """
     reac_id_to_mw_by_kcat: dict[str, float] = {}
     reac_id_to_base_id: dict[str, str] = {}
@@ -219,7 +219,7 @@ def get_cobrak_model_from_sbml_and_thermokinetic_data(
     """Creates a COBRAk model from an SBML and given further thermokinetic (thermodynamic and enzymatic) data.
 
     This function constructs a `Model` by integrating thermokinetic data and additional constraints
-    into an existing COBRA model. It allows for the specification of concentration ranges, enzyme molecular weights, and
+    into an existing COBRA-k model. It allows for the specification of concentration ranges, enzyme molecular weights, and
     reaction data, among other parameters.
 
     Args:
