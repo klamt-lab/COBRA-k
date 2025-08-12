@@ -153,8 +153,8 @@ Up to now, we looked at the range of predefined (mixed-integer) linear programs 
 
 But sometimes, for advanced optimizations, you need to add your own extra constraints and/or variables. Luckily, this is possible in COBRA-k thanks to its internal usage of pyomo [Website]()[GitHub](), as explained in the following subchapters :-)
 
-!!! note "Alternative for simple cases: Extra linear constraints"
-    If you just want to restrict a linear weighted sum of any kind of model variables, you can always use the ```extra_linear_constraints``` member variable as explained in the LP chapter.
+!!! note "Alternative for simple cases: Extra (non-)linear watches and constraints"
+    If you just want to restrict a (non-)linear weighted sum of any kind of model variables, you can always use the ```extra_linear_watches```, ```extra_nonlinear_watches```, ```extra_linear_constraints``` and ```extra_nonlinear_constraints``` member variable as explained in the LP and NLP chapters and the API documentation.
 
 ## Example 1: Construct own (MI)LPs
 

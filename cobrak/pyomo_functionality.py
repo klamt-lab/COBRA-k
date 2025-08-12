@@ -32,6 +32,7 @@ class ApproximationPoint:
     - intercept (float): The y-intercept of the line passing through this point.
     - x_point (float): The x-coordinate of this point.
     """
+
     slope: float
     intercept: float
     x_point: float

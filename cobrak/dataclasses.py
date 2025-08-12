@@ -107,11 +107,34 @@ class EnzymeReactionData:
 
 
 @dataclass
+class ExtraLinearWatch:
+    """Represents a linear 'watch', i.e. a variable that shows the linear sum of other variables.
+
+    A watch can be not only about reactions, but also all other
+    variables (except of watches that are defined *after* this one in the Model's extra_linear_watches
+    member variable) set in a COBRAk model. E.g., if one wants (for whatever
+    reason) a variable for the following constraint:
+    [A] - 2 * r_R1, we set
+    ExtraLinearWatch(
+        stoichiometries = {
+            "x_A": 1.0,
+            "R1": -2,
+        },
+    )
+
+    The name of the watch is set in as dictionary key for the model's extra_linear_watches
+    member variable.
+    """
+
+    stoichiometries: dict[str, float]
+
+
+@dataclass
 class ExtraLinearConstraint:
     """Represents a general linear Model constraint.
 
     This can affect not only reactions, but also all other
-    variables set in a COBRAk model. E.g., if one wants (for whatever
+    variables (including watches) set in a COBRAk model. E.g., if one wants (for whatever
     reason) the following constraint:
     0.5 <= [A] - 2 * r_R1 <= 2.1
     the corresponding ExtraLinearConstraint instance would be:
@@ -128,6 +151,71 @@ class ExtraLinearConstraint:
 
     stoichiometries: dict[str, float]
     """Keys: Model variable names; Children: Multipliers of constraint"""
+    lower_value: float | None = None
+    """Minimal numeric constraint value. Either this and/or upper_value must be not None. Defaults to None."""
+    upper_value: float | None = None
+    """Maximal numeric constraint value. Either this and/or lower_value must be not None. Defaults to None."""
+
+
+@dataclass
+class ExtraNonlinearWatch:
+    """Represents a non-linear 'watch', i.e. a variable that shows the linear sum of other variables.
+
+    Important note: Setting such a non-linear watch makes any optimization non-linear and thus incompatible
+    with linear solvers and computationally much more expensive!
+
+    A watch can be not only about reactions, but also all other
+    variables (except of watches that are defined *after* this one in the Model's extra_linear_watches
+    member variable) set in a COBRAk model. E.g., if one wants (for whatever
+    reason) a variable for the following constraint:
+    exp([A]) - 2 * r_R1^3, we set
+    ExtraLinearWatch(
+        stoichiometries = {
+            "x_A": (1.0, "exp"),
+            "R1": (-2, "power3"),
+        },
+    )
+
+    Allowed non-linear functions are currently 'powerX' (with X as float-readable exponent), 'exp' and 'log'. If you just want
+    the normal value, 'same' can be used (i.e. multiply with 1).
+    The name of the watch is set in as dictionary key for the model's extra_linear_watches
+    member variable.
+    """
+
+    stoichiometries: dict[str, tuple[float, str]]
+
+
+@dataclass
+class ExtraNonlinearConstraint:
+    """Represents a general non-linear Model constraint.
+
+    Important note: Setting such a non-linear watch makes any optimization non-linear and thus incompatible
+    with linear solvers and computationally much more expensive!
+
+    This can affect not only reactions, but also all other
+    variables (including watches) set in a COBRA-k model. E.g., if one wants (for whatever
+    reason) the following constraint:
+    0.5 <= log([A]^2 - 2 * exp(r_R1)) <= 2.1
+    the corresponding ExtraNonlinearConstraint instance would be:
+    ExtraNonlinearConstraint(
+        stoichiometries = {
+            "x_A": (1.0, "power2"),
+            "R1": (-2, "exp"),
+        },
+        full_application = "log",
+        lower_value = 0.5,
+        upper_value = 2.1,
+    )
+    Allowed non-linear functions are currently 'powerX' (with X as float-readable exponent), 'exp' and 'log'. If you just want
+    the normal value, 'same' can be used (i.e. multiply with 1).
+    lower_value or upper_value can be None if no such limit is desired.
+    Also, full_application is by default 'same', which is to be set if no function on the full term is wished.
+    """
+
+    stoichiometries: dict[str, tuple[float, str]]
+    """Keys: Model variable names; Children: (Multipliers of constraint, function name 'same' (multiply with 1), 'powerX' (with X as float-readable exponent), 'exp' or 'log')"""
+    full_application: str = "same"
+    """Either function name 'same' (multiply with 1), 'powerX' (with X as float-readable exponent), 'exp' or 'log'). Defaults to 'same'."""
     lower_value: float | None = None
     """Minimal numeric constraint value. Either this and/or upper_value must be not None. Defaults to None."""
     upper_value: float | None = None
@@ -214,8 +302,18 @@ class Model:
     """[Only neccessary with enzymatic constraints] Keys: Enzyme IDs; Children: Enzyme instances; default is {}"""
     max_prot_pool: PositiveFloat = Field(default=1e9)
     """[Only neccessary with enzymatic constraints] Maximal usable protein pool in g/gDW; default is 1e9, i.e. basically unrestricted"""
+    extra_linear_watches: dict[str, ExtraLinearWatch] = Field(default_factory=dict)
+    """[Optional] Extra non-linear watches. Keys are watch names, children the watch definition."""
+    extra_nonlinear_watches: dict[str, ExtraNonlinearWatch] = Field(
+        default_factory=dict
+    )
+    """[Optional] Extra non-linear watches. Keys are watch names, children the watch definition."""
     extra_linear_constraints: list[ExtraLinearConstraint] = Field(default_factory=list)
     """[Optional] Extra linear constraints"""
+    extra_nonlinear_constraints: list[ExtraNonlinearConstraint] = Field(
+        default_factory=list
+    )
+    """[Optional] Extra non-linear constraints"""
     kinetic_ignored_metabolites: list[str] = Field(default_factory=list)
     """[Optional and only works with saturation term constraints] Metabolite IDs for which no k_m is neccessary"""
     R: PositiveFloat = Field(default=STANDARD_R)

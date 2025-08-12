@@ -22,7 +22,6 @@ from cobrak.evolution import (
     perform_nlp_evolutionary_optimization,
     perform_nlp_irreversible_optimization_with_active_reacs_only,
 )
-from cobrak.nlps import perform_nlp_reversible_optimization  # noqa: F401
 from cobrak.example_models import toy_model
 from cobrak.io import (
     json_write,
@@ -30,10 +29,11 @@ from cobrak.io import (
     save_cobrak_model_as_annotated_sbml_model,
 )
 from cobrak.lps import perform_lp_optimization, perform_lp_variability_analysis
+from cobrak.nlps import perform_nlp_reversible_optimization  # noqa: F401
 from cobrak.printing import (
     print_variability_result,
 )
-from cobrak.standard_solvers import IPOPT, SCIP, BARON  # noqa: F401
+from cobrak.standard_solvers import BARON, IPOPT, SCIP  # noqa: F401
 
 side_reac_id = "Glycolysis"
 main_reac_ids = ["Respiration", "Overflow"]
@@ -217,5 +217,7 @@ result = perform_nlp_evolutionary_optimization(
     evolution_num_gens=10,
 )
 t1 = time.time()
-print(f"max(ATP_Consumption) from evolutionary algorithm under EX_S <= 14: {list(result.keys())[0]}")
+print(
+    f"max(ATP_Consumption) from evolutionary algorithm under EX_S <= 14: {list(result.keys())[0]}"
+)
 print("TIME FOR COBRA-k evolutionary algorithm:", t1 - t0)

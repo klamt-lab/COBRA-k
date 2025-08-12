@@ -68,6 +68,7 @@ class COBRAKProblem:
         correction_config (CorrectionConfig, optional): Configuration for corrections during optimization. Defaults to CorrectionConfig().
         min_abs_objvalue (float, optional): The minimum absolute value of the objective function to consider as valid. Defaults to 1e-6.
         pop_size (int | None, optional): The population size for the evolutionary algorithm. Defaults to None.
+        ignore_nonlinear_extra_terms_in_ectfbas: (bool): Whether or not non-linear watches/constraints shall be ignored in ecTFBAs. Defaults to True.
 
     Attributes:
         original_cobrak_model (Model): A deep copy of the original COBRA-k model.
@@ -108,6 +109,7 @@ class COBRAKProblem:
         correction_config: CorrectionConfig = CorrectionConfig(),
         min_abs_objvalue: float = 1e-6,
         pop_size: int | None = None,
+        ignore_nonlinear_extra_terms_in_ectfbas: bool = True,
     ) -> None:
         """Initializes a COBRAKProblem object.
 
@@ -131,6 +133,7 @@ class COBRAKProblem:
             correction_config (CorrectionConfig, optional): Configuration for corrections during optimization. Defaults to CorrectionConfig().
             min_abs_objvalue (float, optional): The minimum absolute value of the objective function to consider as valid. Defaults to 1e-6.
             pop_size (int | None, optional): The population size for the evolutionary algorithm. Defaults to None.
+            ignore_nonlinear_extra_terms_in_ectfbas: (bool): Whether or not non-linear watches/constraints shall be ignored in ecTFBAs. Defaults to True.
         """
         self.original_cobrak_model: Model = deepcopy(cobrak_model)
         self.objective_target = objective_target
@@ -210,6 +213,9 @@ class COBRAKProblem:
         self.correction_config = correction_config
         self.min_abs_objvalue = min_abs_objvalue
         self.pop_size = pop_size
+        self.ignore_nonlinear_extra_terms_in_ectfbas = (
+            ignore_nonlinear_extra_terms_in_ectfbas
+        )
 
     def fitness(
         self,
@@ -241,6 +247,7 @@ class COBRAKProblem:
                 ignored_reacs=deactivated_reactions,
                 solver=self.lp_solver,
                 correction_config=self.correction_config,
+                ignore_nonlinear_terms=self.ignore_nonlinear_extra_terms_in_ectfbas,
             )
         except (ApplicationError, AttributeError, ValueError):
             first_ectfba_dict = {ALL_OK_KEY: False}
@@ -291,6 +298,7 @@ class COBRAKProblem:
                 ignored_reacs=deactivated_reactions,
                 solver=self.lp_solver,
                 correction_config=self.correction_config,
+                ignore_nonlinear_terms=self.ignore_nonlinear_extra_terms_in_ectfbas,
             )
         except (ApplicationError, AttributeError, ValueError):
             maxz_ectfba_dict = {ALL_OK_KEY: False}
@@ -349,6 +357,7 @@ class COBRAKProblem:
                 ignored_reacs=deactivated_reactions,
                 solver=self.lp_solver,
                 correction_config=self.correction_config,
+                ignore_nonlinear_terms=self.ignore_nonlinear_extra_terms_in_ectfbas,
             )
         except (ApplicationError, AttributeError, ValueError):
             minz_ectfba_dict = {ALL_OK_KEY: False}
@@ -906,6 +915,7 @@ def _sampling_routine(
     nlp_solver: Solver,
     correction_config: CorrectionConfig,
     min_abs_objvalue: float,
+    ignore_nonlinear_extra_terms_in_ectfbas: bool,
 ) -> list[dict[str, float]]:
     """Runs the sampling routine to find feasible initial solutions.
 
@@ -923,6 +933,7 @@ def _sampling_routine(
         nlp_solver (Solver): The nonlinear programming solver to use.
         correction_config (CorrectionConfig): Configuration for corrections during optimization.
         min_abs_objvalue (float): Minimum absolute value of objective function to consider valid.
+        ignore_nonlinear_extra_terms_in_ectfbas: (bool): Whether or not non-linear watches/constraints shall be ignored in ecTFBAs.
 
     Returns:
         list[dict[str, float]]: List of feasible solutions found.
@@ -941,6 +952,7 @@ def _sampling_routine(
                 ignored_reacs=deactivated_reaction_set,
                 solver=lp_solver,
                 correction_config=correction_config,
+                ignore_nonlinear_terms=ignore_nonlinear_extra_terms_in_ectfbas,
             )
         except (ApplicationError, AttributeError, ValueError):
             continue
@@ -1013,6 +1025,7 @@ def perform_nlp_evolutionary_optimization(
     min_abs_objvalue: float = 1e-13,
     pop_size: int | None = None,
     working_results: list[dict[str, float]] = [],
+    ignore_nonlinear_extra_terms_in_ectfbas: bool = True,
 ) -> dict[float, list[dict[str, float]]]:
     """Performs NLP evolutionary optimization on the given COBRA-k model.
 
@@ -1040,6 +1053,7 @@ def perform_nlp_evolutionary_optimization(
         min_abs_objvalue (float, optional): Minimum absolute value of objective function to consider valid. Defaults to 1e-13.
         pop_size (int | None, optional): Population size for the evolutionary algorithm. Defaults to None.
         working_results (list[dict[str, float]], optional): List of initial feasible results. Defaults to [].
+        ignore_nonlinear_extra_terms_in_ectfbas: (bool): Whether or not non-linear watches/constraints shall be ignored in ecTFBAs. Defaults to True.
 
     Returns:
         dict[float, list[dict[str, float]]]: Dictionary of objective values and corresponding solutions.
@@ -1051,6 +1065,7 @@ def perform_nlp_evolutionary_optimization(
             with_thermodynamic_constraints=True,
             active_reactions=[],
             solver=lp_solver,
+            ignore_nonlinear_terms=ignore_nonlinear_extra_terms_in_ectfbas,
         )
     else:
         variability_dict = deepcopy(variability_dict)
@@ -1104,6 +1119,7 @@ def perform_nlp_evolutionary_optimization(
                 nlp_solver,
                 correction_config,
                 min_abs_objvalue,
+                ignore_nonlinear_extra_terms_in_ectfbas,
             )
             for deactivated_reaction_lists in all_deactivated_reaction_lists
         )
@@ -1167,6 +1183,7 @@ def perform_nlp_evolutionary_optimization(
         correction_config=correction_config,
         min_abs_objvalue=min_abs_objvalue,
         pop_size=pop_size,
+        ignore_nonlinear_extra_terms_in_ectfbas=ignore_nonlinear_extra_terms_in_ectfbas,
     )
 
     return problem.optimize()

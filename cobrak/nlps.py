@@ -46,7 +46,7 @@ from .lps import (
     _add_concentration_vars_and_constraints,
     _add_df_and_dG0_var_for_reaction,
     _add_error_sum_to_model,
-    _add_extra_linear_constraints_to_lp,
+    _add_extra_watches_and_constraints_to_lp,
     _add_kappa_substrates_and_products_vars,
     _apply_error_scenario,
     _get_dG0_highbound,
@@ -120,6 +120,7 @@ def get_nlp_from_cobrak_model(
     irreversible_mode: bool = False,
     variability_data: dict[str, tuple[float, float]] = {},
     strict_mode: bool = False,
+    single_strict_reacs: list[str] = [],
     irreversible_mode_min_mdf: float = STANDARD_MIN_MDF,
     with_flux_sum_var: bool = False,
     correction_config: CorrectionConfig = CorrectionConfig(),
@@ -139,7 +140,8 @@ def get_nlp_from_cobrak_model(
        minimal value for κ, γ, ι, and α terms, and can lead to an overapproximation in this regard.
     * `irreversible_mode` (`bool`, optional): Whether to use irreversible mode. Defaults to `False`.
     * `variability_data` (`dict[str, tuple[float, float]]`, optional): Variability data for reactions. Defaults to `{}`.
-    * `strict_mode` (`bool`, optional): Whether to use strict mode. Defaults to `False`.
+    * `strict_mode` (`bool`, optional): Whether to use strict mode (i.e. all <= heuristics become == relations). Defaults to `False`.
+    * `single_strict_reacs` (`list[str]`, optional): If 'strict_mode==False', only reactions with an ID in this list are set to strict mode.
     * `irreversible_mode_min_mdf` (`float`, optional): Minimum MDF value for irreversible mode. Defaults to `STANDARD_MIN_MDF`.
     * `with_flux_sum_var` (`bool`, optional): Whether to include a flux sum variable of name ```cobrak.constants.FLUX_SUM_VAR```. Defaults to `False`.
     * `correction_config` (`CorrectionConfig`, optional): Parameter correction configuration. Defaults to `CorrectionConfig()`.
@@ -219,6 +221,8 @@ def get_nlp_from_cobrak_model(
                 reac_id_to_reac_couple_id[reac_id] = "".join(couple)
         created_z_vars = []
 
+    if with_alpha or with_iota:
+        model_var_names = get_model_var_names(model)
     for reac_id, reaction in cobrak_model.reactions.items():
         if reac_id in ignored_reacs:
             continue
@@ -229,7 +233,7 @@ def get_nlp_from_cobrak_model(
                 reac_id,
                 reaction,
                 cobrak_model,
-                strict_df_equality=strict_mode,
+                strict_df_equality=strict_mode or reac_id in single_strict_reacs,
                 add_error_term=correction_config.add_dG0_error_term
                 and (reaction.dG0 >= dG0_highbound),
                 max_abs_dG0_correction=correction_config.max_abs_dG0_correction,
@@ -323,7 +327,8 @@ def get_nlp_from_cobrak_model(
                     reac_id,
                     reaction,
                     cobrak_model,
-                    strict_kappa_products_equality=strict_mode,
+                    strict_kappa_products_equality=strict_mode
+                    or reac_id in single_strict_reacs,
                     add_error_term=correction_config.add_km_error_term,
                     max_rel_km_correction=correction_config.max_rel_km_correction,
                     kms_lowbound=kms_lowbound,
@@ -344,7 +349,7 @@ def get_nlp_from_cobrak_model(
                 + exp(getattr(model, kappa_substrates_var_id))
                 + exp(getattr(model, kappa_products_var_id))
             )
-            if strict_mode:
+            if strict_mode or reac_id in single_strict_reacs:
                 kappa_constraint = getattr(model, kappa_var_id) == kappa_rhs
             else:
                 kappa_constraint = getattr(model, kappa_var_id) <= kappa_rhs
@@ -379,7 +384,7 @@ def get_nlp_from_cobrak_model(
                     )
                 )  # (f_by_RT**2) / (1 + (f_by_RT**2)) would be a rough approximation
 
-            if strict_mode:
+            if strict_mode or reac_id in single_strict_reacs:
                 gamma_var_constraint_0 = getattr(model, gamma_var_name) == gamma_rhs
             else:
                 gamma_var_constraint_0 = getattr(model, gamma_var_name) <= gamma_rhs
@@ -395,17 +400,17 @@ def get_nlp_from_cobrak_model(
             for met_id, k_i in reaction.enzyme_reaction_data.k_is.items():
                 if met_id in cobrak_model.kinetic_ignored_metabolites:
                     continue
-                iota_product *= 1 / (
-                    1 + exp(getattr(model, f"{LNCONC_VAR_PREFIX}{met_id}")) / k_i
-                )
-
+                var_id = f"{LNCONC_VAR_PREFIX}{met_id}"
+                if var_id not in model_var_names:
+                    continue
+                iota_product *= 1 / (1 + exp(getattr(model, var_id)) / k_i)
             iota_var_name = f"{IOTA_VAR_PREFIX}{reac_id}"
             setattr(
                 model,
                 iota_var_name,
                 Var(within=Reals, bounds=(approximation_value, 1.0)),
             )
-            if strict_mode:
+            if strict_mode or reac_id in single_strict_reacs:
                 iota_var_constraint_0 = (
                     getattr(model, iota_var_name) == approximation_value + iota_product
                 )
@@ -419,19 +424,19 @@ def get_nlp_from_cobrak_model(
                 Constraint(rule=iota_var_constraint_0),
             )
 
-        # α (for solver stability, with a minimal value of 0.0001)
         if with_alpha and has_alpha:
             alpha_product = 1.0
             for met_id, k_a in reaction.enzyme_reaction_data.k_as.items():
                 if met_id in cobrak_model.kinetic_ignored_metabolites:
                     continue
+                var_id = f"{LNCONC_VAR_PREFIX}{met_id}"
+                if var_id not in model_var_names:
+                    continue
                 # alpha_product *= 1 + k_a * exp(
                 #    getattr(model, f"{LNCONC_VAR_PREFIX}{met_id}")
                 # )
                 # alpha_product *= ((exp(getattr(model, f"{LNCONC_VAR_PREFIX}{met_id}"))) / (k_a + exp(getattr(model, f"{LNCONC_VAR_PREFIX}{met_id}"))))
-                alpha_product *= 1 / (
-                    1 + (k_a / exp(getattr(model, f"{LNCONC_VAR_PREFIX}{met_id}")))
-                )
+                alpha_product *= 1 / (1 + (k_a / exp(getattr(model, var_id))))
                 # alpha_product *= (1 - (k_a / (k_a + exp(getattr(model, f"{LNCONC_VAR_PREFIX}{met_id}")))))
 
             alpha_var_name = f"{ALPHA_VAR_PREFIX}{reac_id}"
@@ -441,7 +446,7 @@ def get_nlp_from_cobrak_model(
                 Var(within=Reals, bounds=(approximation_value, 1.0)),
             )
 
-            if strict_mode:
+            if strict_mode or reac_id in single_strict_reacs:
                 alpha_var_constraint_0 = (
                     getattr(model, alpha_var_name)
                     == approximation_value + alpha_product
@@ -456,6 +461,7 @@ def get_nlp_from_cobrak_model(
                 f"alpha_var_constraint_{reac_id}_0",
                 Constraint(rule=alpha_var_constraint_0),
             )
+
         # Build kinetic term for reaction according to included parts
         kinetic_rhs = v_plus
         if has_kappa and with_kappa:
@@ -468,7 +474,7 @@ def get_nlp_from_cobrak_model(
             kinetic_rhs *= getattr(model, alpha_var_name)
 
         # Apply strict mode
-        if strict_mode:
+        if strict_mode or reac_id in single_strict_reacs:
             setattr(
                 model,
                 f"full_reac_constraint_{reac_id}",
@@ -481,7 +487,9 @@ def get_nlp_from_cobrak_model(
                 Constraint(rule=getattr(model, reac_id) <= kinetic_rhs),
             )
 
-    model = _add_extra_linear_constraints_to_lp(model, cobrak_model)
+    model = _add_extra_watches_and_constraints_to_lp(
+        model, cobrak_model, ignore_nonlinear_terms=False
+    )
     if is_any_error_term_active(correction_config):
         if correction_config.error_scenario != {}:
             _apply_error_scenario(
@@ -496,10 +504,6 @@ def get_nlp_from_cobrak_model(
                 correction_config,
             )
 
-    """
-    if cobrak_model.max_conc_sum < float("inf"):
-        model = _add_conc_sum_constraints(cobrak_model, model)
-    """
     ########################
     if cobrak_model.max_conc_sum < float("inf"):
         met_sum_ids: list[str] = []
@@ -555,6 +559,7 @@ def perform_nlp_reversible_optimization(
     with_alpha: bool = False,
     approximation_value: float = 0.0001,
     strict_mode: bool = False,
+    single_strict_reacs: list[str] = [],
     verbose: bool = False,
     solver: Solver = SCIP,
     with_flux_sum_var: bool = False,
@@ -576,7 +581,8 @@ def perform_nlp_reversible_optimization(
     * `with_alpha` (`bool`, optional): Whether to include α activation terms. Defaults to `False` and untested!
     * `approximation_value` (`float`, optional): Approximation value for κ, γ, ι, and α terms. Defaults to `0.0001`. This value is the
        minimal value for κ, γ, ι, and α terms, and can lead to an overapproximation in this regard.
-    * `strict_mode` (`bool`, optional): Whether to use strict mode. Defaults to `False`.
+    * `strict_mode` (`bool`, optional): Whether to use strict mode (i.e. all <= heuristics become == relations). Defaults to `False`.
+    * `single_strict_reacs` (`list[str]`, optional): If 'strict_mode==False', only reactions with an ID in this list are set to strict mode.
     * `verbose` (`bool`, optional): Whether to print solver output. Defaults to `False`.
     * `solver_name` (`str`, optional): Used MINLP solver. Defaults to SCIP,
     * `with_flux_sum_var` (`bool`, optional): Whether to include a reaction flux sum variable of name ```cobrak.constants.FLUX_SUM_VAR```. Defaults to `False`.
@@ -595,6 +601,7 @@ def perform_nlp_reversible_optimization(
         irreversible_mode=False,
         variability_data=variability_dict,
         strict_mode=strict_mode,
+        single_strict_reacs=single_strict_reacs,
         with_flux_sum_var=with_flux_sum_var,
         correction_config=correction_config,
     )
@@ -633,6 +640,7 @@ def perform_nlp_irreversible_optimization(
     approximation_value: float = 0.0001,
     verbose: bool = False,
     strict_mode: bool = False,
+    single_strict_reacs: list[str] = [],
     min_mdf: float = STANDARD_MIN_MDF,
     solver: Solver = IPOPT,
     multistart_num_iterations: int = 10,
@@ -657,7 +665,8 @@ def perform_nlp_irreversible_optimization(
     * `approximation_value` (`float`, optional): Approximation value for κ, γ, ι, and α terms. Defaults to `0.0001`. This value is the
        minimal value for κ, γ, ι, and α terms, and can lead to an overapproximation in this regard.
     * `verbose` (`bool`, optional): Whether to print solver output. Defaults to `False`.
-    * `strict_mode` (`bool`, optional): Whether to use strict mode. Defaults to `False`.
+    * `strict_mode` (`bool`, optional): Whether to use strict mode (i.e. all <= heuristics become == relations). Defaults to `False`.
+    * `single_strict_reacs` (`list[str]`, optional): If 'strict_mode==False', only reactions with an ID in this list are set to strict mode.
     * `min_mdf` (`float`, optional): Minimum MDF value. Defaults to `STANDARD_MIN_MDF`.
     * `solver_name` (Solver, optional): Used NLP solver. Defaults to IPOPT.
     * `multistart_num_iterations` (`int`, optional): Number of iterations for multistart solver. Defaults to `10`.
@@ -679,6 +688,7 @@ def perform_nlp_irreversible_optimization(
         irreversible_mode=True,
         variability_data=variability_dict,
         strict_mode=strict_mode,
+        single_strict_reacs=single_strict_reacs,
         irreversible_mode_min_mdf=min_mdf,
         with_flux_sum_var=with_flux_sum_var,
         correction_config=correction_config,
@@ -738,6 +748,7 @@ def perform_nlp_irreversible_optimization_with_active_reacs_only(
     approximation_value: float = 0.0001,
     verbose: bool = False,
     strict_mode: bool = False,
+    single_strict_reacs: list[str] = [],
     min_mdf: float = STANDARD_MIN_MDF,
     solver: Solver = IPOPT,
     multistart_num_iterations: int = 10,
@@ -761,7 +772,8 @@ def perform_nlp_irreversible_optimization_with_active_reacs_only(
     * `approximation_value` (`float`, optional): Approximation value for κ, γ, ι, and α terms. Defaults to `0.0001`. This value is the
        minimal value for κ, γ, ι, and α terms, and can lead to an overapproximation in this regard.
     * `verbose` (`bool`, optional): Whether to print solver output. Defaults to `False`.
-    * `strict_mode` (`bool`, optional): Whether to use strict mode. Defaults to `False`.
+    * `strict_mode` (`bool`, optional): Whether to use strict mode (i.e. all <= heuristics become == relations). Defaults to `False`.
+    * `single_strict_reacs` (`list[str]`, optional): If 'strict_mode==False', only reactions with an ID in this list are set to strict mode.
     * `min_mdf` (`float`, optional): Minimum MDF value. Defaults to `STANDARD_MIN_MDF`.
     * `solver` (Solver, optional): Used NLP solver. Defaults to IPOPT.
     * `multistart_num_iterations` (`int`, optional): Number of iterations for multistart solver. Defaults to `10`.
@@ -789,6 +801,7 @@ def perform_nlp_irreversible_optimization_with_active_reacs_only(
         approximation_value=approximation_value,
         verbose=verbose,
         strict_mode=strict_mode,
+        single_strict_reacs=single_strict_reacs,
         min_mdf=min_mdf,
         solver=solver,
         multistart_num_iterations=multistart_num_iterations,
@@ -806,6 +819,7 @@ def _batch_nlp_variability_optimization(
     approximation_value: float,
     tfba_variability_dict: dict[str, float],
     strict_mode: bool,
+    single_strict_reacs: list[str],
     min_mdf: float,
     solver: Solver,
 ) -> list[tuple[bool, str, float | None]]:
@@ -870,6 +884,7 @@ def perform_nlp_irreversible_variability_analysis_with_active_reacs_only(
     extra_tested_vars_max: list[str] = [],
     extra_tested_vars_min: list[str] = [],
     strict_mode: bool = False,
+    single_strict_reacs: list[str] = [],
     min_mdf: float = STANDARD_MIN_MDF,
     min_flux_cutoff: float = 1e-8,
     solver: Solver = IPOPT,
@@ -896,7 +911,8 @@ def perform_nlp_irreversible_variability_analysis_with_active_reacs_only(
     * `calculate_reacs` (`bool`, optional): Whether to calculate reaction flux variability. Defaults to `True`.
     * `calculate_concs` (`bool`, optional): Whether to calculate metabolite concentration variability. Defaults to `True`.
     * `calculate_rest` (`bool`, optional): Whether to calculate variability of other variables (e.g., enzyme delivery, κ, γ). Defaults to `True`.
-    * `strict_mode` (`bool`, optional): Whether to use strict mode. Defaults to `False`.
+    * `strict_mode` (`bool`, optional): Whether to use strict mode (i.e. all <= heuristics become == relations). Defaults to `False`.
+    * `single_strict_reacs` (`list[str]`, optional): If 'strict_mode==False', only reactions with an ID in this list are set to strict mode.
     * `min_mdf` (`float`, optional): Minimum MDF value. Defaults to `STANDARD_MIN_MDF`.
     * `min_flux_cutoff` (`float`, optional): Minimum flux cutoff value. Defaults to `1e-8`.
     * `solver` (Solver, optional): Used NLP solver. Defaults to IPOPT.
@@ -1030,7 +1046,6 @@ def perform_nlp_irreversible_variability_analysis_with_active_reacs_only(
 
     objectives_data: list[tuple[str, str]] = []
     for obj_sense, target_id in objective_targets:
-        print(target_id)
         if obj_sense == -1:
             objective_name = f"MIN_OBJ_{target_id}"
             pyomo_sense = minimize
@@ -1060,6 +1075,7 @@ def perform_nlp_irreversible_variability_analysis_with_active_reacs_only(
             approximation_value,
             tfba_variability_dict,
             strict_mode,
+            single_strict_reacs,
             min_mdf,
             solver,
         )

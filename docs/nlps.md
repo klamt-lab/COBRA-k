@@ -313,3 +313,44 @@ print_optimization_result(toy_model, nlp_result)
 ```
 
 Again, ```perform_nlp_reversible_optimization``` has many further optional arguments that you can find in this documentation's "API reference" chapter. By default, COBRA-k uses the non-linear solver IPOPT for NLPs.
+
+### Extra non-linear flux constraints
+
+Optionally, you can also introduce extra *non-*linear constraints (corresponding to the ```ExtraNonlinearConstraint``` dataclass, used in ```Model```) that set constrained relationships between variables. Currently, the non-linear functions "powerX" (i.e. take the X-th power of a value), "log" and "exp" are usable. "same" is the option if you do not want a function application (i.e. it's a multiplication with 1). See COBRA-k's API documentation for more. As an example, let's set a (nonsense) non-linear constraint that restricts the flux of reaction EX_P to the doubled exponential value of the concentration of C:
+
+```py
+# ...using the code imports from above
+from cobrak.constants import LNCONC_VAR_PREFIX
+from cobrak.dataclasses import ExtraNonlinearConstraint
+
+# Let's define v_EX_P <= 2 * exp(x_C)
+toy_model.extra_nonlinear_constraints = [
+    ExtraNonlinearConstraint(
+        stoichiometries={
+            "EX_P": (1.0, "same"),  # first the stoichiometry, second the function application
+            f"{LNCONC_VAR_PREFIX}C": (-2.0, "exp"),
+        },
+        upper_value=0.0,
+    )
+]
+```
+
+### Extra linear watches
+
+Optionally, you can also introduce extra linear *watch variables* (corresponding to the ```ExtraNonlinearWatch``` dataclass, used in ```Model```) that add a variable with a fixed non-linear relationships to single fluxes. See COBRA-k's API documentation for more. Currently, the non-linear functions "powerX" (i.e. take the X-th power of a value), "log" and "exp" are usable. See COBRA-k's API documentation for more. Here's an example where we set a watch to the logarithm of the flux of EX_S:
+
+```py
+# ...using the code imports from above
+from cobrak.dataclasses import ExtraNonlinearWatch
+
+# Let's define v_EX_P <= 2 * exp(x_C)
+toy_model.extra_nonlinear_watches = {
+    "log_EX_S": ExtraNonlinearWatch(
+        stoichiometries={
+            "EX_S": (1.0, "log"),
+        },
+    )
+}
+```
+
+...now, we have a variable ```log_EX_S``` that is also added to result dictionaries after LP or NLP optimizations.
