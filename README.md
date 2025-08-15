@@ -58,7 +58,7 @@
 
 ## Introduction
 
-COBRA-k stands for "Constraint-Based Reconstruction and Analysis (COBRA) **with kinetics**" [[Paper]](#publication), a generalized variant of the metabolic modeling framework known as COBRA. Both frameworks allow one to analyze constraint-based metabolic models with the help of optimization approaches. While COBRA uses exclusively linear constraints to describe steady state flux distributions in a given metabolic network, COBRA-k expands COBRA by allowing also the integration of non-linear kinetic rate laws (herein we use reversible Michaelis-Menten kinetics. In particular, this enables also a consistent integration of (steady state) fluxes, metabolite concentration and enzyme abundances in COBRA models. While classical COBRA model are usually formulated as linear or mixed-integer linear program (LP / MILP), COBRA-k requires solving mixed-integer **non-linear** programs (MINLP).
+COBRA-k stands for "Constraint-Based Reconstruction and Analysis (COBRA) **with kinetics**" [[Paper]](#publication), a generalized variant of the metabolic modeling framework known as COBRA. Both frameworks allow one to analyze constraint-based metabolic models with the help of optimization approaches. While COBRA uses exclusively linear constraints to describe steady state flux distributions in a given metabolic network, COBRA-k expands COBRA by allowing also the integration of non-linear kinetic rate laws (herein we use reversible Michaelis-Menten kinetics). In particular, this enables also a consistent integration of (steady state) fluxes, metabolite concentration and enzyme abundances in COBRA models. While classical COBRA model are usually formulated as linear or mixed-integer linear program (LP / MILP), COBRA-k requires solving mixed-integer **non-linear** programs (MINLP).
 
 The COBRA-k package is a general COBRA/COBRA-k suite written as a Python module, while also being the reference implementation of COBRA-k. Some of COBRA-k's major features are:
 
@@ -122,8 +122,8 @@ from cobrak.lps import perform_lp_optimization
 from cobrak.printing import print_optimization_result
 
 # Run enzyme-constrained Flux Balance Analysis
-lp_result = perform_lp_optimization(
-    cobrak_model=toy_model,
+lp_result: dict[str, float] = perform_lp_optimization(
+    cobrak_model=toy_model,  # toy_model is an instance of COBRA-k's dataclass 'Model'
     objective_target="ATP_Consumption",
     objective_sense=+1,
     with_enzyme_constraints=True,
@@ -136,6 +136,8 @@ print_optimization_result(
     optimization_dict=lp_result
 )
 ```
+
+Regarding its programming philosophy, COBRA-k aims to be i) composable (e.g. all main classes are "just" [dataclasses](https://docs.python.org/3/library/dataclasses.html) - also known as ```struct```) and ii) explicitly typed (with some type checks provided by [pydantic](https://github.com/pydantic/pydantic)) thus trying to help you when coding in your favourite editor or IDE.
 <br>
 
 
@@ -245,7 +247,20 @@ You can then run the tests in the "test" subfolder as follows:
 pytest tests
 ```
 
-Please make sure that your code changes do not unintendently break any tests.
+Please make sure that your code changes do not unintendently break any tests. Also, you're invited to create tests for uncovered (untested) parts in COBRA-k's code of which there's still too much. To get a coverage report in a nice HTML, e.g. install [coverage](https://coverage.readthedocs.io/en/latest/) and [pytest-cov](https://pytest-cov.readthedocs.io/en/latest/) as follows:
+
+```
+uv pip install coverage
+uv pip install pytest-cov
+```
+
+...and create the nice HTML coverage report as follows (while being in COBRA-k's main folder):
+
+```
+pytest --cov=cobrak --cov-report=html
+```
+
+The resulting report can be found in the newly generated subfolder ```htmlcov```.
 
 ### Documentation development
 
@@ -263,6 +278,8 @@ To now self-run the documentation on a local server, you can use mkdocs itself w
 ```
 mkdocs serve
 ```
+
+The documentation's text can be found in the ```*.md```Markdown files in the ```docs```subfolder. Note that the Markdown format uses the [Material for mkdocs](https://squidfunk.github.io/mkdocs-material/getting-started/) syntax expansions to the plain Markdown format.
 
 <br>
 

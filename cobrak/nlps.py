@@ -10,8 +10,10 @@ see lps.py in the same folder.
 # IMPORTS SECTION #
 from copy import deepcopy
 from itertools import chain
+from math import log
 
 from joblib import Parallel, delayed
+from pydantic import ConfigDict, NonNegativeFloat, validate_call
 from pyomo.environ import (
     Binary,
     ConcreteModel,
@@ -36,9 +38,7 @@ from .constants import (
     LNCONC_VAR_PREFIX,
     MDF_VAR_ID,
     OBJECTIVE_VAR_NAME,
-    SOLVER_STATUS_KEY,
     STANDARD_MIN_MDF,
-    TERMINATION_CONDITION_KEY,
     Z_VAR_PREFIX,
 )
 from .dataclasses import CorrectionConfig, Model, Solver
@@ -70,6 +70,7 @@ from .utilities import (
 
 
 # FUNCTIONS SECTION #
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def add_loop_constraints_to_nlp(
     model: ConcreteModel,
     cobrak_model: Model,
@@ -109,6 +110,7 @@ def add_loop_constraints_to_nlp(
     return model
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def get_nlp_from_cobrak_model(
     cobrak_model: Model,
     ignored_reacs: list[str] = [],
@@ -403,7 +405,16 @@ def get_nlp_from_cobrak_model(
                 var_id = f"{LNCONC_VAR_PREFIX}{met_id}"
                 if var_id not in model_var_names:
                     continue
-                iota_product *= 1 / (1 + exp(getattr(model, var_id)) / k_i)
+                stoichiometry = reaction.stoichiometries.get(
+                    met_id, 1.0
+                ) * reaction.enzyme_reaction_data.hill_coefficients.get(met_id, 1.0)
+                iota_product *= 1 / (
+                    1
+                    + exp(
+                        stoichiometry * getattr(model, var_id)
+                        - stoichiometry * log(k_i)
+                    )
+                )
             iota_var_name = f"{IOTA_VAR_PREFIX}{reac_id}"
             setattr(
                 model,
@@ -432,11 +443,20 @@ def get_nlp_from_cobrak_model(
                 var_id = f"{LNCONC_VAR_PREFIX}{met_id}"
                 if var_id not in model_var_names:
                     continue
+                stoichiometry = reaction.stoichiometries.get(
+                    met_id, 1.0
+                ) * reaction.enzyme_reaction_data.hill_coefficients.get(met_id, 1.0)
                 # alpha_product *= 1 + k_a * exp(
                 #    getattr(model, f"{LNCONC_VAR_PREFIX}{met_id}")
                 # )
                 # alpha_product *= ((exp(getattr(model, f"{LNCONC_VAR_PREFIX}{met_id}"))) / (k_a + exp(getattr(model, f"{LNCONC_VAR_PREFIX}{met_id}"))))
-                alpha_product *= 1 / (1 + (k_a / exp(getattr(model, var_id))))
+                alpha_product *= 1 / (
+                    1
+                    + exp(
+                        stoichiometry * log(k_a)
+                        - stoichiometry * getattr(model, var_id)
+                    )
+                )
                 # alpha_product *= (1 - (k_a / (k_a + exp(getattr(model, f"{LNCONC_VAR_PREFIX}{met_id}")))))
 
             alpha_var_name = f"{ALPHA_VAR_PREFIX}{reac_id}"
@@ -548,6 +568,7 @@ def get_nlp_from_cobrak_model(
     return model
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def perform_nlp_reversible_optimization(
     cobrak_model: Model,
     objective_target: str | dict[str, float],
@@ -557,7 +578,7 @@ def perform_nlp_reversible_optimization(
     with_gamma: bool = True,
     with_iota: bool = False,
     with_alpha: bool = False,
-    approximation_value: float = 0.0001,
+    approximation_value: NonNegativeFloat = 0.0001,
     strict_mode: bool = False,
     single_strict_reacs: list[str] = [],
     verbose: bool = False,
@@ -628,6 +649,7 @@ def perform_nlp_reversible_optimization(
     return add_statuses_to_optimziation_dict(nlp_result, results)
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def perform_nlp_irreversible_optimization(
     cobrak_model: Model,
     objective_target: str | dict[str, float],
@@ -637,15 +659,13 @@ def perform_nlp_irreversible_optimization(
     with_gamma: bool = True,
     with_iota: bool = False,
     with_alpha: bool = False,
-    approximation_value: float = 0.0001,
+    approximation_value: NonNegativeFloat = 0.0001,
     verbose: bool = False,
     strict_mode: bool = False,
     single_strict_reacs: list[str] = [],
     min_mdf: float = STANDARD_MIN_MDF,
     solver: Solver = IPOPT,
-    multistart_num_iterations: int = 10,
-    multistart_solver_name: str = "ipopt",
-    min_flux: float = 0.0,
+    min_flux: NonNegativeFloat = 0.0,
     with_flux_sum_var: bool = False,
     correction_config: CorrectionConfig = CorrectionConfig(),
 ) -> dict[str, float]:
@@ -669,8 +689,6 @@ def perform_nlp_irreversible_optimization(
     * `single_strict_reacs` (`list[str]`, optional): If 'strict_mode==False', only reactions with an ID in this list are set to strict mode.
     * `min_mdf` (`float`, optional): Minimum MDF value. Defaults to `STANDARD_MIN_MDF`.
     * `solver_name` (Solver, optional): Used NLP solver. Defaults to IPOPT.
-    * `multistart_num_iterations` (`int`, optional): Number of iterations for multistart solver. Defaults to `10`.
-    * `multistart_solver_name` (`str`, optional): Solver name for multistart. Defaults to `"ipopt"`.
     * `min_flux` (`float`, optional): Minimum flux value. Defaults to `0.0`.
     * `with_flux_sum_var` (`bool`, optional): Whether to include a reaction flux sum variable of name ```cobrak.constants.FLUX_SUM_VAR```. Defaults to `False`.
     * `correction_config` (`CorrectionConfig`, optional): Parameter correction configuration. Defaults to `CorrectionConfig()`.
@@ -707,34 +725,12 @@ def perform_nlp_irreversible_optimization(
     )
     nlp_model.obj = get_objective(nlp_model, objective_target, objective_sense)
     pyomo_solver = get_solver(solver.name, solver.solver_options, solver.solver_attrs)
-    if solver.name.startswith("multistart"):
-        all_results = pyomo_solver.solve(
-            nlp_model,
-            solver=multistart_solver_name,
-            solver_args={"options": solver.solver_options},
-            iterations=multistart_num_iterations,
-        )
-        mmtfba_dict = get_pyomo_solution_as_dict(nlp_model)
-        if isinstance(all_results, tuple):  # cobrak_multistart
-            results = all_results[0]
-            objs = all_results[1]
-            solver_statuses = all_results[2]
-            termination_conditions = all_results[3]
-            mmtfba_dict = add_statuses_to_optimziation_dict(mmtfba_dict, results)
-            mmtfba_dict[OBJECTIVE_VAR_NAME + "_MULTISTART"] = objs
-            mmtfba_dict[SOLVER_STATUS_KEY + "_MULTISTART"] = solver_statuses
-            mmtfba_dict[TERMINATION_CONDITION_KEY + "_MULTISTART"] = (
-                termination_conditions
-            )
-        else:
-            results = all_results
-            mmtfba_dict = add_statuses_to_optimziation_dict(mmtfba_dict, results)
-        return mmtfba_dict
     results = pyomo_solver.solve(nlp_model, tee=verbose, **solver.solve_extra_options)
     mmtfba_dict = get_pyomo_solution_as_dict(nlp_model)
     return add_statuses_to_optimziation_dict(mmtfba_dict, results)
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def perform_nlp_irreversible_optimization_with_active_reacs_only(
     cobrak_model: Model,
     objective_target: str | dict[str, float],
@@ -751,7 +747,6 @@ def perform_nlp_irreversible_optimization_with_active_reacs_only(
     single_strict_reacs: list[str] = [],
     min_mdf: float = STANDARD_MIN_MDF,
     solver: Solver = IPOPT,
-    multistart_num_iterations: int = 10,
     do_not_delete_with_z_var_one: bool = False,
     correction_config: CorrectionConfig = CorrectionConfig(),
 ) -> dict[str, float]:
@@ -776,7 +771,6 @@ def perform_nlp_irreversible_optimization_with_active_reacs_only(
     * `single_strict_reacs` (`list[str]`, optional): If 'strict_mode==False', only reactions with an ID in this list are set to strict mode.
     * `min_mdf` (`float`, optional): Minimum MDF value. Defaults to `STANDARD_MIN_MDF`.
     * `solver` (Solver, optional): Used NLP solver. Defaults to IPOPT.
-    * `multistart_num_iterations` (`int`, optional): Number of iterations for multistart solver. Defaults to `10`.
     * `do_not_delete_with_z_var_one` (`bool`, optional): Whether to delete reactions with associated Z variables (in the optimization dics) equal to one.
       Defaults to `False`.
     * `correction_config` (`CorrectionConfig`, optional): Paramter correction configuration. Defaults to `CorrectionConfig()`.
@@ -784,6 +778,9 @@ def perform_nlp_irreversible_optimization_with_active_reacs_only(
     # Returns
     * `dict[str, float]`: The optimization results.
     """
+    optimization_dict = deepcopy(optimization_dict)
+    for single_strict_reac in single_strict_reacs:
+        optimization_dict[single_strict_reac] = 1.0
     nlp_cobrak_model = delete_unused_reactions_in_optimization_dict(
         cobrak_model=cobrak_model,
         optimization_dict=optimization_dict,
@@ -804,11 +801,11 @@ def perform_nlp_irreversible_optimization_with_active_reacs_only(
         single_strict_reacs=single_strict_reacs,
         min_mdf=min_mdf,
         solver=solver,
-        multistart_num_iterations=multistart_num_iterations,
         correction_config=correction_config,
     )
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def _batch_nlp_variability_optimization(
     batch: list[tuple[str, str]],
     cobrak_model: Model,
@@ -855,6 +852,7 @@ def _batch_nlp_variability_optimization(
                 approximation_value=approximation_value,
                 variability_dict=deepcopy(tfba_variability_dict),
                 strict_mode=strict_mode,
+                single_strict_reacs=single_strict_reacs,
                 min_mdf=min_mdf,
                 solver=solver,
                 verbose=False,
@@ -868,6 +866,7 @@ def _batch_nlp_variability_optimization(
     return resultslist
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def perform_nlp_irreversible_variability_analysis_with_active_reacs_only(
     cobrak_model: Model,
     optimization_dict: dict[str, float],

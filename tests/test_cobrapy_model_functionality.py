@@ -1,9 +1,11 @@
+"""pytest tests for COBRA-k's module cobrapy_model_functionality"""
+
 from cobrak.cobrapy_model_functionality import (
     create_irreversible_cobrapy_model_from_stoichiometries,
 )
 
 
-def test_create_irreversible_cobrapy_model_from_stoichiometries():
+def test_create_irreversible_cobrapy_model_from_stoichiometries() -> None:  # noqa: D103
     model = create_irreversible_cobrapy_model_from_stoichiometries(
         {
             "EX_A": {"A": +1},

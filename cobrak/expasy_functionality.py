@@ -2,7 +2,10 @@
 
 import xml.etree.ElementTree as ET
 
+from pydantic import validate_call
 
+
+@validate_call(validate_return=True)
 def get_ec_number_transfers(expasy_enzyme_rdf_path: str) -> dict[str, str]:
     """Parses an Expasy enzyme RDF file to extract enzyme EC number transfers.
 

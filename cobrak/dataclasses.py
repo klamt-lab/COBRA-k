@@ -91,19 +91,25 @@ class EnzymeReactionData:
     k_cat_references: list[ParameterReference] = Field(default_factory=list)
     """[Optional] List of references showing the source(s) of the k_cat value"""
     k_ms: dict[str, PositiveFloat] = Field(default_factory=dict)
-    """[Optional] The reaction's k_ms (Michaelis-Menten constants) in M=mol⋅l⁻¹. Metabolite IDs are keys, k_ms values. Default is {}"""
+    """[Optional] The reaction's k_ms (Michaelis-Menten constants) in M=mol⋅l⁻¹. Metabolite IDs are keys, k_ms the values. Default is {}"""
     k_m_references: dict[str, list[ParameterReference]] = Field(default_factory=dict)
     """[Optional] References showing the source(s) of the k_m values. Metabolite IDs are keys, the source lists values. Default is {}"""
     k_is: dict[str, PositiveFloat] = Field(default_factory=dict)
-    """[Optional] The reaction's k_is (Inhibition constants) in M=mol⋅l⁻¹. Metabolite IDs are keys, k_ms values. Default is {}"""
+    """[Optional] The reaction's k_is (Inhibition constants) in M=mol⋅l⁻¹. Metabolite IDs are keys, k_is the values. Default is {}"""
     k_i_references: dict[str, list[ParameterReference]] = Field(default_factory=dict)
     """[Optional] References showing the source(s) of the k_i values. Metabolite IDs are keys, the source lists values. Default is {}"""
     k_as: dict[str, PositiveFloat] = Field(default_factory=dict)
-    """[Optional] The reaction's k_as (Activation constants) in M=mol⋅l⁻¹. Metabolite IDs are keys, k_ms values. Default is {}"""
+    """[Optional] The reaction's k_as (Activation constants) in M=mol⋅l⁻¹. Metabolite IDs are keys, k_as the values. Default is {}"""
     k_a_references: dict[str, list[ParameterReference]] = Field(default_factory=dict)
     """[Optional] References showing the source(s) of the k_a values. Metabolite IDs are keys, the source lists values. Default is {}"""
+    hill_coefficients: dict[str, PositiveFloat] = Field(default_factory=dict)
+    """[Optional] If existent, the reaction's Hill coefficients. Metabolite IDs are keys, coefficients the values. Default is {}"""
+    hill_coefficient_references: dict[str, list[ParameterReference]] = Field(
+        default_factory=dict
+    )
+    """[Optional] References showing the source(s) of the Hill coefficients. Metabolite IDs are keys, the source lists values. Default is {}"""
     special_stoichiometries: dict[str, PositiveFloat] = Field(default_factory=dict)
-    """[Optional] Special (non-1) stoichiometries of polypeptides in the reaction's enzyme. Default is {}"""
+    """[Optional] Special (non-1) stoichiometries of polypeptides/enzymes in the reaction's enzyme. Default is {}"""
 
 
 @dataclass
@@ -262,6 +268,7 @@ class Reaction:
             k_ms=None,
             k_is=None,
             k_as=None,
+            hill_coefficients=None,
         ),
         annotation={}, # Can be also ignored
     )
@@ -353,7 +360,7 @@ class Model:
 class CorrectionConfig:
     """Stores the configuration for corrections in a model (see parameter corrections chapter in documentation)."""
 
-    error_scenario: dict[str, tuple[float, float]] = Field(default_factory=list)
+    error_scenario: dict[str, tuple[float, float]] = Field(default_factory=dict)
     """A dictionary where keys are error scenarios and values are tuples representing the lower and upper bounds of the error. Defaults to {}."""
     add_flux_error_term: bool = False
     """Indicates whether to add flux error terms. Defaults to False."""

@@ -10,6 +10,7 @@ from openpyxl.formatting.rule import ColorScaleRule
 from openpyxl.styles import Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.worksheet import Worksheet
+from pydantic import ConfigDict, validate_call
 
 from .constants import (
     DF_VAR_PREFIX,
@@ -156,6 +157,7 @@ class VariabilityDataset:
 
 
 # "PRIVATE" FUNCTIONS SECTION #
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def _create_xlsx_from_datadicts(
     path: str,
     titles_and_data_dict: dict[
@@ -241,11 +243,13 @@ def _create_xlsx_from_datadicts(
     wb.save(path)
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True), validate_return=True)
 def _get_empty_cell() -> SpreadsheetCell:
     """Returns spreadsheet cell with no content in full black"""
     return SpreadsheetCell(None, bg_color=BG_COLOR_BLACK, font=FONT_BLACK)
 
 
+@validate_call(validate_return=True)
 def _get_enzcomplex_reaction(
     cobrak_model: Model, enzcomplex_id: str
 ) -> tuple[str, Reaction]:
@@ -262,11 +266,13 @@ def _get_enzcomplex_reaction(
     return reac_id, cobrak_model.reactions[reac_id]
 
 
+@validate_call(validate_return=True)
 def _get_met_id_from_met_var_id(met_var_id: str) -> str:
     """Gives the (N/MI)LP metabolite concentration variable ID, derived from the metabolite ID"""
     return ("\b" + met_var_id).replace("\b" + LNCONC_VAR_PREFIX, "").replace("\b", "")
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def _get_optimization_bg_color(opt_value: float) -> PatternFill:
     """Determine the background color for a cell based on an optimization value.
 
@@ -281,6 +287,7 @@ def _get_optimization_bg_color(opt_value: float) -> PatternFill:
     return BG_COLOR_GREEN
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def _get_variability_bg_color(min_value: float, max_value: float) -> PatternFill:
     """Determine the background color for a cell based on variability values.
 
@@ -298,6 +305,7 @@ def _get_variability_bg_color(min_value: float, max_value: float) -> PatternFill
     return BG_COLOR_GREEN
 
 
+@validate_call(validate_return=True)
 def _na_str_or_value(
     value: str | float | int | bool | None,
 ) -> str | float | int | bool:
@@ -311,6 +319,7 @@ def _na_str_or_value(
     return value
 
 
+@validate_call(validate_return=True)
 def _num_to_sheet_letter(number: int) -> str:
     """Convert a given column number to its corresponding spreadsheet column letter.
 
@@ -333,6 +342,7 @@ def _num_to_sheet_letter(number: int) -> str:
     return column
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def _set_cell(
     sheet: Worksheet,
     line: int,
@@ -360,6 +370,7 @@ def _set_cell(
 
 
 # "PUBLIC" FUNCTIONS SECTION #
+@validate_call
 def create_cobrak_spreadsheet(
     path: str,
     cobrak_model: Model,

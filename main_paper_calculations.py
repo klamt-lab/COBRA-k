@@ -121,6 +121,7 @@ class RunConfig:
     # Model changes
     manually_changed_kms: dict[str, dict[str, float]]
     manually_changed_kcats: dict[str, dict[str, float]]
+    manually_changed_dG0s: dict[str, dict[str, float]]
     # Folder settings
     results_folder: str
     # ecTFVA settings
@@ -142,6 +143,15 @@ class RunConfig:
     max_conc_sum: float | None = None
     nameaddition: str | None = None
     kicked_reacs: list[str] = Field(default_factory=list)
+    do_parameter_variation: bool = False
+    varied_reacs: list[str] = Field(default_factory=list)
+    max_km_variation: float | None = None
+    max_kcat_variation: float | None = None
+    max_ki_variation: float | None = None
+    max_ka_variation: float | None = None
+    max_dG0_variation: float | None = None
+    with_iota: bool = False
+    with_alpha: bool = False
 
 
 def create_and_submit_slurm_job(json_path: str) -> None:
@@ -200,6 +210,7 @@ if __name__ == "__main__":
                 RunConfig(
                     manually_changed_kms=MANUALLY_CHANGED_KMS,
                     manually_changed_kcats=MANUALLY_CHANGED_KCATS_8,
+                    manually_changed_dG0s={},
                     results_folder="/examples/iCH360/RESULTS_PROTPOOLTESTS/",
                     ectfva_active_reacs=["Biomass_fw"],
                     round_num=round_num,
@@ -216,6 +227,7 @@ if __name__ == "__main__":
                     protein_pool=maxglcvalue[1],
                     max_conc_sum=0.4,
                     nameaddition=f"maxglc{maxglcvalue[0]}_protpool{maxglcvalue[1]}_CALIBRATION",
+                    varied_reacs=[],
                 )
                 for maxglcvalue in (
                     (1000.0, 0.221),
@@ -242,6 +254,7 @@ if __name__ == "__main__":
                 RunConfig(
                     manually_changed_kms=MANUALLY_CHANGED_KMS,
                     manually_changed_kcats=MANUALLY_CHANGED_KCATS,
+                    manually_changed_dG0s={},
                     results_folder="/examples/iCH360/RESULTS_GLCUPTAKE/",
                     ectfva_active_reacs=["Biomass_fw"],
                     round_num=round_num,
@@ -262,6 +275,7 @@ if __name__ == "__main__":
                     nameaddition=f"maxglc{maxglcvalue}",
                     uses_bennett_concs=False,
                     kicked_reacs=[],
+                    varied_reacs=[],
                 )
                 for maxglcvalue in (
                     1.0,
@@ -301,6 +315,7 @@ if __name__ == "__main__":
                 RunConfig(
                     manually_changed_kms=MANUALLY_CHANGED_KMS,
                     manually_changed_kcats=MANUALLY_CHANGED_KCATS,
+                    manually_changed_dG0s={},
                     results_folder="/examples/iCH360/RESULTS_BENNETT/",
                     ectfva_active_reacs=["Biomass_fw"],
                     round_num=round_num,
@@ -321,6 +336,7 @@ if __name__ == "__main__":
                     nameaddition=f"bennett_maxglc{maxglcvalue}",
                     uses_bennett_concs=True,
                     kicked_reacs=[],
+                    varied_reacs=[],
                 )
                 for maxglcvalue in (9.65,)
             ]
@@ -330,6 +346,7 @@ if __name__ == "__main__":
                 RunConfig(
                     manually_changed_kms=MANUALLY_CHANGED_KMS,
                     manually_changed_kcats=MANUALLY_CHANGED_KCATS,
+                    manually_changed_dG0s={},
                     results_folder="/examples/iCH360/RESULTS_MAXAC_MINMU/",
                     ectfva_active_reacs=["Biomass_fw", "EX_ac_e_fw"],
                     round_num=round_num,
@@ -351,6 +368,7 @@ if __name__ == "__main__":
                     nameaddition="_maxac_minmu0.1",
                     uses_bennett_concs=False,
                     kicked_reacs=[],
+                    varied_reacs=[],
                 ),
             ]
         )
@@ -359,6 +377,7 @@ if __name__ == "__main__":
                 RunConfig(
                     manually_changed_kms=MANUALLY_CHANGED_KMS,
                     manually_changed_kcats=MANUALLY_CHANGED_KCATS,
+                    manually_changed_dG0s={},
                     results_folder="/examples/iCH360/RESULTS_MAXAC/",
                     ectfva_active_reacs=["EX_ac_e_fw"],
                     round_num=round_num,
@@ -379,6 +398,7 @@ if __name__ == "__main__":
                     nameaddition="_maxac",
                     uses_bennett_concs=False,
                     kicked_reacs=[],
+                    varied_reacs=[],
                 )
             ]
         )
@@ -427,6 +447,7 @@ if __name__ == "__main__":
                 RunConfig(
                     manually_changed_kms=MANUALLY_CHANGED_KMS,
                     manually_changed_kcats=MANUALLY_CHANGED_KCATS,
+                    manually_changed_dG0s={},
                     results_folder="/examples/iCH360/RESULTS_SINGLES_KOS/",
                     ectfva_active_reacs=["Biomass_fw", "EX_ac_e_fw"],
                     round_num=round_num,
@@ -450,6 +471,7 @@ if __name__ == "__main__":
                     max_conc_sum=0.4,
                     nameaddition=f"_ko{ko_target[0]}_{ko_target[1]}",
                     uses_bennett_concs=False,
+                    varied_reacs=[],
                 )
                 for ko_target in ko_targets
             ]

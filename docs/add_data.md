@@ -22,6 +22,7 @@ SABIO-RK and UniProt data are downloaded automatically into a file in the given 
 Using all this information the automatic procedure collects the following information and adds it to the Model:
 
 * $k_{cat}$, $K_M$ and $K_I$ data: From SABIO-RK and BRENDA
+* Hill coefficients: From SABIO-RK
 * Molecular enzyme weights: From UniProt
 * Taxonomic distances (used to collect taxonomically nearer enzyme kinetic data): From NCBI TAXONOMY
 * $Δ_r G^{'°}$: Using the eQuilibrator API
@@ -65,6 +66,7 @@ cobrak_model = get_cobrak_model_with_kinetic_data_from_sbml_model_alone(
     data_cache_folder="/path/to/folder/for/uniprot/cache",
     R=$GAS_CONSTANT, # Default is STANDARD_R
     T=$TEMPERATURE, # Default is STANDARD_T
+    add_hill_coefficients=True,  # Default is True, if False, no Hill coefficeints are loaded
 )
 ```
 
@@ -79,9 +81,9 @@ Two of the arguments have the following non-obvious meanings:
 If you want to automatically create only a select amount of data, look up COBRA-k's submodules
 ```equilibrator_functionality``` (for $Δ_r G^{'°}$), ```uniprot_functionality``` (for molecular enzyme weights),
 ```sabio_rk_functionality``` (for enzyme kinetic data from SABIO-RK), ```brenda_functionality``` (for enzyme kinetic
-data from BRENDA) and ```ncbi_taxonomy_functionality``` (for taxonomy distance data). Their functions are also described in this documentation's "API reference".
+data from BRENDA) and ```ncbi_taxonomy_functionality``` (for taxonomy distance data). Their functions are also described in this documentation's API reference.
 
-Finally, if you already have some data and want to add it to an SBML file Model generation, you can use ```get_cobrak_model_from_sbml_and_thermokinetic_data``` as follows.
+Finally, if you already have some data and want to add it to an SBML file Model generation, you can use ```get_cobrak_model_from_sbml_and_thermokinetic_data``` as follows:
 
 ```py
 from cobrak.model_instantiation import get_cobrak_model_from_sbml_and_thermokinetic_data
@@ -107,7 +109,7 @@ cobrak_model = get_cobrak_model_from_sbml_and_thermokinetic_data(
         "$ENZYME_ID": molecular_weight,
         # (...)
     },
-    enzyme_reaction_data: dict[str, EnzymeReactionData | None],
+    enzyme_reaction_data: dict[str, EnzymeReactionData | None],  # Contains k_cats, k_ms, k_is, k_as and Hill coefficients
     max_prot_pool=0.5, # In g/gDW
     kinetic_ignored_metabolites=["h2_c", "h2_p",], # Is list[str]
     enzyme_conc_ranges = { # Is dict[str, ParameterRange | None]
@@ -120,3 +122,6 @@ cobrak_model = get_cobrak_model_from_sbml_and_thermokinetic_data(
     T: float = STANDARD_T, # Standard temperature
 )
 ```
+
+!!! note
+    For a real-life example of a semi-automated way of collecting enzymatic data, look into the file ["examples/iCH360/B_prepare_external_data_for_cobrak.py" in COBRA-k's "examples/iCH360" repository subfolder](https://github.com/klamt-lab/COBRA-k/blob/main/examples/iCH360/B_prepare_external_data_for_cobrak.py). It also contains separate calls to the BRENDA and SABIO-RK functionalities.

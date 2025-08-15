@@ -7,7 +7,7 @@ This documentation explains how to use the COBRA-k Python package, which is the 
 
     Also note that, in this documentation's formulas, bold capital letters represent matrices (e.g. $\mathbf{X}$), bold small letters vectors (e.g. $\mathbf{x}$) and italic letters single numeric values (e.g. $x$).
 
-For more about COBRA-k's features, code and license, visit its [GitHub repository](https://github.com/klamt-lab/cobrak).
+For more about COBRA-k's features, code and license, visit its [GitHub repository](https://github.com/klamt-lab/COBRA-k).
 
 If you use COBRA-k in your academic work, please cite its publication:
 

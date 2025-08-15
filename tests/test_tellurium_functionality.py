@@ -1,13 +1,15 @@
+"""pytest tests for COBRA-k's module tellurium_functionality"""
+
 from cobrak.constants import LNCONC_VAR_PREFIX
 from cobrak.dataclasses import Metabolite, Model, Reaction
 from cobrak.tellurium_functionality import (
-    _get_numbersafe_id,
-    _get_reaction_string_of_cobrak_reaction,
-    get_tellurium_string_from_cobrak_model,
+    _get_numbersafe_id,  # noqa: PLC2701
+    _get_reaction_string_of_cobrak_reaction,  # noqa: PLC2701
+    get_tellurium_string_from_cobrak_model_and_solution,
 )
 
 
-def test_get_reaction_string():
+def test_get_reaction_string() -> None:  # noqa: D103
     cobrak_model = Model(
         reactions={
             "reaction_id": Reaction(
@@ -49,7 +51,7 @@ def test_get_reaction_string():
     assert isinstance(reac_string, str)
 
 
-def test_get_tellurium_string():
+def test_get_tellurium_string() -> None:  # noqa: D103
     cobrak_model = Model(
         reactions={
             "reaction_id": Reaction(
@@ -73,7 +75,7 @@ def test_get_tellurium_string():
     e_concs = {"reaction_id": 1.0}
     met_concs = {"metabolite_id": 1.0}
     nlp_results = {"reaction_id": 1.0, LNCONC_VAR_PREFIX + "metabolite_id": 1e-6}
-    tellurium_string = get_tellurium_string_from_cobrak_model(
+    tellurium_string = get_tellurium_string_from_cobrak_model_and_solution(
         cobrak_model,
         cell_density,
         e_concs,
@@ -83,7 +85,7 @@ def test_get_tellurium_string():
     assert isinstance(tellurium_string, str)
 
 
-def test_get_numbersafe_id():
+def test_get_numbersafe_id() -> None:  # noqa: D103
     met_id = "metabolite_id"
     numbersafe_id = _get_numbersafe_id(met_id)
     assert numbersafe_id == met_id

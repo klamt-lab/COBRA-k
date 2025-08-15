@@ -92,6 +92,7 @@ sabio_enzyme_reaction_data = sabio_select_enzyme_kinetic_data_for_model(
     kcat_overwrite=kcat_per_h,
     transfered_ec_number_json=f"{common_input_folder}ec_number_transfers.json",
     max_taxonomy_level=6,
+    add_hill_coefficients=False,
 )
 
 full_enzyme_reaction_data = combine_enzyme_reaction_datasets(

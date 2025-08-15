@@ -9,10 +9,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.cm import get_cmap
 from matplotlib.ticker import FuncFormatter
+from pydantic import ConfigDict, validate_call
 
 from cobrak.io import json_load
 
 
+@validate_call(validate_return=True)
 def _get_constant_combinations(
     n: int,
     variable_combination: tuple[int, int],
@@ -45,6 +47,7 @@ def _get_constant_combinations(
     return constant_combinations
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def dual_axis_plot(
     xpoints: list[float],
     leftaxis_ypoints_list: list[list[float]],
@@ -249,6 +252,7 @@ def dual_axis_plot(
     plt.close()
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def plot_combinations(
     func: Callable[[list[float]], float],
     min_values: list[float],
@@ -436,6 +440,7 @@ def plot_combinations(
         plt.show()
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def plot_objvalue_evolution(
     json_path: str,
     output_path: str,
@@ -523,6 +528,7 @@ def plot_objvalue_evolution(
     plt.close()
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def plot_variabilities(
     variabilities: list[list[tuple[float, float, float]]],
     variability_names: list[str],
@@ -648,6 +654,7 @@ def plot_variabilities(
         plt.show()
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def scatterplot_with_labels(
     x_data: list[tuple[float, float, float]],
     y_data: list[tuple[float, float, float]],

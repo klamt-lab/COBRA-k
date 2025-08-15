@@ -9,6 +9,7 @@ from json import dumps
 from math import exp
 from typing import Any
 
+from pydantic import ConfigDict, validate_call
 from rich.columns import Columns
 from rich.table import Table
 
@@ -35,6 +36,7 @@ from .utilities import (
 )
 
 
+@validate_call(validate_return=True)
 def _mapcolored(
     value: int | float,
     min_value: int | float,
@@ -63,6 +65,7 @@ def _mapcolored(
     return f"[no highlight][rgb({r},{g},{b})]{prefix}{value}{suffix}[/rgb({r},{g},{b})][/no highlight]"
 
 
+@validate_call(validate_return=True)
 def _varcolor(key: str, variability: dict[str, tuple[float, float]]) -> tuple[str, str]:
     """Determine the color prefix and suffix for a variable based on its variability.
 
@@ -83,6 +86,7 @@ def _varcolor(key: str, variability: dict[str, tuple[float, float]]) -> tuple[st
     return f"[no highlight][blue]{prefix}", f"{suffix}[/blue][/no highlight]"
 
 
+@validate_call(validate_return=True)
 def _none_as_na(
     string: str | float | None, rounding: int = 3, prefix: str = "", suffix: str = ""
 ) -> str:
@@ -104,6 +108,7 @@ def _none_as_na(
     return prefix + str(string) + suffix
 
 
+@validate_call(validate_return=True)
 def _get_mapcolored_value_or_na(
     key: str,
     dictionary: dict[str, float],
@@ -155,6 +160,7 @@ def _get_mapcolored_value_or_na(
     return _none_as_na(value)
 
 
+@validate_call(validate_return=True)
 def _get_value_or_na(
     key: str,
     dictionary: dict[str, float],
@@ -179,6 +185,7 @@ def _get_value_or_na(
     return _none_as_na(value, rounding, prefix, suffix)
 
 
+@validate_call(validate_return=True)
 def _get_var_or_na(
     key: str,
     dictionary: dict[str, tuple[float, float]],
@@ -211,6 +218,7 @@ def _get_var_or_na(
     )
 
 
+@validate_call(validate_return=True)
 def _zero_prefix(value: float | int) -> str:
     """Return an opening parenthesis if the value is zero, otherwise return an empty string.
 
@@ -223,6 +231,7 @@ def _zero_prefix(value: float | int) -> str:
     return "(" if value == 0.0 else ""
 
 
+@validate_call(validate_return=True)
 def _zero_suffix(value: float | int) -> str:
     """Return a closing parenthesis if the value is zero, otherwise return an empty string.
 
@@ -235,6 +244,7 @@ def _zero_suffix(value: float | int) -> str:
     return ")" if value == 0.0 else ""
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def print_dict(dictionary: dict[Any, Any], indent: int = 4) -> None:
     """Pretty-print a dictionary in a JSON formatted string with the specified indentation.
 
@@ -245,6 +255,7 @@ def print_dict(dictionary: dict[Any, Any], indent: int = 4) -> None:
     console.print(dumps(dictionary, indent=indent))
 
 
+@validate_call
 def print_model(
     cobrak_model: Model,
     print_reacs: bool = True,
@@ -360,6 +371,7 @@ def print_model(
         )
 
 
+@validate_call
 def print_optimization_result(
     cobrak_model: Model,
     optimization_dict: dict[str, float],
@@ -625,6 +637,7 @@ def print_optimization_result(
     )
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def print_strkey_dict_as_table(
     dictionary: dict[str, Any],
     table_title: str = "",
@@ -647,6 +660,7 @@ def print_strkey_dict_as_table(
     console.print(table)
 
 
+@validate_call
 def print_variability_result(
     cobrak_model: Model,
     variability_dict: dict[str, tuple[float, float]],
@@ -704,11 +718,14 @@ def print_variability_result(
                 exchange_table.add_column(reac_column)
             for exchange_reac_id in exchange_ids:
                 prefix, suffix = _varcolor(exchange_reac_id, variability_dict)
+                flux_range = _get_var_or_na(
+                    exchange_reac_id, variability_dict, rounding, prefix, suffix
+                )
+                if ignore_unused and flux_range[1] == 0.0:
+                    continue
                 arguments: list[str] = [
                     exchange_reac_id,
-                    *_get_var_or_na(
-                        exchange_reac_id, variability_dict, rounding, prefix, suffix
-                    ),
+                    *flux_range,
                     *_get_var_or_na(
                         f"{DF_VAR_PREFIX}{exchange_reac_id}",
                         variability_dict,
@@ -732,9 +749,15 @@ def print_variability_result(
                 continue
             prefix, suffix = _varcolor(reac_id, variability_dict)
 
+            flux_range = _get_var_or_na(
+                reac_id, variability_dict, rounding, prefix, suffix
+            )
+            if ignore_unused and flux_range[1] == 0.0:
+                continue
+
             arguments = [
                 reac_id,
-                *_get_var_or_na(reac_id, variability_dict, rounding, prefix, suffix),
+                *flux_range,
                 *_get_var_or_na(
                     f"{DF_VAR_PREFIX}{reac_id}",
                     variability_dict,
@@ -757,13 +780,17 @@ def print_variability_result(
                 continue
             enzyme_var_id = get_reaction_enzyme_var_id(reac_id, reaction)
             prefix, suffix = _varcolor(enzyme_var_id, variability_dict)
+            conc_range = _get_var_or_na(
+                enzyme_var_id, variability_dict, rounding, prefix, suffix
+            )
+            if ignore_unused and conc_range[1] == 0.0:
+                continue
             reacs_table.add_row(
                 *[
                     enzyme_var_id,
-                    *_get_var_or_na(
-                        enzyme_var_id, variability_dict, rounding, prefix, suffix
-                    ),
-                ]
+                    conc_range,
+                ],
+                conc_range,
             )
         table_columns.append(enzymes_table)
 

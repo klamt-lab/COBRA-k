@@ -34,7 +34,6 @@ json_write(
     "examples/iCH360/prepared_external_resources/iCH360_cobrak_prestepC_uncalibrated.json",
     filled_cobrak_model,
 )
-
 with filled_cobrak_model as unconcrestricted_filled_cobrak_model:
     t3 = time.time()
     variability_dict = perform_lp_variability_analysis(
@@ -62,7 +61,7 @@ with filled_cobrak_model as unconcrestricted_filled_cobrak_model:
         with_thermodynamic_constraints=True,
         min_flux_cutoff=1e-6,
         solver=CPLEX_FOR_VARIABILITY_ANALYSIS,
-        active_reactions=["Biomass_fw", "EC_ac_e_fw"],
+        active_reactions=["Biomass_fw", "EX_ac_e_fw"],
         min_active_flux=1e-5,
     )
     t4 = time.time()

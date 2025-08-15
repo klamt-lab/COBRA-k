@@ -10,6 +10,7 @@ from statistics import median
 from typing import Any
 
 import cobra
+from pydantic import ConfigDict, NonNegativeInt, validate_call
 
 from .dataclasses import EnzymeReactionData, ParameterReference
 from .io import json_load, json_zip_load
@@ -21,6 +22,7 @@ from .sabio_rk_functionality import _search_metname_in_bigg_ids
 
 
 # "PRIVATE" FUNCTIONS SECTION #
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def _brenda_get_all_enzyme_kinetic_data_for_model(
     model: cobra.Model,
     brenda_json_targz_file_path: str,
@@ -140,6 +142,7 @@ def _brenda_get_all_enzyme_kinetic_data_for_model(
     return brenda_database_for_model
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def _brenda_parse_full_json(
     brenda_json_targz_file_path: str,
     bigg_metabolites_json_path: str,
@@ -437,8 +440,9 @@ def _brenda_parse_full_json(
     return result_json
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def _is_fitting_ec_numbers(
-    ec_number_one: str, ec_number_two: str, wildcard_level: int
+    ec_number_one: str, ec_number_two: str, wildcard_level: NonNegativeInt
 ) -> bool:
     """Check whether the EC numbers are the same under the used wildcard level.
 
@@ -459,6 +463,7 @@ def _is_fitting_ec_numbers(
 
 
 # "PUBLIC" FUNCTIONS SECTION #
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def brenda_select_enzyme_kinetic_data_for_model(
     cobra_model: cobra.Model,
     brenda_json_targz_file_path: str,
@@ -477,7 +482,7 @@ def brenda_select_enzyme_kinetic_data_for_model(
     accept_nan_temperature: bool = True,
     kcat_overwrite: dict[str, float] = {},
     transfered_ec_number_json: str = "",
-    max_taxonomy_level: int = float("inf"),
+    max_taxonomy_level: NonNegativeInt = 1e9,
 ) -> dict[str, EnzymeReactionData | None]:
     """Select and assign enzyme kinetic data for each reaction in a COBRApy model based on BRENDA
     database entries and taxonomic similarity.

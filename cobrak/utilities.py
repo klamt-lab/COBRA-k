@@ -12,6 +12,15 @@ from typing import Any, TypeVar
 import numpy as np
 from numpy import array, exp, percentile
 from numpy.random import uniform
+from pydantic import (
+    ConfigDict,
+    NonNegativeFloat,
+    NonNegativeInt,
+    PositiveFloat,
+    PositiveInt,
+    conint,
+    validate_call,
+)
 from pyomo.environ import ConcreteModel, Var, log
 from pyomo.opt import SolverStatus, TerminationCondition
 from pyomo.opt.results import SolverResults
@@ -56,11 +65,12 @@ T = TypeVar("T")  # Not neccessary anymore as soon as Python >= 3.12 can be used
 
 
 # "PRIVATE" FUNCTIONS SECTION #
+@validate_call(validate_return=True)
 def _compare_two_results_with_statistics(
     cobrak_model: Model,
     result_1: dict[str, float],
     result_2: dict[str, float],
-    min_reac_flux: float,
+    min_reac_flux: NonNegativeFloat,
 ) -> tuple[dict[str, float], dict[int, list[str]]]:
     """Compares two optimization results and calculates statistics on the absolute flux differences.
 
@@ -114,6 +124,7 @@ def _compare_two_results_with_statistics(
 
 
 # "PUBLIC" FUNCTIONS SECTION #
+@validate_call(validate_return=True)
 def add_objective_value_as_extra_linear_constraint(
     cobrak_model: Model,
     objective_value: float,
@@ -156,6 +167,7 @@ def add_objective_value_as_extra_linear_constraint(
     return cobrak_model
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True), validate_return=True)
 def add_statuses_to_optimziation_dict(
     optimization_dict: dict[str, float], pyomo_results: SolverResults
 ) -> dict[str, float]:
@@ -192,11 +204,12 @@ def add_statuses_to_optimziation_dict(
     return optimization_dict
 
 
+@validate_call(validate_return=True)
 def apply_error_correction_on_model(
     cobrak_model: Model,
     correction_result: dict[str, float],
-    min_abs_error_value: float = 0.01,
-    min_rel_error_value: float = 0.01,
+    min_abs_error_value: NonNegativeFloat = 0.01,
+    min_rel_error_value: NonNegativeFloat = 0.01,
     verbose: bool = False,
 ) -> Model:
     """Applies error corrections to a COBRAl model based on a correction result dictionary.
@@ -284,12 +297,13 @@ def apply_error_correction_on_model(
     return changed_model
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True), validate_return=True)
 def apply_variability_dict(
     model: ConcreteModel,
     cobrak_model: Model,  # noqa: ARG001
     variability_dict: dict[str, tuple[float, float]],
     error_scenario: dict[str, tuple[float, float]] = {},
-    abs_epsilon: float = 1e-5,
+    abs_epsilon: NonNegativeFloat = 1e-5,
 ) -> ConcreteModel:
     """Applies the variability data as new variable bounds in the pyomo model
 
@@ -335,6 +349,7 @@ def apply_variability_dict(
     return model
 
 
+@validate_call(validate_return=True)
 def combine_enzyme_reaction_datasets(
     datasets: list[dict[str, EnzymeReactionData | None]],
 ) -> dict[str, EnzymeReactionData | None]:
@@ -397,13 +412,31 @@ def combine_enzyme_reaction_datasets(
                         enzyme_reaction_data.k_a_references[met_id]
                     )
 
+            for (
+                met_id,
+                hill_coefficient,
+            ) in enzyme_reaction_data.hill_coefficients.items():
+                if met_id not in combined_data[reac_id].hill_coefficients or (
+                    combined_data[reac_id]
+                    .hill_coefficient_references[met_id][0]
+                    .tax_distance
+                    > enzyme_reaction_data.hill_coefficient_references[met_id][
+                        0
+                    ].tax_distance
+                ):
+                    combined_data[reac_id].hill_coefficients[met_id] = hill_coefficient
+                    combined_data[reac_id].hill_coefficient_references[met_id] = (
+                        enzyme_reaction_data.hill_coefficient_references[met_id]
+                    )
+
     return combined_data
 
 
+@validate_call(validate_return=True)
 def compare_optimization_result_reaction_uses(
     cobrak_model: Model,
     results: list[dict[str, float]],
-    min_abs_flux: float = 1e-6,
+    min_abs_flux: NonNegativeFloat = 1e-6,
 ) -> None:
     """Compares the usage of reactions across multiple optimization (e.g. FBA) results.
 
@@ -466,6 +499,7 @@ def compare_optimization_result_reaction_uses(
         print("===")
 
 
+@validate_call(validate_return=True)
 def compare_optimization_result_fluxes(
     cobrak_model: Model,
     result_1: dict[str, float],
@@ -529,6 +563,7 @@ def compare_optimization_result_fluxes(
     return abs_results
 
 
+@validate_call(validate_return=True)
 def compare_multiple_results_to_best(
     cobrak_model: Model,
     results: list[dict[str, float]],
@@ -586,6 +621,7 @@ def compare_multiple_results_to_best(
     return comparisons
 
 
+@validate_call(validate_return=True)
 def count_last_equal_elements(lst: list[Any]) -> int:
     """Counts the number of consecutive equal elements from the end of the list.
 
@@ -621,6 +657,7 @@ def count_last_equal_elements(lst: list[Any]) -> int:
     return count
 
 
+@validate_call(validate_return=True)
 def create_cnapy_scenario_out_of_optimization_dict(
     path: str,
     cobrak_model: Model,
@@ -653,6 +690,7 @@ def create_cnapy_scenario_out_of_optimization_dict(
     json_write(path, cnapy_scenario)
 
 
+@validate_call(validate_return=True)
 def create_cnapy_scenario_out_of_variability_dict(
     path: str,
     cobrak_model: Model,
@@ -699,6 +737,7 @@ def create_cnapy_scenario_out_of_variability_dict(
     json_write(path, cnapy_scenario)
 
 
+@validate_call(validate_return=True)
 def delete_orphaned_metabolites_and_enzymes(cobrak_model: Model) -> Model:
     """Removes orphaned metabolites and enzymes from a COBRAk model.
 
@@ -741,12 +780,13 @@ def delete_orphaned_metabolites_and_enzymes(cobrak_model: Model) -> Model:
     return cobrak_model
 
 
+@validate_call(validate_return=True)
 def delete_unused_reactions_in_optimization_dict(
     cobrak_model: Model,
     optimization_dict: dict[str, float],
     exception_prefix: str = "",
     delete_missing_reactions: bool = True,
-    min_abs_flux: float = 1e-15,
+    min_abs_flux: NonNegativeFloat = 1e-15,
     do_not_delete_with_z_var_one: bool = True,
 ) -> Model:
     """Delete unused reactions in a COBRAk model based on an optimization dictionary.
@@ -794,6 +834,7 @@ def delete_unused_reactions_in_optimization_dict(
     return delete_orphaned_metabolites_and_enzymes(cobrak_model)
 
 
+@validate_call(validate_return=True)
 def delete_unused_reactions_in_variability_dict(
     cobrak_model: Model,
     variability_dict: dict[str, tuple[float, float]],
@@ -827,6 +868,7 @@ def delete_unused_reactions_in_variability_dict(
     return delete_orphaned_metabolites_and_enzymes(cobrak_model)
 
 
+@validate_call(validate_return=True)
 def get_active_reacs_from_optimization_dict(
     cobrak_model: Model,
     fba_dict: dict[str, float],
@@ -852,6 +894,7 @@ def get_active_reacs_from_optimization_dict(
     return active_reacs
 
 
+@validate_call(validate_return=True)
 def get_base_id(
     reac_id: str,
     fwd_suffix: str = REAC_FWD_SUFFIX,
@@ -881,6 +924,7 @@ def get_base_id(
     )
 
 
+@validate_call(validate_return=True)
 def get_base_id_optimzation_result(
     cobrak_model: Model,
     optimization_dict: dict[str, float],
@@ -924,6 +968,7 @@ def get_base_id_optimzation_result(
     return base_id_scenario
 
 
+@validate_call(validate_return=True)
 def get_cobrak_enzyme_reactions_string(cobrak_model: Model, enzyme_id: str) -> str:
     """Get string of reaction IDs associated with a specific enzyme in the COBRAk model.
 
@@ -947,6 +992,7 @@ def get_cobrak_enzyme_reactions_string(cobrak_model: Model, enzyme_id: str) -> s
     return "; ".join(enzyme_reactions)
 
 
+@validate_call(validate_return=True)
 def get_elementary_conservation_relations(
     cobrak_model: Model,
 ) -> str:
@@ -984,11 +1030,12 @@ def get_elementary_conservation_relations(
     return conservation_relations
 
 
+@validate_call(validate_return=True)
 def get_enzyme_usage_by_protein_pool_fraction(
     cobrak_model: Model,
     result: dict[str, float],
-    min_conc: float = 1e-12,
-    rounding: int = 5,
+    min_conc: NonNegativeFloat = 1e-12,
+    rounding: NonNegativeInt = 5,
 ) -> dict[float, list[str]]:
     """Return enzyme usage as a fraction of the total protein pool in a COBRAk model.
 
@@ -1025,6 +1072,7 @@ def get_enzyme_usage_by_protein_pool_fraction(
     return dict(sorted(protein_pool_fractions.items()))
 
 
+@validate_call(validate_return=True)
 def get_extra_linear_constraint_string(
     extra_linear_constraint: ExtraLinearConstraint,
 ) -> str:
@@ -1059,6 +1107,7 @@ def get_extra_linear_constraint_string(
     return string.lstrip()
 
 
+@validate_call(validate_return=True)
 def get_fwd_rev_corrected_flux(
     reac_id: str,
     usable_reac_ids: list[str] | set[str],
@@ -1097,6 +1146,7 @@ def get_fwd_rev_corrected_flux(
     return flux
 
 
+@validate_call(validate_return=True)
 def get_full_enzyme_id(identifiers: list[str]) -> str:
     """Generate a full enzyme ID by concatenating the list of enzyme identifiers with a specific separator.
 
@@ -1109,6 +1159,7 @@ def get_full_enzyme_id(identifiers: list[str]) -> str:
     return "_AND_".join(identifiers)
 
 
+@validate_call(validate_return=True)
 def get_full_enzyme_mw(cobrak_model: Model, reaction: Reaction) -> float:
     """Calculate the full molecular weight of enzymes (in kDa) involved in a given reaction.
 
@@ -1143,6 +1194,7 @@ def get_full_enzyme_mw(cobrak_model: Model, reaction: Reaction) -> float:
     return full_mw
 
 
+@validate_call(validate_return=True)
 def get_df_kappa_and_gamma_sorted_lists(
     cobrak_model: Model,
     result: dict[str, float],
@@ -1216,6 +1268,7 @@ def get_df_kappa_and_gamma_sorted_lists(
     )
 
 
+@validate_call(validate_return=True)
 def get_metabolite_consumption_and_production(
     cobrak_model: Model, met_id: str, optimization_dict: dict[str, float]
 ) -> tuple[float, float]:
@@ -1249,6 +1302,7 @@ def get_metabolite_consumption_and_production(
     return consumption, production
 
 
+@validate_call(validate_return=True)
 def get_model_kcats(cobrak_model: Model) -> list[float]:
     """Extracts k_cat values from reactions with enzyme data in the model.
 
@@ -1265,6 +1319,7 @@ def get_model_kcats(cobrak_model: Model) -> list[float]:
     return kcats
 
 
+@validate_call(validate_return=True)
 def get_model_kms(cobrak_model: Model) -> list[float]:
     """Extracts k_m values from reactions with enzyme data in the model.
 
@@ -1281,7 +1336,10 @@ def get_model_kms(cobrak_model: Model) -> list[float]:
     return kms
 
 
-def get_model_kms_by_usage(cobrak_model: Model) -> tuple[list[float], list[float]]:
+@validate_call(validate_return=True)
+def get_model_kms_by_usage(
+    cobrak_model: Model,
+) -> tuple[list[PositiveFloat], list[PositiveFloat]]:
     """Collects k_M values from a COBRA-k model, separating them into substrate and product lists.
 
     This function iterates through the reactions in a COBRA-k model and extracts the
@@ -1296,8 +1354,8 @@ def get_model_kms_by_usage(cobrak_model: Model) -> tuple[list[float], list[float
         A tuple containing two lists: the first list contains k_M values for substrates,
         and the second list contains k_M values for products.
     """
-    substrate_kms = []
-    product_kms = []
+    substrate_kms: list[PositiveFloat] = []
+    product_kms: list[PositiveFloat] = []
     for reaction in cobrak_model.reactions.values():
         if reaction.enzyme_reaction_data is None:
             continue
@@ -1312,14 +1370,15 @@ def get_model_kms_by_usage(cobrak_model: Model) -> tuple[list[float], list[float
     return substrate_kms, product_kms
 
 
-def get_model_mws(cobrak_model: Model) -> list[float]:
+@validate_call(validate_return=True)
+def get_model_mws(cobrak_model: Model) -> list[PositiveFloat]:
     """Extracts molecular weights of enzymes from the model.
 
     Args:
         cobrak_model (Model): The COBRAk model containing enzyme data.
 
     Returns:
-        list[float]: A list of molecular weights for each enzyme in the model.
+        list[PositiveFloat]: A list of molecular weights for each enzyme in the model.
     """
     mws = []
     for enzyme in cobrak_model.enzymes.values():
@@ -1327,6 +1386,7 @@ def get_model_mws(cobrak_model: Model) -> list[float]:
     return mws
 
 
+@validate_call(validate_return=True)
 def get_model_dG0s(cobrak_model: Model, abs_values: bool = False) -> list[float]:
     """Extracts standard Gibbs free energy changes (dG0) from reactions in the model.
 
@@ -1346,7 +1406,8 @@ def get_model_dG0s(cobrak_model: Model, abs_values: bool = False) -> list[float]
     return dG0s
 
 
-def get_model_max_kcat_times_e_values(cobrak_model: Model) -> list[float]:
+@validate_call(validate_return=True)
+def get_model_max_kcat_times_e_values(cobrak_model: Model) -> list[NonNegativeFloat]:
     """Calculates the maximum k_cat * E (enzyme concentration in terms of its molecular weight)
     for each reaction with enzyme data and returns these values.
 
@@ -1377,10 +1438,11 @@ def get_model_max_kcat_times_e_values(cobrak_model: Model) -> list[float]:
     return max_kcat_times_e_values
 
 
+@validate_call(validate_return=True)
 def get_model_with_filled_missing_parameters(
     cobrak_model: Model,
     add_dG0_extra_constraints: bool = False,
-    param_percentile: int = 90,
+    param_percentile: conint(ge=0, le=100) = 90,
     ignore_prefixes: list[str] = ["EX_"],
     use_median_for_kms: bool = True,
     use_median_for_kcats: bool = True,
@@ -1412,7 +1474,6 @@ def get_model_with_filled_missing_parameters(
     all_mws = get_model_mws(cobrak_model)
     all_kcats = get_model_kcats(cobrak_model)
     substrate_kms, product_kms = get_model_kms_by_usage(cobrak_model)
-    all_kms = substrate_kms + product_kms
     all_abs_dG0s = [abs(dG0) for dG0 in get_model_dG0s(cobrak_model)]
     dG0_reverse_couples: set[tuple[str]] = set()
     for reac_id in cobrak_model.reactions:
@@ -1472,7 +1533,7 @@ def get_model_with_filled_missing_parameters(
                         met_id
                     ] = float(
                         percentile(
-                            all_kms,
+                            product_kms if stoichiometry > 0.0 else substrate_kms,
                             param_percentile
                             if stoichiometry > 0.0
                             else 100 - param_percentile,
@@ -1503,6 +1564,7 @@ def get_model_with_filled_missing_parameters(
     return cobrak_model
 
 
+@validate_call(validate_return=True)
 def get_reaction_string(cobrak_model: Model, reac_id: str) -> str:
     """Generate a string representation of a reaction in a COBRAk model.
 
@@ -1538,6 +1600,7 @@ def get_reaction_string(cobrak_model: Model, reac_id: str) -> str:
     return " + ".join(educt_parts) + " " + arrow + " " + " + ".join(product_parts)
 
 
+@validate_call(validate_return=True)
 def get_reverse_reac_id_if_existing(
     reac_id: str,
     fwd_suffix: str = REAC_FWD_SUFFIX,
@@ -1560,6 +1623,7 @@ def get_reverse_reac_id_if_existing(
     return ""
 
 
+@validate_call(validate_return=True)
 def get_metabolites_in_elementary_conservation_relations(
     cobrak_model: Model,
 ) -> list[str]:
@@ -1598,13 +1662,15 @@ def get_metabolites_in_elementary_conservation_relations(
     return list(set(dependencies))
 
 
+@validate_call(validate_return=True)
 def get_model_with_varied_parameters(
     model: Model,
-    max_km_variation: float | None = None,
-    max_kcat_variation: float | None = None,
-    max_ki_variation: float | None = None,
-    max_ka_variation: float | None = None,
-    max_dG0_variation: float | None = None,
+    max_km_variation: NonNegativeFloat | None = None,
+    max_kcat_variation: NonNegativeFloat | None = None,
+    max_ki_variation: NonNegativeFloat | None = None,
+    max_ka_variation: NonNegativeFloat | None = None,
+    max_dG0_variation: NonNegativeFloat | None = None,
+    varied_reacs: list[str] = [],
 ) -> Model:
     """Generates a modified copy of the input Model with varied reaction parameters.
 
@@ -1623,6 +1689,7 @@ def get_model_with_varied_parameters(
         max_ki_variation: Maximum factor by which to vary k_is. Defaults to None.
         max_ka_variation: Maximum factor by which to vary k_as. Defaults to None.
         max_dG0_variation: Maximum factor by which to vary dG0. Defaults to None.
+        varied_reacs: If not [], only reactions with IDs in this list are varied. Defaults to [].
 
     Returns:
         A deep copy of the input model with varied reaction parameters.
@@ -1630,6 +1697,8 @@ def get_model_with_varied_parameters(
     varied_model = deepcopy(model)
     tested_rev_reacs: list[str] = []
     for reac_id, reaction in varied_model.reactions.items():
+        if (varied_reacs != []) and (reac_id not in varied_reacs):
+            continue
         if (
             max_dG0_variation is not None
             and reaction.dG0 is not None
@@ -1647,7 +1716,7 @@ def get_model_with_varied_parameters(
         if reaction.enzyme_reaction_data is not None:
             if max_kcat_variation is not None:
                 reaction.enzyme_reaction_data.k_cat *= max_kcat_variation ** (
-                    uniform(-1, 1)
+                    uniform(-1, 1)  # noqa: NPY002
                 )  # noqa: NPY002
             if max_km_variation is not None:
                 for met_id in reaction.enzyme_reaction_data.k_ms:
@@ -1656,25 +1725,26 @@ def get_model_with_varied_parameters(
                         and reaction.stoichiometries[met_id] < 0.0
                     ):
                         reaction.enzyme_reaction_data.k_ms[met_id] *= (
-                            max_km_variation ** (uniform(-1, 1))
+                            max_km_variation ** (uniform(-1, 1))  # noqa: NPY002
                         )  # noqa: NPY002
                     else:
                         reaction.enzyme_reaction_data.k_ms[met_id] *= (
-                            max_km_variation ** (uniform(-1, 1.0))
+                            max_km_variation ** (uniform(-1, 1.0))  # noqa: NPY002
                         )  # noqa: NPY002
             if max_ki_variation is not None:
                 for met_id in reaction.enzyme_reaction_data.k_is:
                     reaction.enzyme_reaction_data.k_is[met_id] *= max_ki_variation ** (
-                        uniform(-1, 1)
+                        uniform(-1, 1)  # noqa: NPY002
                     )  # noqa: NPY002
             if max_ka_variation is not None:
                 for met_id in reaction.enzyme_reaction_data.k_as:
                     reaction.enzyme_reaction_data.k_as[met_id] *= max_ka_variation ** (
-                        uniform(-1, 1)
+                        uniform(-1, 1)  # noqa: NPY002
                     )  # noqa: NPY002
     return varied_model
 
 
+@validate_call(validate_return=True)
 def get_potentially_active_reactions_in_variability_dict(
     cobrak_model: Model, variability_dict: dict[str, tuple[float, float]]
 ) -> list[str]:
@@ -1699,6 +1769,7 @@ def get_potentially_active_reactions_in_variability_dict(
     ]
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True), validate_return=True)
 def get_pyomo_solution_as_dict(model: ConcreteModel) -> dict[str, float]:
     """Returns the pyomo solution as a dictionary of { "$VAR_NAME": "$VAR_VALUE", ... }
 
@@ -1721,6 +1792,7 @@ def get_pyomo_solution_as_dict(model: ConcreteModel) -> dict[str, float]:
     return solution_dict
 
 
+@validate_call(validate_return=True)
 def get_reaction_enzyme_var_id(reac_id: str, reaction: Reaction) -> str:
     """Returns the pyomo model name of the reaction's enzyme
 
@@ -1741,7 +1813,10 @@ def get_reaction_enzyme_var_id(reac_id: str, reaction: Reaction) -> str:
     )
 
 
-def get_solver_status_from_pyomo_results(pyomo_results: SolverResults) -> int:
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True), validate_return=True)
+def get_solver_status_from_pyomo_results(
+    pyomo_results: SolverResults,
+) -> NonNegativeInt:
     """Returns the solver status from the pyomo results as an integer code.
 
     This function interprets the solver status from a `SolverResults` object and returns a corresponding integer code.
@@ -1776,6 +1851,7 @@ def get_solver_status_from_pyomo_results(pyomo_results: SolverResults) -> int:
             raise ValueError
 
 
+@validate_call(validate_return=True)
 def get_stoichiometric_matrix(cobrak_model: Model) -> list[list[float]]:
     """Returns the model's stoichiometric matrix.
 
@@ -1800,8 +1876,9 @@ def get_stoichiometric_matrix(cobrak_model: Model) -> list[list[float]]:
     return matrix
 
 
+@validate_call(validate_return=True)
 def get_stoichiometrically_coupled_reactions(
-    cobrak_model: Model, rounding: int = 10
+    cobrak_model: Model, rounding: NonNegativeInt = 10
 ) -> list[list[str]]:
     """Returns stoichiometrically coupled reactions.
 
@@ -1842,6 +1919,7 @@ def get_stoichiometrically_coupled_reactions(
     return coupled_reacs
 
 
+@validate_call(validate_return=True)
 def get_substrate_and_product_exchanges(
     cobrak_model: Model, optimization_dict: dict[str, Any] = {}
 ) -> tuple[tuple[str, ...], tuple[str, ...]]:
@@ -1879,7 +1957,10 @@ def get_substrate_and_product_exchanges(
     return tuple(substrate_reac_ids), tuple(product_reac_ids)
 
 
-def get_termination_condition_from_pyomo_results(pyomo_results: SolverResults) -> float:
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True), validate_return=True)
+def get_termination_condition_from_pyomo_results(
+    pyomo_results: SolverResults,
+) -> NonNegativeFloat:
     """Returns the termination condition from the pyomo results as a float code.
 
     This function interprets the termination condition from a `SolverResults` object and returns a corresponding float code.
@@ -1955,6 +2036,7 @@ def get_termination_condition_from_pyomo_results(pyomo_results: SolverResults) -
             raise ValueError
 
 
+@validate_call(validate_return=True)
 def get_unoptimized_reactions_in_nlp_solution(
     cobrak_model: Model, solution: dict[str, float], verbose: bool = False
 ) -> dict[str, tuple[float, float]]:
@@ -2078,6 +2160,7 @@ def get_unoptimized_reactions_in_nlp_solution(
     return unoptimized_reactions
 
 
+@validate_call(validate_return=True)
 def have_all_unignored_km(
     reaction: Reaction, kinetic_ignored_metabolites: list[str]
 ) -> bool:
@@ -2120,6 +2203,7 @@ def have_all_unignored_km(
     return not (len(substrates_with_km) == 0 or len(products_with_km) == 0)
 
 
+@validate_call(validate_return=True)
 def is_any_error_term_active(correction_config: CorrectionConfig) -> bool:
     """Checks if any error term is active in the correction configuration.
 
@@ -2146,6 +2230,7 @@ def is_any_error_term_active(correction_config: CorrectionConfig) -> bool:
     )
 
 
+@validate_call(validate_return=True)
 def is_objsense_maximization(objsense: int) -> bool:
     """Checks if the objective sense is maximization.
 
@@ -2159,9 +2244,9 @@ def is_objsense_maximization(objsense: int) -> bool:
     return objsense > 0
 
 
-def last_n_elements_equal(lst: list[Any], n: int) -> bool:
-    """
-    Check if the last n elements of a list are equal.
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True), validate_return=True)
+def last_n_elements_equal(lst: list[Any], n: int | float) -> bool:
+    """Check if the last n elements of a list are equal.
 
     Args:
         lst (list[Any]): The list to check.
@@ -2179,7 +2264,10 @@ def last_n_elements_equal(lst: list[Any], n: int) -> bool:
     return (n == 0) or (len(lst) >= n and all(x == lst[-n] for x in lst[-n:]))
 
 
-def make_kms_better_by_factor(cobrak_model: Model, reac_id: str, factor: float) -> None:
+@validate_call(validate_return=True)
+def make_kms_better_by_factor(
+    cobrak_model: Model, reac_id: str, factor: NonNegativeFloat
+) -> None:
     """Adjusts the Michaelis constants (Km) for substrates and products of a specified reaction in the metabolic model.
 
     - Substrate's Michaelis constants are divided by 'factor'.
@@ -2217,6 +2305,7 @@ def make_kms_better_by_factor(cobrak_model: Model, reac_id: str, factor: float) 
         reaction.enzyme_reaction_data.k_ms[product_id] *= factor
 
 
+@validate_call(validate_return=True)
 def parse_external_resources(path: str, brenda_version: str) -> None:
     """Parse and verify the presence of external resource files required for a COBRAk model.
 
@@ -2270,6 +2359,7 @@ def parse_external_resources(path: str, brenda_version: str) -> None:
         )
 
 
+@validate_call(validate_return=True)
 def print_model_parameter_statistics(cobrak_model: Model) -> None:
     """Prints statistics about reaction parameters (kcats and kms) in a COBRA-k model.
 
@@ -2337,6 +2427,7 @@ def print_model_parameter_statistics(cobrak_model: Model) -> None:
     print(len(cobrak_model.reactions))
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True), validate_return=True)
 def sort_dict_keys(dictionary: dict[str, T]) -> dict[str, T]:
     """Sorts all keys in a dictionary alphabetically.
 
@@ -2349,7 +2440,8 @@ def sort_dict_keys(dictionary: dict[str, T]) -> dict[str, T]:
     return dict(sorted(dictionary.items()))
 
 
-def split_list(lst: list[Any], n: int) -> list[list[Any]]:
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True), validate_return=True)
+def split_list(lst: list[Any], n: PositiveInt) -> list[list[Any]]:
     """Split a list into `n` nearly equal parts.
 
     This function divides a given list into `n` sublists, distributing the elements as evenly as possible.

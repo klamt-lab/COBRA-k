@@ -1,7 +1,6 @@
 # IMPORTS SECTION #
 from copy import deepcopy
 from dataclasses import dataclass
-from math import log
 from os.path import exists
 from sys import argv
 from time import time
@@ -31,6 +30,7 @@ from cobrak.standard_solvers import CPLEX, CPLEX_FOR_VARIABILITY_ANALYSIS, IPOPT
 from cobrak.utilities import (
     create_cnapy_scenario_out_of_optimization_dict,
     delete_orphaned_metabolites_and_enzymes,
+    get_model_with_varied_parameters,
     is_objsense_maximization,
 )
 
@@ -45,6 +45,7 @@ class RunConfig:
     # Model changes
     manually_changed_kms: dict[str, dict[str, float]]
     manually_changed_kcats: dict[str, float]
+    manually_changed_dG0s: dict[str, float]
     # Folder settings
     results_folder: str
     # ecTFVA settings
@@ -66,6 +67,15 @@ class RunConfig:
     max_conc_sum: float | None = None
     nameaddition: str | None = None
     kicked_reacs: list[str] = Field(default_factory=list)
+    do_parameter_variation: bool = False
+    varied_reacs: list[str] = Field(default_factory=list)
+    max_km_variation: float | None = None
+    max_kcat_variation: float | None = None
+    max_ki_variation: float | None = None
+    max_ka_variation: float | None = None
+    max_dG0_variation: float | None = None
+    with_iota: bool = False
+    with_alpha: bool = False
 
 
 # LOAD RUN CONFIGURATION #
@@ -84,70 +94,80 @@ run_config.results_folder = (
 ensure_folder_existence(run_config.results_folder)
 
 # LOAD AND CHANGE COBRAK MODEL #
+used_cobrak_model_path = (
+    f"{run_config.results_folder}used_cobrak_model_{file_suffix}.json"
+)
+if not exists(used_cobrak_model_path):
+    cobrak_model: Model = json_load(
+        "examples/iCH360/prepared_external_resources/iCH360_cobrak.json",
+        Model,
+    )
+    if run_config.do_parameter_variation:
+        cobrak_model = get_model_with_varied_parameters(
+            cobrak_model,
+            run_config.max_km_variation,
+            run_config.max_kcat_variation,
+            run_config.max_ki_variation,
+            run_config.max_ka_variation,
+            run_config.max_dG0_variation,
+            run_config.varied_reacs,
+        )
+
+    for kicked_reac in run_config.kicked_reacs:
+        if kicked_reac in cobrak_model.reactions:
+            del cobrak_model.reactions[kicked_reac]
+    if len(run_config.kicked_reacs) > 0:
+        cobrak_model = delete_orphaned_metabolites_and_enzymes(cobrak_model)
+
+    if run_config.protein_pool is not None:
+        assert run_config.protein_pool > 0
+        cobrak_model.max_prot_pool = run_config.protein_pool
+    for reac_id, changed_kms_dict in run_config.manually_changed_kms.items():
+        if reac_id in run_config.kicked_reacs:
+            continue
+        for met_id, changed_km in changed_kms_dict.items():
+            assert changed_km > 0
+            cobrak_model.reactions[reac_id].enzyme_reaction_data.k_ms[met_id] = (
+                changed_km
+            )
+    for reac_id, changed_kcat in run_config.manually_changed_kcats.items():
+        if reac_id in run_config.kicked_reacs:
+            continue
+        assert changed_kcat > 0
+        cobrak_model.reactions[reac_id].enzyme_reaction_data.k_cat = changed_kcat
+    for reac_id, changed_dG0 in run_config.manually_changed_dG0s.items():
+        if reac_id in run_config.kicked_reacs:
+            continue
+        # assert float(changed_dG0)
+        cobrak_model.reactions[reac_id].dG0 = changed_dG0
+
+    for deactivated_reac in run_config.deactivated_reacs:
+        cobrak_model.reactions[deactivated_reac].min_flux = 0.0
+        cobrak_model.reactions[deactivated_reac].max_flux = 0.0
+
+    for var_id, bound_tuple in run_config.set_bounds.items():
+        if not var_id:
+            continue
+        cobrak_model.extra_linear_constraints.append(
+            ExtraLinearConstraint(
+                stoichiometries={
+                    var_id: 1.0,
+                },
+                lower_value=bound_tuple[0],
+                upper_value=bound_tuple[1],
+            )
+        )
+
+    if run_config.max_conc_sum is not None:
+        assert run_config.max_conc_sum > 0
+        cobrak_model.max_conc_sum = run_config.max_conc_sum
+
+    json_write(used_cobrak_model_path, cobrak_model)
+
 cobrak_model: Model = json_load(
-    "examples/iCH360/prepared_external_resources/iCH360_cobrak.json",
+    used_cobrak_model_path,
     Model,
 )
-
-for kicked_reac in run_config.kicked_reacs:
-    if kicked_reac in cobrak_model.reactions:
-        del cobrak_model.reactions[kicked_reac]
-if len(run_config.kicked_reacs) > 0:
-    cobrak_model = delete_orphaned_metabolites_and_enzymes(cobrak_model)
-
-if run_config.protein_pool is not None:
-    assert run_config.protein_pool > 0
-    cobrak_model.max_prot_pool = run_config.protein_pool
-for reac_id, changed_kms_dict in run_config.manually_changed_kms.items():
-    if reac_id in run_config.kicked_reacs:
-        continue
-    for met_id, changed_km in changed_kms_dict.items():
-        assert changed_km > 0
-        cobrak_model.reactions[reac_id].enzyme_reaction_data.k_ms[met_id] = changed_km
-for reac_id, changed_kcat in run_config.manually_changed_kcats.items():
-    if reac_id in run_config.kicked_reacs:
-        continue
-    assert changed_kcat > 0
-    cobrak_model.reactions[reac_id].enzyme_reaction_data.k_cat = changed_kcat
-
-for deactivated_reac in run_config.deactivated_reacs:
-    cobrak_model.reactions[deactivated_reac].min_flux = 0.0
-    cobrak_model.reactions[deactivated_reac].max_flux = 0.0
-
-for var_id, bound_tuple in run_config.set_bounds.items():
-    if not var_id:
-        continue
-    cobrak_model.extra_linear_constraints.append(
-        ExtraLinearConstraint(
-            stoichiometries={
-                var_id: 1.0,
-            },
-            lower_value=bound_tuple[0],
-            upper_value=bound_tuple[1],
-        )
-    )
-
-if run_config.max_conc_sum is not None:
-    assert run_config.max_conc_sum > 0
-    cobrak_model.max_conc_sum = run_config.max_conc_sum
-
-json_write(
-    f"{run_config.results_folder}used_cobrak_model_{file_suffix}.json", cobrak_model
-)
-
-# RUN VARIABILITY ANALYSIS #
-if run_config.uses_bennett_concs:
-    raw_bennett_data = json_load(
-        "examples/common_needed_external_resources/Bennett_2009_full_data.json"
-    )
-    for metid, value in raw_bennett_data.items():
-        if metid in cobrak_model.metabolites:
-            cobrak_model.metabolites[metid].log_min_conc = log(
-                min(0.1 * value["mean"], value["lb"])
-            )
-            cobrak_model.metabolites[metid].log_max_conc = log(
-                max(10 * value["mean"], value["ub"])
-            )
 
 
 var_dict_filepath = f"{run_config.results_folder}variability_dict_{file_suffix}.json"
@@ -217,8 +237,8 @@ else:
             sampling_always_deactivated_reactions=[],
             with_kappa=True,
             with_gamma=True,
-            with_iota=False,
-            with_alpha=False,
+            with_iota=run_config.with_iota,
+            with_alpha=run_config.with_alpha,
             evolution_num_gens=run_config.evolution_num_gens,
             lp_solver=CPLEX,
             nlp_solver=IPOPT_MA57,
@@ -256,8 +276,8 @@ else:
             variability_data=variability_dict,
             lp_solver=CPLEX,
             nlp_solver=IPOPT_MA57,
-            with_iota=False,
-            with_alpha=False,
+            with_iota=run_config.with_iota,
+            with_alpha=run_config.with_alpha,
         )
 
         if (
@@ -277,10 +297,10 @@ else:
             set_new_best = True
         if not set_new_best:
             break
-        json_write(
-            f"{run_config.results_folder}postprocess_round{postprocess_round}_{file_suffix}_full_result.json",
-            postprocess_results,
-        )
+        # json_write(
+        #    f"{run_config.results_folder}postprocess_round{postprocess_round}_{file_suffix}_full_result.json",
+        #    postprocess_results,
+        # )
         json_write(
             f"{run_config.results_folder}postprocess_round{postprocess_round}_{file_suffix}_best_result.json",
             best_postprocess_result,

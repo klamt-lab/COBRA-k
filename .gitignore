@@ -51,3 +51,11 @@ __pycache__
 Thumbs.db*
 
 .DS_Store*
+
+# Coverage files
+htmlcov
+.coverage
+
+# Build files
+build
+*.egg-info

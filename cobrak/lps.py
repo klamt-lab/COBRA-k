@@ -15,6 +15,7 @@ from typing import Any
 
 from joblib import Parallel, cpu_count, delayed
 from numpy import percentile
+from pydantic import ConfigDict, validate_call
 from pyomo.environ import (
     Binary,
     ConcreteModel,
@@ -30,7 +31,6 @@ from pyomo.environ import (
     minimize,
     value,
 )
-from pyomo.opt.base.solvers import SolverFactoryClass
 
 from cobrak.pyomo_functionality import add_linear_approximation_to_pyomo_model
 
@@ -80,6 +80,7 @@ from .utilities import (
 
 
 # "PRIVATE" FUNCTIONS SECTION #
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def _add_concentration_vars_and_constraints(
     model: ConcreteModel,
     cobrak_model: Model,
@@ -135,6 +136,7 @@ def _add_concentration_vars_and_constraints(
     return model
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def _add_conc_sum_constraints(
     cobrak_model: Model,
     model: ConcreteModel,
@@ -183,6 +185,7 @@ def _add_conc_sum_constraints(
     return model
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def _add_df_and_dG0_var_for_reaction(
     model: ConcreteModel,
     reac_id: str,
@@ -269,6 +272,7 @@ def _add_df_and_dG0_var_for_reaction(
     return model, f_var_name
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def _add_error_sum_to_model(
     model: ConcreteModel,
     cobrak_model: Model,
@@ -345,6 +349,7 @@ def _add_error_sum_to_model(
     return model
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def _add_extra_watches_and_constraints_to_lp(
     model: ConcreteModel,
     cobrak_model: Model,
@@ -551,6 +556,7 @@ def _add_extra_watches_and_constraints_to_lp(
     return model
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def _add_enzyme_constraints_to_lp(
     model: ConcreteModel,
     cobrak_model: Model,
@@ -703,6 +709,7 @@ def _add_enzyme_constraints_to_lp(
     return model
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def _add_kappa_substrates_and_products_vars(
     model: ConcreteModel,
     reac_id: str,
@@ -762,11 +769,15 @@ def _add_kappa_substrates_and_products_vars(
     kappa_substrates_sum = 0.0
     kappa_products_lhs: Expression = -1.0 * getattr(model, kappa_products_var_id)
     kappa_products_sum = 0.0
-    for reac_met_id, stoichiometry in reaction.stoichiometries.items():
+    for reac_met_id, raw_stoichiometry in reaction.stoichiometries.items():
         if reac_met_id in cobrak_model.kinetic_ignored_metabolites:
             continue
         if reac_met_id.startswith(ENZYME_VAR_PREFIX):
             continue
+        stoichiometry = (
+            raw_stoichiometry
+            * reaction.enzyme_reaction_data.hill_coefficients.get(reac_met_id, 1.0)
+        )
         k_m = reaction.enzyme_reaction_data.k_ms[reac_met_id]
         if stoichiometry > 0.0:  # Product
             kappa_products_lhs += stoichiometry * getattr(
@@ -860,6 +871,7 @@ def _add_kappa_substrates_and_products_vars(
     return model, kappa_substrates_var_id, kappa_products_var_id
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def _add_thermodynamic_constraints_to_lp(
     model: ConcreteModel,
     cobrak_model: Model,
@@ -998,6 +1010,7 @@ def _add_thermodynamic_constraints_to_lp(
     return model
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True), validate_return=True)
 def _apply_error_scenario(
     model: ConcreteModel,
     cobrak_model: Model,
@@ -1101,6 +1114,7 @@ def _apply_error_scenario(
     _apply_scenario(model, error_scenario)
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True), validate_return=True)
 def _apply_scenario(
     model: ConcreteModel, scenario: dict[str, tuple[float, float]]
 ) -> None:
@@ -1123,8 +1137,9 @@ def _apply_scenario(
         var.setub(ub)
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True), validate_return=True)
 def _batch_variability_optimization(
-    pyomo_solver: SolverFactoryClass,
+    pyomo_solver: Any,  # noqa: ANN401
     model: ConcreteModel,
     batch: list[tuple[str, str]],
     solve_extra_options: dict[str, Any] = {},
@@ -1170,6 +1185,7 @@ def _batch_variability_optimization(
     return resultslist
 
 
+@validate_call(validate_return=True)
 def _get_dG0_highbound(cobrak_model: Model, dG0_error_cutoff: float) -> float:
     """Calculate the high bound for dG0 values based on a specified error cutoff.
 
@@ -1188,6 +1204,7 @@ def _get_dG0_highbound(cobrak_model: Model, dG0_error_cutoff: float) -> float:
     return all_dG0s[floor((1 - dG0_error_cutoff) * len(all_dG0s)) :][0]
 
 
+@validate_call(validate_return=True)
 def _get_km_bounds(cobrak_model: Model, km_error_cutoff: float) -> tuple[float, float]:
     """Determine the low and high bounds for km values based on a specified error cutoff.
 
@@ -1214,6 +1231,7 @@ def _get_km_bounds(cobrak_model: Model, km_error_cutoff: float) -> tuple[float, 
     return kms_lowbound, kms_highbound
 
 
+@validate_call
 def _get_steady_state_lp_from_cobrak_model(
     cobrak_model: Model,
     ignored_reacs: list[str] = [],
@@ -1260,6 +1278,7 @@ def _get_steady_state_lp_from_cobrak_model(
 
 
 # "PUBLIC" FUNCTIONS SECTION #
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def add_flux_sum_var(model: ConcreteModel, cobrak_model: Model) -> ConcreteModel:
     """Add a flux sum variable to a (N/MI)LP model.
 
@@ -1293,6 +1312,7 @@ def add_flux_sum_var(model: ConcreteModel, cobrak_model: Model) -> ConcreteModel
     return model
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def add_loop_constraints_to_lp(
     model: ConcreteModel,
     cobrak_model: Model,
@@ -1352,6 +1372,7 @@ def add_loop_constraints_to_lp(
     return model
 
 
+@validate_call
 def get_lp_from_cobrak_model(
     cobrak_model: Model,
     with_enzyme_constraints: bool,
@@ -1504,6 +1525,7 @@ def get_lp_from_cobrak_model(
     return model
 
 
+@validate_call(validate_return=True)
 def perform_lp_min_active_reactions_analysis(
     cobrak_model: Model,
     with_enzyme_constraints: bool,
@@ -1615,6 +1637,7 @@ def perform_lp_min_active_reactions_analysis(
     return minz_dict["extrazsum"]
 
 
+@validate_call
 def perform_lp_optimization(
     cobrak_model: Model,
     objective_target: str | dict[str, float],
@@ -1710,6 +1733,7 @@ def perform_lp_optimization(
     return add_statuses_to_optimziation_dict(fba_dict, results)
 
 
+@validate_call(validate_return=True)
 def perform_lp_thermodynamic_bottleneck_analysis(
     cobrak_model: Model,
     with_enzyme_constraints: bool = False,
@@ -1786,6 +1810,7 @@ def perform_lp_thermodynamic_bottleneck_analysis(
     return bottleneck_reactions
 
 
+@validate_call
 def perform_lp_variability_analysis(
     cobrak_model: Model,
     with_enzyme_constraints: bool = False,

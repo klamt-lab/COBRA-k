@@ -9,11 +9,13 @@ from typing import Any
 
 import cobra
 import requests
+from pydantic import ConfigDict, validate_call
 
 from .io import ensure_folder_existence, json_load, json_write, standardize_folder
 
 
 # FUNCTIONS SECTION #
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True), validate_return=True)
 def uniprot_get_enzyme_molecular_weights(
     model: cobra.Model,
     cache_basepath: str,

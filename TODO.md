@@ -2,7 +2,6 @@
 
 ## Mid-term
 
-* Add @validate_call where possible
 * Add "CompactModel" class
 * Consistent argument names
 * Consistent argument orders
@@ -16,6 +15,7 @@
 * More and better error messages
 * Simple MILP EFM function for very small networks
 * Switch to StringZilla
+* High code coverage
 
 ## Long-term
 

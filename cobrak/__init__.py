@@ -10,7 +10,7 @@ import logging
 import signal
 import sys
 from types import FrameType
-from typing import Any, Optional
+from typing import Any
 
 from rich.console import Console
 from rich.logging import RichHandler
@@ -18,7 +18,9 @@ from rich.traceback import install
 
 
 # PUBLIC FUNCTIONS SECTION #
-def exit_signal_handler(sig: int, frame: FrameType | None) -> None:
+def exit_signal_handler(
+    sig: int, frame: FrameType | None  # noqa: ARG001
+) -> None:  # pragma: no cover
     """Handles the exit signal by printing a shutdown message and exiting the program.
 
     Args:
@@ -61,7 +63,7 @@ def set_logging_handler(
         "error",
         "critical",
     ],
-    **args: Any,
+    **args: Any,  # noqa: ANN401
 ) -> RichHandler:
     """
     Sets up the logging handler with the given options.

@@ -5,6 +5,7 @@ from copy import deepcopy
 from dataclasses import asdict
 
 import cobra
+from pydantic import ConfigDict, validate_call
 
 from .constants import (
     REAC_ENZ_SEPARATOR,
@@ -17,6 +18,7 @@ from .dataclasses import ExtraLinearConstraint
 
 
 # FUNCTIONS SECTION #
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def get_fullsplit_cobra_model(
     cobra_model: cobra.Model,
     fwd_suffix: str = REAC_FWD_SUFFIX,
@@ -201,6 +203,7 @@ def get_fullsplit_cobra_model(
     return fullsplit_cobra_model
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def create_irreversible_cobrapy_model_from_stoichiometries(
     stoichiometries: dict[str, dict[str, float]],
 ) -> cobra.Model:
