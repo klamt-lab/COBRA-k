@@ -1,9 +1,9 @@
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt  # noqa: D100
 import z_add_path  # noqa: F401
 
 from cobrak.dataclasses import Model
 from cobrak.io import ensure_folder_existence, json_load
-from cobrak.utilities import get_df_kappa_and_gamma_sorted_lists
+from cobrak.utilities import get_df_and_efficiency_factors_sorted_lists
 
 resultfolder = "RESULTS_GLCUPTAKE"
 runname = "1_maxglc9.65"
@@ -13,7 +13,7 @@ cobrak_model = json_load(
 )
 result = json_load(f"examples/iCH360/{resultfolder}/final_best_result__{runname}.json")
 
-_, kappas, gammas, kappa_times_gamma = get_df_kappa_and_gamma_sorted_lists(
+_, kappas, gammas, _, _, kappa_times_gamma = get_df_and_efficiency_factors_sorted_lists(
     cobrak_model,
     result,
     min_flux=1e-6,

@@ -34,6 +34,8 @@ from .constants import (
     DG0_VAR_PREFIX,
     ENZYME_VAR_INFIX,
     ENZYME_VAR_PREFIX,
+    IOTA_VAR_PREFIX,
+    ALPHA_VAR_PREFIX,
     ERROR_BOUND_LOWER_CHANGE_PREFIX,
     ERROR_BOUND_UPPER_CHANGE_PREFIX,
     ERROR_VAR_PREFIX,
@@ -412,21 +414,45 @@ def combine_enzyme_reaction_datasets(
                         enzyme_reaction_data.k_a_references[met_id]
                     )
 
-            for (
-                met_id,
-                hill_coefficient,
-            ) in enzyme_reaction_data.hill_coefficients.items():
-                if met_id not in combined_data[reac_id].hill_coefficients or (
+            hills = enzyme_reaction_data.hill_coefficients
+            for met_id in hills.kappa:
+                if met_id not in combined_data[reac_id].hill_coefficients.kappa or (
                     combined_data[reac_id]
-                    .hill_coefficient_references[met_id][0]
+                    .hill_coefficient_references.kappa[met_id][0]
                     .tax_distance
-                    > enzyme_reaction_data.hill_coefficient_references[met_id][
+                    > enzyme_reaction_data.hill_coefficient_references.kappa[met_id][
                         0
                     ].tax_distance
                 ):
-                    combined_data[reac_id].hill_coefficients[met_id] = hill_coefficient
-                    combined_data[reac_id].hill_coefficient_references[met_id] = (
-                        enzyme_reaction_data.hill_coefficient_references[met_id]
+                    combined_data[reac_id].hill_coefficients.kappa[met_id] = hills.kappa
+                    combined_data[reac_id].hill_coefficient_references.kappa[met_id] = (
+                        enzyme_reaction_data.hill_coefficient_references.kappa[met_id]
+                    )
+            for met_id in hills.iota:
+                if met_id not in combined_data[reac_id].hill_coefficients.iota or (
+                    combined_data[reac_id]
+                    .hill_coefficient_references.iota[met_id][0]
+                    .tax_distance
+                    > enzyme_reaction_data.hill_coefficient_references.iota[met_id][
+                        0
+                    ].tax_distance
+                ):
+                    combined_data[reac_id].hill_coefficients.iota[met_id] = hills.iota
+                    combined_data[reac_id].hill_coefficient_references.iota[met_id] = (
+                        enzyme_reaction_data.hill_coefficient_references.iota[met_id]
+                    )
+            for met_id in hills.alpha:
+                if met_id not in combined_data[reac_id].hill_coefficients.alpha or (
+                    combined_data[reac_id]
+                    .hill_coefficient_references.alpha[met_id][0]
+                    .tax_distance
+                    > enzyme_reaction_data.hill_coefficient_references.alpha[met_id][
+                        0
+                    ].tax_distance
+                ):
+                    combined_data[reac_id].hill_coefficients.alpha[met_id] = hills.alpha
+                    combined_data[reac_id].hill_coefficient_references.alpha[met_id] = (
+                        enzyme_reaction_data.hill_coefficient_references.alpha[met_id]
                     )
 
     return combined_data
@@ -1036,7 +1062,7 @@ def get_enzyme_usage_by_protein_pool_fraction(
     result: dict[str, float],
     min_conc: NonNegativeFloat = 1e-12,
     rounding: NonNegativeInt = 5,
-) -> dict[float, list[str]]:
+) -> dict[NonNegativeFloat, list[str]]:
     """Return enzyme usage as a fraction of the total protein pool in a COBRAk model.
 
     This function computes the fraction of the total protein pool used by each enzyme based on the given result dictionary.
@@ -1050,7 +1076,7 @@ def get_enzyme_usage_by_protein_pool_fraction(
         rounding (int, optional): The number of decimal places to round the protein pool fractions. Defaults to 5.
 
     Returns:
-        dict[float, list[str]]: A dictionary where the keys are protein pool fractions and the values are lists of
+        dict[NonNegativeFloat, list[str]]: A dictionary where the keys are protein pool fractions and the values are lists of
                                 reaction IDs that use that fraction of the protein pool.
     """
     protein_pool_fractions: dict[float, list[str]] = {}
@@ -1195,24 +1221,24 @@ def get_full_enzyme_mw(cobrak_model: Model, reaction: Reaction) -> float:
 
 
 @validate_call(validate_return=True)
-def get_df_kappa_and_gamma_sorted_lists(
+def get_df_and_efficiency_factors_sorted_lists(
     cobrak_model: Model,
     result: dict[str, float],
-    min_flux: float = 0.0,
+    min_flux: NonNegativeFloat = 0.0,
 ) -> tuple[
-    dict[str, float], dict[str, float], dict[str, float], dict[str, tuple[float, int]]
+    dict[str, float], dict[str, float], dict[str, float], dict[str, float], dict[str, float], dict[str, tuple[float, int]]
 ]:
-    """Extracts and sorts lists of flux values (df), kappa values, and gamma values from a result dictionary.
+    """Extracts and sorts lists of flux values (df) and κ, γ, ι, α values from a result dictionary.
 
-    This function processes a dictionary of results ( a COBRA-k optimization)
-    to extract and sort lists of flux values (df), kappa values, and gamma values.  It filters
+    This function processes a dictionary of results of a COBRA-k optimization
+    to extract and sort lists of flux values (df) and κ, γ, ι, α values values. It filters
     these values based on a minimum flux threshold and returns them as sorted dictionaries.
     The function also calculates and returns a dictionary of kappa times gamma values,
     along with a status indicator representing the number of these values present for each reaction.
 
     Args:
-        cobrak_model: The COBRA Model object.
-        result: A dictionary containing the simulation or optimization results.  Keys are expected to
+        cobrak_model: The COBRA-k Model object.
+        result: A dictionary containing optimization results.  Keys are expected to
             start with prefixes like 'DF_VAR_PREFIX', 'KAPPA_VAR_PREFIX', and 'GAMMA_VAR_PREFIX'.
         min_flux: The minimum flux value to consider when filtering the results.  Values below this
             threshold are excluded.  Defaults to 0.0.
@@ -1220,13 +1246,19 @@ def get_df_kappa_and_gamma_sorted_lists(
     Returns:
         A tuple containing four dictionaries:
         1. A dictionary of sorted flux values (df) above the minimum flux.
-        2. A dictionary of sorted kappa values above the minimum flux.
-        3. A dictionary of sorted gamma values above the minimum flux.
-        4. A dictionary of sorted kappa times gamma values, along with a status indicator.
+        2. A dictionary of sorted κ values above the minimum flux.
+        3. A dictionary of sorted γ values above the minimum flux.
+        4. A dictionary of sorted ι values above the minimum flux.
+        5. A dictionary of sorted α values above the minimum flux.
+        6. A dictionary of sorted κ⋅γ⋅ι⋅α values, along with a status indicator. If, for a reaction,
+           one or more of these efficiency factors is missing, the respective factor is assumed to be 1.0
+           thus having no effect on the multiplied value.
     """
     dfs: dict[str, float] = {}
     kappas: dict[str, float] = {}
     gammas: dict[str, float] = {}
+    iotas: dict[str, float] = {}
+    alphas: dict[str, float] = {}
     for var_id, value in result.items():
         if var_id.startswith(DF_VAR_PREFIX):
             reac_id = var_id[len(DF_VAR_PREFIX) :]
@@ -1237,33 +1269,49 @@ def get_df_kappa_and_gamma_sorted_lists(
         elif var_id.startswith(GAMMA_VAR_PREFIX):
             reac_id = var_id[len(GAMMA_VAR_PREFIX) :]
             gammas[reac_id] = value
+        elif var_id.startswith(IOTA_VAR_PREFIX):
+            reac_id = var_id[len(IOTA_VAR_PREFIX) :]
+            iotas[reac_id] = value
+        elif var_id.startswith(ALPHA_VAR_PREFIX):
+            reac_id = var_id[len(ALPHA_VAR_PREFIX) :]
+            alphas[reac_id] = value
 
-    kappa_times_gamma_dict: dict[str, tuple[float, int]] = {}
+    all_multiplied_dict: dict[str, tuple[float, int]] = {}
     for reac_id in cobrak_model.reactions:
         status = 0
-        kappa_times_gamma = 1.0
+        product = 1.0
         if reac_id in kappas:
-            kappa_times_gamma *= kappas[reac_id]
+            product *= kappas[reac_id]
             status += 1
         if reac_id in gammas:
-            kappa_times_gamma *= gammas[reac_id]
+            product *= gammas[reac_id]
             status += 1
-        kappa_times_gamma_dict[reac_id] = (kappa_times_gamma, status)
+        if reac_id in iotas:
+            product *= iotas[reac_id]
+            status += 1
+        if reac_id in alphas:
+            product *= alphas[reac_id]
+            status += 1
+        all_multiplied_dict[reac_id] = (product, status)
 
     sorted_df_keys = sorted(dfs, key=lambda k: dfs[k], reverse=False)
     sorted_kappa_keys = sorted(kappas, key=lambda k: kappas[k], reverse=False)
     sorted_gamma_keys = sorted(gammas, key=lambda k: gammas[k], reverse=False)
-    sorted_kappa_times_gamma_keys = sorted(
-        kappas, key=lambda k: kappa_times_gamma_dict[k], reverse=False
+    sorted_iota_keys = sorted(iotas, key=lambda k: iotas[k], reverse=False)
+    sorted_alpha_keys = sorted(alphas, key=lambda k: alphas[k], reverse=False)
+    sorted_product_keys = sorted(
+        all_multiplied_dict, key=lambda k: all_multiplied_dict[k], reverse=False
     )
     return (
         {key: dfs[key] for key in sorted_df_keys if result[key] > min_flux},
         {key: kappas[key] for key in sorted_kappa_keys if result[key] > min_flux},
         {key: gammas[key] for key in sorted_gamma_keys if result[key] > min_flux},
+        {key: iotas[key] for key in sorted_iota_keys if result[key] > min_flux},
+        {key: alphas[key] for key in sorted_alpha_keys if result[key] > min_flux},
         {
-            key: kappa_times_gamma_dict[key]
-            for key in sorted_kappa_times_gamma_keys
-            if result[key] > min_flux
+            key: all_multiplied_dict[key]
+            for key in sorted_product_keys
+            if key in result and result[key] > min_flux
         },
     )
 
@@ -2038,7 +2086,7 @@ def get_termination_condition_from_pyomo_results(
 
 @validate_call(validate_return=True)
 def get_unoptimized_reactions_in_nlp_solution(
-    cobrak_model: Model, solution: dict[str, float], verbose: bool = False
+    cobrak_model: Model, solution: dict[str, float], verbose: bool = False, regard_iota: bool = False, regard_alpha: bool = False,
 ) -> dict[str, tuple[float, float]]:
     """Identify unoptimized reactions in the NLP (Non-Linear Programming) solution.
 
@@ -2076,12 +2124,14 @@ def get_unoptimized_reactions_in_nlp_solution(
         if have_all_unignored_km(reaction, cobrak_model.kinetic_ignored_metabolites):
             kappa_substrates = 1.0
             kappa_products = 1.0
-            for met_id, stoichiometry in reaction.stoichiometries.items():
+            for met_id, raw_stoichiometry in reaction.stoichiometries.items():
                 if met_id in cobrak_model.kinetic_ignored_metabolites:
                     continue
 
+                stoichiometry = raw_stoichiometry * reaction.enzyme_reaction_data.hill_coefficients.kappa.get(met_id, 1.0)
+                expconc = exp(solution[f"{LNCONC_VAR_PREFIX}{met_id}"])
                 multiplier = (
-                    exp(solution[f"{LNCONC_VAR_PREFIX}{met_id}"])
+                    expconc
                     / reaction.enzyme_reaction_data.k_ms[met_id]
                 ) ** abs(stoichiometry)
                 if stoichiometry < 0.0:
@@ -2096,17 +2146,44 @@ def get_unoptimized_reactions_in_nlp_solution(
                 has_problem = True
                 if verbose:
                     print(
-                        f"Kappa problem in {reac_id}: Real is {real_kappa}, NLP value is {nlp_kappa}"
-                    )
-                    print("E", solution[get_reaction_enzyme_var_id(reac_id, reaction)])
-                    print(
-                        "E_use",
-                        solution[get_reaction_enzyme_var_id(reac_id, reaction)]
-                        * get_full_enzyme_mw(cobrak_model, reaction),
+                        f"κ problem in {reac_id}: Real is {real_kappa}, NLP value is {nlp_kappa}"
                     )
         else:
             real_kappa = 1.0
             nlp_kappa = 1.0
+
+        # Iota and alpha check
+        real_iota = 1.0
+        real_alpha = 1.0
+        if reac_id in solution and reaction.enzyme_reaction_data is not None and reaction.enzyme_reaction_data.identifiers != [""]:
+            alpha_and_iota_mets = set(list(reaction.enzyme_reaction_data.k_is.keys()) + list(reaction.enzyme_reaction_data.k_as.keys()))
+            for met_id in alpha_and_iota_mets:
+                met_var_id = f"{LNCONC_VAR_PREFIX}{met_id}"
+                if met_var_id not in solution:
+                    continue
+                expconc = exp(solution[met_var_id])
+                stoichiometry_iota = abs(reaction.stoichiometries.get(met_id, 1.0)) * reaction.enzyme_reaction_data.hill_coefficients.iota.get(met_id, 1.0)
+                stoichiometry_alpha = abs(reaction.stoichiometries.get(met_id, 1.0)) * reaction.enzyme_reaction_data.hill_coefficients.alpha.get(met_id, 1.0)
+
+                if met_id in reaction.enzyme_reaction_data.k_is and regard_iota:
+                    real_iota *= 1 / (1 + (expconc / reaction.enzyme_reaction_data.k_is[met_id]) ** stoichiometry_iota)
+                if met_id in reaction.enzyme_reaction_data.k_as and regard_alpha:
+                    real_alpha *= 1 / (1 + (reaction.enzyme_reaction_data.k_as[met_id] / expconc) ** stoichiometry_alpha)
+
+        nlp_iota = solution.get(f"{IOTA_VAR_PREFIX}{reac_id}", 1.0) if regard_iota else 1.0
+        if abs(nlp_iota - real_iota) > 0.001:
+            has_problem = True
+            if verbose:
+                print(
+                    f"ι problem in {reac_id}: Real is {real_iota}, NLP value is {nlp_iota}"
+                )
+        nlp_alpha = solution.get(f"{ALPHA_VAR_PREFIX}{reac_id}", 1.0) if regard_alpha else 1.0
+        if abs(nlp_alpha - real_alpha) > 0.001:
+            has_problem = True
+            if verbose:
+                print(
+                    f"α problem in {reac_id}: Real is {real_alpha}, NLP value is {nlp_alpha}"
+                )
 
         # Gamma check
         if reaction.dG0 is not None:
@@ -2130,10 +2207,10 @@ def get_unoptimized_reactions_in_nlp_solution(
                 has_problem = True
                 if verbose:
                     print(
-                        f"Gamma problem in {reac_id}: Real is {real_gamma}, NLP value is {nlp_gamma}"
+                        f"γ problem in {reac_id}: Real is {real_gamma}, NLP value is {nlp_gamma}"
                     )
                     print(
-                        f"dg: Real is {dg}, NLP value is {solution[DF_VAR_PREFIX + reac_id]}"
+                        f"ΔG': Real is {dg}, NLP value is {solution[DF_VAR_PREFIX + reac_id]}"
                     )
                     print("E", solution[get_reaction_enzyme_var_id(reac_id, reaction)])
                     print(
@@ -2149,8 +2226,8 @@ def get_unoptimized_reactions_in_nlp_solution(
         enzyme_conc = solution[get_reaction_enzyme_var_id(reac_id, reaction)]
         v_plus = enzyme_conc * reaction.enzyme_reaction_data.k_cat
 
-        nlp_flux = v_plus * nlp_gamma * nlp_kappa
-        real_flux = v_plus * real_gamma * real_kappa
+        nlp_flux = v_plus * nlp_gamma * nlp_kappa * nlp_alpha * nlp_iota
+        real_flux = v_plus * real_gamma * real_kappa * real_alpha * real_iota
         if has_problem and verbose:
             print(nlp_flux, real_flux, solution[reac_id])
 

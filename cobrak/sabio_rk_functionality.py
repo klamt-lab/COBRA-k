@@ -15,7 +15,7 @@ import cobra
 import requests
 from dataclasses_json import dataclass_json
 
-from .dataclasses import EnzymeReactionData, ParameterReference
+from .dataclasses import EnzymeReactionData, ParameterReference, HillCoefficients, HillParameterReferences
 from .io import (
     ensure_folder_existence,
     get_files,
@@ -775,10 +775,12 @@ def sabio_select_enzyme_kinetic_data_for_model(
                 min(k_a_per_tax_score.keys())
             ]
 
-        hills: dict[str, float] = {}
+        hills: HillCoefficients = HillCoefficients()
         hill_references: dict[str, list[ParameterReference]] = {}
         for met_id, hills_per_tax_score in hills_per_tax_score.items():
-            hills[met_id] = median(hills_per_tax_score[min(hills_per_tax_score.keys())])
+            hills.kappa[met_id] = median(hills_per_tax_score[min(hills_per_tax_score.keys())])
+            hills.iota[met_id] = median(hills_per_tax_score[min(hills_per_tax_score.keys())])
+            hills.alpha[met_id] = median(hills_per_tax_score[min(hills_per_tax_score.keys())])
             hill_references[met_id] = hill_refs_per_tax_score[met_id][
                 min(hills_per_tax_score.keys())
             ]
@@ -794,7 +796,11 @@ def sabio_select_enzyme_kinetic_data_for_model(
             k_as=k_as,
             k_a_references=k_a_references,
             hill_coefficients=hills,
-            hill_coefficient_references=hill_references,
+            hill_coefficient_references=HillParameterReferences(
+                kappa=hill_references,
+                iota=hill_references,
+                alpha=hill_references,
+            ),
         )
 
     enzyme_reaction_data = {**enzyme_reaction_data, **custom_enzyme_kinetic_data}

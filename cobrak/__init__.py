@@ -19,7 +19,8 @@ from rich.traceback import install
 
 # PUBLIC FUNCTIONS SECTION #
 def exit_signal_handler(
-    sig: int, frame: FrameType | None  # noqa: ARG001
+    sig: int,  # noqa: ARG001
+    frame: FrameType | None,  # noqa: ARG001
 ) -> None:  # pragma: no cover
     """Handles the exit signal by printing a shutdown message and exiting the program.
 

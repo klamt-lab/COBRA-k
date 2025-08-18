@@ -1,4 +1,4 @@
-# IMPORTS SECTION #
+# IMPORTS SECTION #  # noqa: D100
 from copy import deepcopy
 from dataclasses import dataclass
 from os.path import exists
@@ -41,7 +41,7 @@ except (ValueError, IndexError):
 
 
 @dataclass
-class RunConfig:
+class RunConfig:  # noqa: D101
     # Model changes
     manually_changed_kms: dict[str, dict[str, float]]
     manually_changed_kcats: dict[str, float]

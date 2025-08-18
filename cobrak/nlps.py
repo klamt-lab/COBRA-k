@@ -405,9 +405,9 @@ def get_nlp_from_cobrak_model(
                 var_id = f"{LNCONC_VAR_PREFIX}{met_id}"
                 if var_id not in model_var_names:
                     continue
-                stoichiometry = reaction.stoichiometries.get(
+                stoichiometry = abs(reaction.stoichiometries.get(
                     met_id, 1.0
-                ) * reaction.enzyme_reaction_data.hill_coefficients.get(met_id, 1.0)
+                )) * reaction.enzyme_reaction_data.hill_coefficients.iota.get(met_id, 1.0)
                 iota_product *= 1 / (
                     1
                     + exp(
@@ -443,9 +443,9 @@ def get_nlp_from_cobrak_model(
                 var_id = f"{LNCONC_VAR_PREFIX}{met_id}"
                 if var_id not in model_var_names:
                     continue
-                stoichiometry = reaction.stoichiometries.get(
+                stoichiometry = abs(reaction.stoichiometries.get(
                     met_id, 1.0
-                ) * reaction.enzyme_reaction_data.hill_coefficients.get(met_id, 1.0)
+                )) * reaction.enzyme_reaction_data.hill_coefficients.alpha.get(met_id, 1.0)
                 # alpha_product *= 1 + k_a * exp(
                 #    getattr(model, f"{LNCONC_VAR_PREFIX}{met_id}")
                 # )

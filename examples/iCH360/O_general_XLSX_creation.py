@@ -1,4 +1,4 @@
-from itertools import starmap
+from itertools import starmap  # noqa: D100
 from math import exp
 from os.path import exists
 

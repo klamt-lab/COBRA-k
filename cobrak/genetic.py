@@ -64,7 +64,7 @@ class COBRAKGENETIC:
         self.gen = gen
         self.seed = seed
         if seed is not None:
-            np.random.seed(seed)
+            np.random.seed(seed)  # noqa: NPY002
 
         # Initialization of random particles
         cpu_count_value = cpu_count() if pop_size is None else pop_size

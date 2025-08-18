@@ -272,7 +272,7 @@ def test_delete_unused_reactions_in_optimization_dict(  # noqa: D103
     assert "R3" not in model.reactions
 
 
-def test_delete_unused_reactions_in_variability_dict(
+def test_delete_unused_reactions_in_variability_dict(  # noqa: D103
     mock_model: Model, mock_variability_dict: dict[str, tuple[float, float]]
 ) -> None:  # noqa: D103
     model = delete_unused_reactions_in_variability_dict(
@@ -283,7 +283,7 @@ def test_delete_unused_reactions_in_variability_dict(
     assert "R3" not in model.reactions
 
 
-def test_get_active_reacs_from_optimization_dict(
+def test_get_active_reacs_from_optimization_dict(  # noqa: D103
     mock_model: Model, mock_optimization_dict: dict[str, float]
 ) -> None:  # noqa: D103
     result = get_active_reacs_from_optimization_dict(mock_model, mock_optimization_dict)
@@ -320,7 +320,7 @@ def test_get_full_enzyme_mw(mock_model: Model) -> None:  # noqa: D103
     assert result == 20.0
 
 
-def test_get_metabolites_in_elementary_conservation_relations(
+def test_get_metabolites_in_elementary_conservation_relations(  # noqa: D103
     mock_model: Model,
 ) -> None:  # noqa: D103
     result = get_metabolites_in_elementary_conservation_relations(mock_model)

@@ -1,4 +1,4 @@
-# IMPORTS SECTION
+# IMPORTS SECTION  # noqa: D100
 import time
 
 import z_add_path  # noqa: F401

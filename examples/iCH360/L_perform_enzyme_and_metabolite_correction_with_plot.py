@@ -1,4 +1,4 @@
-# IMPORTS SECTION #
+# IMPORTS SECTION #  # noqa: D100
 from math import exp, log
 
 import matplotlib.pyplot as plt
@@ -86,7 +86,7 @@ ensure_folder_existence(correction_folder)
 
 
 # Correction and plot functions #
-def run_metabolite_correction() -> dict[str, float]:
+def run_metabolite_correction() -> dict[str, float]:  # noqa: D103
     met_correction_error_scenario: ErrorScenario = {
         f"{LNCONC_VAR_PREFIX}{met_id}": (
             log(bennett_data[met_id]["lb"]),
@@ -126,7 +126,7 @@ def run_metabolite_correction() -> dict[str, float]:
     return metcorrection_result
 
 
-def run_enzyme_correction() -> dict[str, float]:
+def run_enzyme_correction() -> dict[str, float]:  # noqa: D103
     enzcorrection_result = perform_nlp_irreversible_optimization_with_active_reacs_only(
         cobrak_model=cobrak_model,
         objective_target=ERROR_SUM_VAR_ID,
@@ -164,7 +164,7 @@ def run_enzyme_correction() -> dict[str, float]:
     return enzcorrection_result
 
 
-def plot_metabolite_result(
+def plot_metabolite_result(  # noqa: D103
     nlp_result: dict[str, float], ax: plt.Axes, title: str
 ) -> None:
     variability_nlp: list[tuple[float, float]] = []
@@ -220,7 +220,7 @@ def plot_metabolite_result(
     )
 
 
-def plot_enzyme_result(nlp_result: dict[str, float], ax: plt.Axes, title: str) -> None:
+def plot_enzyme_result(nlp_result: dict[str, float], ax: plt.Axes, title: str) -> None:  # noqa: D103
     variability_nlp: list[tuple[float, float]] = []
     variability_schmidt: list[tuple[float, float]] = []
     labels: list[str] = []
@@ -283,7 +283,7 @@ def plot_enzyme_result(nlp_result: dict[str, float], ax: plt.Axes, title: str) -
     )
 
 
-def plot_flux_result(
+def plot_flux_result(  # noqa: D103
     predicted_data: dict[str, float], ax: plt.Axes, title: str
 ) -> None:
     # http://dx.doi.org/10.1016/j.cels.2015.09.008

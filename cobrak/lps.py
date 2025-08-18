@@ -776,7 +776,7 @@ def _add_kappa_substrates_and_products_vars(
             continue
         stoichiometry = (
             raw_stoichiometry
-            * reaction.enzyme_reaction_data.hill_coefficients.get(reac_met_id, 1.0)
+            * reaction.enzyme_reaction_data.hill_coefficients.kappa.get(reac_met_id, 1.0)
         )
         k_m = reaction.enzyme_reaction_data.k_ms[reac_met_id]
         if stoichiometry > 0.0:  # Product

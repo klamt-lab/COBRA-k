@@ -413,7 +413,8 @@ def get_cobrak_model_with_kinetic_data_from_sbml_model_alone(
         data_cache_folder (str, optional): _description_. Defaults to "".
         R (float, optional): _description_. Defaults to STANDARD_R.
         T (float, optional): _description_. Defaults to STANDARD_T.
-        add_hill_coefficients (bool, optional): Whether Hill coefficeints shall be collected (True) or not (False). Defaults to True.
+        add_hill_coefficients (bool, optional): Whether Hill coefficeints shall be collected (True) or not (False).
+            They are added (as they cannot be separated for κ, ι *and* α as HilLCoefficient instances). Defaults to True.
 
     Returns:
         Model: _description_

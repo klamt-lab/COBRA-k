@@ -81,6 +81,28 @@ class ParameterReference:
 
 
 @dataclass
+class HillParameterReferences:
+    """Represents the database reference for the ι, α and κ Hill coefficients."""
+    kappa: dict[str, list[ParameterReference]] = Field(default_factory=dict)
+    """References for κ Hill coefficients."""
+    iota: dict[str, list[ParameterReference]] = Field(default_factory=dict)
+    """References for ι Hill coefficients."""
+    alpha: dict[str, list[ParameterReference]] = Field(default_factory=dict)
+    """References for α Hill coefficients."""
+
+
+@dataclass
+class HillCoefficients:
+    """Represents the Hill coefficients of a reactions, seperated according to efficiency terms"""
+    kappa: dict[str, PositiveFloat] = Field(default_factory=dict)
+    """Hill coefficients affecting the κ saturation term. Metabolite IDs are keys, coefficients values. Defaults to {}."""
+    iota: dict[str, PositiveFloat] = Field(default_factory=dict)
+    """Hill coefficients affecting the ι inhibition term. Metabolite IDs are keys, coefficients values. Defaults to {}."""
+    alpha: dict[str, PositiveFloat] = Field(default_factory=dict)
+    """Hill coefficients affecting the α activation term. Metabolite IDs are keys, coefficients values. Defaults to {}."""
+
+
+@dataclass
 class EnzymeReactionData:
     """Represents the enzymes used by a reaction."""
 
@@ -102,11 +124,9 @@ class EnzymeReactionData:
     """[Optional] The reaction's k_as (Activation constants) in M=mol⋅l⁻¹. Metabolite IDs are keys, k_as the values. Default is {}"""
     k_a_references: dict[str, list[ParameterReference]] = Field(default_factory=dict)
     """[Optional] References showing the source(s) of the k_a values. Metabolite IDs are keys, the source lists values. Default is {}"""
-    hill_coefficients: dict[str, PositiveFloat] = Field(default_factory=dict)
-    """[Optional] If existent, the reaction's Hill coefficients. Metabolite IDs are keys, coefficients the values. Default is {}"""
-    hill_coefficient_references: dict[str, list[ParameterReference]] = Field(
-        default_factory=dict
-    )
+    hill_coefficients: HillCoefficients = HillCoefficients()
+    """[Optional] If given, the reaction's Hill coefficients. Metabolite IDs are keys, coefficients the  in form of HillCoefficients instances. Default is empty HillCoefficients()."""
+    hill_coefficient_references: HillParameterReferences = HillParameterReferences()
     """[Optional] References showing the source(s) of the Hill coefficients. Metabolite IDs are keys, the source lists values. Default is {}"""
     special_stoichiometries: dict[str, PositiveFloat] = Field(default_factory=dict)
     """[Optional] Special (non-1) stoichiometries of polypeptides/enzymes in the reaction's enzyme. Default is {}"""

@@ -1,4 +1,4 @@
-import z_add_path  # noqa: F401
+import z_add_path  # noqa: D100, F401
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill
 
@@ -10,7 +10,7 @@ from cobrak.utilities import sort_dict_keys
 BG_COLOR_GREY = PatternFill(start_color="d3d3d3", end_color="d3d3d3", fill_type="solid")
 
 
-def _choose_color(current_value: float, wt_value: float):
+def _choose_color(current_value: float, wt_value: float):  # noqa: ANN202
     if max(wt_value / current_value, current_value / wt_value) < 1.001:
         return BG_COLOR_GREY
     if wt_value > current_value:

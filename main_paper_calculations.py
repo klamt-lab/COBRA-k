@@ -1,3 +1,11 @@
+"""Creates JSONs that describe the main paper calculations.
+
+Use with argument 'local' to store these JSONs in the subfolder "main_paper_calculations". Without this
+argument, this script tries to start these runs using SLURM as on HPC clusters.
+With a JSON's path as argument, you can then run 'examples/iCH360/H_run_calculations.py' (to be found from
+COBRA-k's repository).
+"""
+
 import contextlib
 import json
 import os
@@ -30,13 +38,11 @@ def ensure_folder_existence(folder: str) -> None:
     """
     if os.path.isdir(folder):
         return
-    try:
+    with contextlib.suppress(FileExistsError):
         os.makedirs(folder)
-    except FileExistsError:
-        pass
 
 
-def json_load(path: str, dataclass_type: Any = Any) -> Any:
+def json_load(path: str, dataclass_type: Any = Any) -> Any:  # noqa: ANN401
     """Load JSON data from a file and validate it against a specified dataclass type.
 
     This function reads the content of a JSON file located at the given `path`, parses it,
@@ -76,13 +82,13 @@ def json_load(path: str, dataclass_type: Any = Any) -> Any:
     >>> print(person.name, person.age)
     John Doe 30
     """
-    with open(path, encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:  # noqa: FURB101
         data = f.read()
 
     return TypeAdapter(dataclass_type).validate_json(data)
 
 
-def json_write(path: str, json_data: Any) -> None:
+def json_write(path: str, json_data: Any) -> None:  # noqa: ANN401
     """Writes a JSON file at the given path with the given data as content.
 
     Can be also used for any of COBRAk's dataclasses as well as any
@@ -117,7 +123,7 @@ def json_write(path: str, json_data: Any) -> None:
 
 
 @dataclass
-class RunConfig:
+class RunConfig:  # noqa: D101
     # Model changes
     manually_changed_kms: dict[str, dict[str, float]]
     manually_changed_kcats: dict[str, dict[str, float]]
@@ -154,7 +160,7 @@ class RunConfig:
     with_alpha: bool = False
 
 
-def create_and_submit_slurm_job(json_path: str) -> None:
+def create_and_submit_slurm_job(json_path: str) -> None:  # noqa: D103
     jobname = "PSBR"
     # Define the SLURM script content
     slurm_script_content = f"""#!/bin/bash

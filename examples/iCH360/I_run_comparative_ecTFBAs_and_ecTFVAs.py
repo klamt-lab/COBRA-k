@@ -1,4 +1,4 @@
-from os.path import exists
+from os.path import exists  # noqa: D100
 
 import z_add_path  # noqa: F401
 
