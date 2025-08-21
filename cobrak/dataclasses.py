@@ -83,6 +83,7 @@ class ParameterReference:
 @dataclass
 class HillParameterReferences:
     """Represents the database reference for the ι, α and κ Hill coefficients."""
+
     kappa: dict[str, list[ParameterReference]] = Field(default_factory=dict)
     """References for κ Hill coefficients."""
     iota: dict[str, list[ParameterReference]] = Field(default_factory=dict)
@@ -94,6 +95,7 @@ class HillParameterReferences:
 @dataclass
 class HillCoefficients:
     """Represents the Hill coefficients of a reactions, seperated according to efficiency terms"""
+
     kappa: dict[str, PositiveFloat] = Field(default_factory=dict)
     """Hill coefficients affecting the κ saturation term. Metabolite IDs are keys, coefficients values. Defaults to {}."""
     iota: dict[str, PositiveFloat] = Field(default_factory=dict)
@@ -406,6 +408,18 @@ class CorrectionConfig:
     """Cutoff value for the κ error term. Defaults to 1.0."""
     max_rel_km_correction: PositiveFloat = 0.999
     """Maximal relative correction for the κ error term. Defaults to 0.999."""
+    add_ki_error_term: bool = False
+    """Indicates whether to add a ι error term. Defaults to False."""
+    ki_error_cutoff: PositiveFloat = 1.0
+    """Cutoff value for the ι error term. Defaults to 1.0."""
+    max_rel_ki_correction: PositiveFloat = 0.999
+    """Maximal relative correction for the ι error term. Defaults to 0.999."""
+    add_ka_error_term: bool = False
+    """Indicates whether to add an α error term. Defaults to False."""
+    ka_error_cutoff: PositiveFloat = 1.0
+    """Cutoff value for the α error term. Defaults to 1.0."""
+    max_rel_ka_correction: PositiveFloat = 0.999
+    """Maximal relative correction for the α error term. Defaults to 0.999."""
     error_sum_as_qp: bool = False
     """Indicates whether to use a quadratic programming approach for the error sum. Defaults to False."""
     add_error_sum_term: bool = True

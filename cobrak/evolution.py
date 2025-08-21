@@ -511,6 +511,7 @@ def _postprocess_batch(
     correction_config: CorrectionConfig = CorrectionConfig(),
     onlytested: str = "",
     ignore_nonlinear_extra_terms_in_ectfbas: bool = True,
+    var_data_abs_epsilon: float = 1e-5,
 ) -> list[str, tuple[str], dict[str, float], str, int]:
     """Postprocesses a batch of reactions to find feasible switches.
 
@@ -536,6 +537,7 @@ def _postprocess_batch(
         correction_config (CorrectionConfig, optional): Configuration for corrections during optimization. Defaults to CorrectionConfig().
         onlytested (str, optional): Specific reactions to test during postprocessing. Defaults to "".
         ignore_nonlinear_extra_terms_in_ectfbas: (bool, optional): Whether or not non-linear watches/constraints shall be ignored in ecTFBAs.
+        var_data_abs_epsilon: (float, optional): Under this value, any data given by the variability dict is considered to be 0. Defaults to 1e-5.
 
     Returns:
         list[str, tuple[str], dict[str, float], str, int]: List of feasible switches found with extra data, as follows:
@@ -583,6 +585,7 @@ def _postprocess_batch(
                 target_cobrak_model,
                 variability_data,
                 error_scenario=correction_config.error_scenario,
+                min_abs_objvalue=var_data_abs_epsilon,
             )
 
             active_z_var_changes_sum = 0.0
@@ -725,9 +728,6 @@ def _postprocess_batch(
                     results = pyomo_lp_solver.solve(
                         baselp, tee=verbose, **lp_solver.solve_extra_options
                     )
-                except (ApplicationError, AttributeError, ValueError):
-                    lp_resultdict = {ALL_OK_KEY: False}
-                try:
                     lp_resultdict = add_statuses_to_optimziation_dict(
                         get_pyomo_solution_as_dict(baselp), results
                     )

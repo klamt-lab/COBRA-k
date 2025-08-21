@@ -16,10 +16,12 @@ from rich.table import Table
 from . import console
 from .constants import (
     ALL_OK_KEY,
+    ALPHA_VAR_PREFIX,
     DF_VAR_PREFIX,
     ERROR_SUM_VAR_ID,
     ERROR_VAR_PREFIX,
     GAMMA_VAR_PREFIX,
+    IOTA_VAR_PREFIX,
     KAPPA_VAR_PREFIX,
     LNCONC_VAR_PREFIX,
     OBJECTIVE_VAR_NAME,
@@ -283,11 +285,12 @@ def print_model(
         reac_table = Table(title="Reactions", title_justify="left")
         reac_table.add_column("ID")
         reac_table.add_column("String")
-        reac_table.add_column("ΔG'°ᵢ")
-        reac_table.add_column("kcatᵢ")
-        reac_table.add_column("kMᵢ")
-        # reac_table.add_column("kIᵢ")
-        # reac_table.add_column("kAᵢ")
+        reac_table.add_column("ΔG'°")
+        reac_table.add_column("kcat")
+        reac_table.add_column("kM")
+        reac_table.add_column("kI")
+        reac_table.add_column("kA")
+        reac_table.add_column("Hills")
         reac_table.add_column("Name")
         reac_table.add_column("Annotation")
 
@@ -306,6 +309,21 @@ def print_model(
                     if reaction.enzyme_reaction_data is None
                     else str(reaction.enzyme_reaction_data.k_ms)
                 ),
+                (
+                    "N/A"
+                    if reaction.enzyme_reaction_data is None
+                    else str(reaction.enzyme_reaction_data.k_is)
+                ),
+                (
+                    "N/A"
+                    if reaction.enzyme_reaction_data is None
+                    else str(reaction.enzyme_reaction_data.k_as)
+                ),
+                (
+                    "N/A"
+                    if reaction.enzyme_reaction_data is None
+                    else str(reaction.enzyme_reaction_data.hill_coefficients)
+                ),
                 reaction.name,
                 str(reaction.annotation),
             ]
@@ -315,9 +333,9 @@ def print_model(
     if print_enzymes and cobrak_model.enzymes != {}:
         enzyme_table = Table(title="Enzymes", title_justify="left")
         enzyme_table.add_column("ID")
-        enzyme_table.add_column("MWᵢ")
-        enzyme_table.add_column("min([Eᵢ])")
-        enzyme_table.add_column("max([Eᵢ])")
+        enzyme_table.add_column("MW")
+        enzyme_table.add_column("min([E])")
+        enzyme_table.add_column("max([E])")
         enzyme_table.add_column("Name")
         enzyme_table.add_column("Annotation")
 
@@ -336,8 +354,8 @@ def print_model(
     if print_mets:
         met_table = Table(title="Metabolites", title_justify="left")
         met_table.add_column("ID")
-        met_table.add_column("min(cᵢ)")
-        met_table.add_column("max(cᵢ)")
+        met_table.add_column("min(c)")
+        met_table.add_column("max(c)")
         met_table.add_column("Name")
         met_table.add_column("Annotation")
 
@@ -455,12 +473,14 @@ def print_optimization_result(
             title_justify="left",
         )
         reac_table.add_column("ID")
-        reac_table.add_column("vᵢ")
+        reac_table.add_column("v")
         if add_stoichiometries:
             reac_table.add_column("Stoichiometries")
-        reac_table.add_column("dfᵢ")
-        reac_table.add_column("κᵢ")
-        reac_table.add_column("γᵢ")
+        reac_table.add_column("df")
+        reac_table.add_column("κ")
+        reac_table.add_column("γ")
+        reac_table.add_column("ι")
+        reac_table.add_column("α")
         for reac_id in sort_dict_keys(cobrak_model.reactions):
             if ignore_unused and (
                 reac_id not in optimization_dict
@@ -510,6 +530,24 @@ def print_optimization_result(
                     ),
                     _get_mapcolored_value_or_na(
                         f"{GAMMA_VAR_PREFIX}{reac_id}",
+                        optimization_dict,
+                        0.0,
+                        1.0,
+                        rounding=rounding,
+                        prefix=prefix,
+                        suffix=suffix,
+                    ),
+                    _get_mapcolored_value_or_na(
+                        f"{IOTA_VAR_PREFIX}{reac_id}",
+                        optimization_dict,
+                        0.0,
+                        1.0,
+                        rounding=rounding,
+                        prefix=prefix,
+                        suffix=suffix,
+                    ),
+                    _get_mapcolored_value_or_na(
+                        f"{ALPHA_VAR_PREFIX}{reac_id}",
                         optimization_dict,
                         0.0,
                         1.0,

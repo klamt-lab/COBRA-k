@@ -13,13 +13,13 @@ from openpyxl.worksheet.worksheet import Worksheet
 from pydantic import ConfigDict, validate_call
 
 from .constants import (
+    ALPHA_VAR_PREFIX,
     DF_VAR_PREFIX,
     ENZYME_VAR_INFIX,
     ENZYME_VAR_PREFIX,
     ERROR_VAR_PREFIX,
     GAMMA_VAR_PREFIX,
     IOTA_VAR_PREFIX,
-    ALPHA_VAR_PREFIX,
     KAPPA_VAR_PREFIX,
     LNCONC_VAR_PREFIX,
     OBJECTIVE_VAR_NAME,
@@ -439,13 +439,36 @@ def create_cobrak_spreadsheet(
             continue
         all_enzcomplex_ids.append(get_reaction_enzyme_var_id(reac_id, reaction))
 
-    has_any_vplus = any(opt_data.with_vplus for opt_data in optimization_datasets.values())
+    has_any_vplus = any(
+        opt_data.with_vplus for opt_data in optimization_datasets.values()
+    )
     has_any_df = any(opt_data.with_vplus for opt_data in optimization_datasets.values())
-    has_any_kappa = any(opt_data.with_kappa for opt_data in optimization_datasets.values())
-    has_any_gamma = any(opt_data.with_gamma for opt_data in optimization_datasets.values())
-    has_any_iota = any(opt_data.with_iota for opt_data in optimization_datasets.values())
-    has_any_alpha = any(opt_data.with_alpha for opt_data in optimization_datasets.values())
-    has_any_kinetic_differences = any(opt_data.with_kinetic_differences for opt_data in optimization_datasets.values())
+    has_any_kappa = any(
+        opt_data.with_kappa for opt_data in optimization_datasets.values()
+    )
+    has_any_gamma = any(
+        opt_data.with_gamma for opt_data in optimization_datasets.values()
+    )
+    has_any_iota = any(
+        opt_data.with_iota for opt_data in optimization_datasets.values()
+    )
+    has_any_alpha = any(
+        opt_data.with_alpha for opt_data in optimization_datasets.values()
+    )
+    has_any_kinetic_differences = any(
+        opt_data.with_kinetic_differences for opt_data in optimization_datasets.values()
+    )
+
+    kappa_gamma_iota_alpha_str_list = []
+    if has_any_kappa:
+        kappa_gamma_iota_alpha_str_list.append("κ")
+    if has_any_gamma:
+        kappa_gamma_iota_alpha_str_list.append("γ")
+    if has_any_iota:
+        kappa_gamma_iota_alpha_str_list.append("ι")
+    if has_any_alpha:
+        kappa_gamma_iota_alpha_str_list.append("α")
+    kappa_gamma_iota_alpha_str = "⋅".join(kappa_gamma_iota_alpha_str_list)
 
     # Index sheet
     index_titles: list[Title] = []
@@ -661,16 +684,16 @@ def create_cobrak_spreadsheet(
     if has_any_kappa or has_any_gamma or has_any_alpha or has_any_iota:
         stats_cells |= {
             f"{statline}": [
-                SpreadsheetCell("Min κ⋅γ⋅ι⋅α", font=FONT_BOLD),
+                SpreadsheetCell(f"Min {kappa_gamma_iota_alpha_str}", font=FONT_BOLD),
             ],
             f"{statline + 1}": [
-                SpreadsheetCell("Max κ⋅γ⋅ι⋅α", font=FONT_BOLD),
+                SpreadsheetCell(f"Max {kappa_gamma_iota_alpha_str}", font=FONT_BOLD),
             ],
             f"{statline + 2}": [
-                SpreadsheetCell("Mean κ⋅γ⋅ι⋅α", font=FONT_BOLD),
+                SpreadsheetCell(f"Mean {kappa_gamma_iota_alpha_str}", font=FONT_BOLD),
             ],
             f"{statline + 3}": [
-                SpreadsheetCell("Median κ⋅γ⋅ι⋅α", font=FONT_BOLD),
+                SpreadsheetCell(f"Median {kappa_gamma_iota_alpha_str}", font=FONT_BOLD),
             ],
         }
         statline += 4
@@ -695,10 +718,14 @@ def create_cobrak_spreadsheet(
             SpreadsheetCell("Objective difference to best", font=FONT_BOLD),
         ],
         f"{statline + 6}": [
-            SpreadsheetCell("Only in this to best (regarding active reactions)", font=FONT_BOLD),
+            SpreadsheetCell(
+                "Only in this to best (regarding active reactions)", font=FONT_BOLD
+            ),
         ],
         f"{statline + 7}": [
-            SpreadsheetCell("Only in best to this (regarding active reactions)", font=FONT_BOLD),
+            SpreadsheetCell(
+                "Only in best to this (regarding active reactions)", font=FONT_BOLD
+            ),
         ],
     }
     statline += 8
@@ -712,10 +739,14 @@ def create_cobrak_spreadsheet(
         statline += 1
 
     for extrai, extratitle in enumerate(extra_optstatistics_data.keys()):
-        stats_cells[f"{statline + extrai}"] = [SpreadsheetCell(extratitle, font=FONT_BOLD)]
+        stats_cells[f"{statline + extrai}"] = [
+            SpreadsheetCell(extratitle, font=FONT_BOLD)
+        ]
 
     # Optimization data
-    for current_dataset_i, (opt_dataset_name, opt_dataset) in enumerate(optimization_datasets.items()):
+    for current_dataset_i, (opt_dataset_name, opt_dataset) in enumerate(
+        optimization_datasets.items()
+    ):
         statline = 0
         stats_titles.append(Title(opt_dataset_name, WIDTH_DEFAULT))
         if objective_overwrite is None:
@@ -723,7 +754,9 @@ def create_cobrak_spreadsheet(
         else:
             stats_cells[f"{statline}"].append(opt_dataset.data[objective_overwrite])
         stats_cells[f"{statline + 1}"].append(opt_dataset.data[SOLVER_STATUS_KEY])
-        stats_cells[f"{statline + 2}"].append(opt_dataset.data[TERMINATION_CONDITION_KEY])
+        stats_cells[f"{statline + 2}"].append(
+            opt_dataset.data[TERMINATION_CONDITION_KEY]
+        )
         statline += 3
 
         if PROT_POOL_REAC_NAME in opt_dataset.data:
@@ -734,12 +767,10 @@ def create_cobrak_spreadsheet(
             statline += 1
 
         if opt_dataset.with_df:
-            df_stats, _, _, _ = (
-                get_df_and_efficiency_factors_sorted_lists(
-                    cobrak_model,
-                    opt_dataset.data,
-                    min_var_value,
-                )
+            df_stats, _, _, _ = get_df_and_efficiency_factors_sorted_lists(
+                cobrak_model,
+                opt_dataset.data,
+                min_var_value,
             )
             stats_cells[f"{statline}"].append(min(df_stats.values()))
             stats_cells[f"{statline + 1}"].append(max(df_stats.values()))
@@ -783,31 +814,12 @@ def create_cobrak_spreadsheet(
                 stats_cells[line_letter].append(_get_empty_cell())
             statline += 4
 
-        if opt_dataset.with_kappa and opt_dataset.with_gamma:
-            _, _, _, _, _, multiplier_stats = get_df_and_efficiency_factors_sorted_lists(
-                cobrak_model,
-                opt_dataset.data,
-                min_var_value,
-            )
-            kappa_times_gamma_stats_values = [
-                x[0] for x in multiplier_stats.values()
-            ]
-            stats_cells[f"{statline}"].append(min(kappa_times_gamma_stats_values))
-            stats_cells[f"{statline + 1}"].append(max(kappa_times_gamma_stats_values))
-            stats_cells[f"{statline + 2}"].append(mean(kappa_times_gamma_stats_values))
-            stats_cells[f"{statline + 3}"].append(median(kappa_times_gamma_stats_values))
-            statline += 4
-        elif has_any_gamma and has_any_kappa:
-            for line_letter in (f"{statline + j}" for j in range(4)):
-                stats_cells[line_letter].append(_get_empty_cell())
-            statline += 4
-
         if opt_dataset.with_iota:
             iota_values = [
                 opt_dataset.data[x]
                 for x in opt_dataset.data
                 if x.startswith(IOTA_VAR_PREFIX)
-                and (opt_dataset.data[x[len(IOTA_VAR_PREFIX):]] > min_var_value)
+                and (opt_dataset.data[x[len(IOTA_VAR_PREFIX) :]] > min_var_value)
             ]
             stats_cells[f"{statline}"].append(min(iota_values))
             stats_cells[f"{statline + 1}"].append(max(iota_values))
@@ -824,7 +836,7 @@ def create_cobrak_spreadsheet(
                 opt_dataset.data[x]
                 for x in opt_dataset.data
                 if x.startswith(ALPHA_VAR_PREFIX)
-                and (opt_dataset.data[x[len(ALPHA_VAR_PREFIX):]] > min_var_value)
+                and (opt_dataset.data[x[len(ALPHA_VAR_PREFIX) :]] > min_var_value)
             ]
             stats_cells[f"{statline}"].append(min(alpha_values))
             stats_cells[f"{statline + 1}"].append(max(alpha_values))
@@ -836,19 +848,53 @@ def create_cobrak_spreadsheet(
                 stats_cells[line_letter].append(_get_empty_cell())
             statline += 4
 
+        if (
+            opt_dataset.with_kappa
+            or opt_dataset.with_gamma
+            or opt_dataset.with_alpha
+            or opt_dataset.with_iota
+        ):
+            _, _, _, _, _, multiplier_stats = (
+                get_df_and_efficiency_factors_sorted_lists(
+                    cobrak_model,
+                    opt_dataset.data,
+                    min_var_value,
+                )
+            )
+            efficiencies_product_stats_values = [
+                x[0] for x in multiplier_stats.values()
+            ]
+            stats_cells[f"{statline}"].append(min(efficiencies_product_stats_values))
+            stats_cells[f"{statline + 1}"].append(
+                max(efficiencies_product_stats_values)
+            )
+            stats_cells[f"{statline + 2}"].append(
+                mean(efficiencies_product_stats_values)
+            )
+            stats_cells[f"{statline + 3}"].append(
+                median(efficiencies_product_stats_values)
+            )
+            statline += 4
+        elif has_any_gamma and has_any_kappa:
+            for line_letter in (f"{statline + j}" for j in range(4)):
+                stats_cells[line_letter].append(_get_empty_cell())
+            statline += 4
+
         if current_dataset_i in comparisons:
             dataset_comparison_stats, dataset_unique_reacs = comparisons[
                 current_dataset_i
             ]
             tempstatline = statline
             for j, comparison_value in enumerate(dataset_comparison_stats.values()):
-                stats_cells[f"{statline + j}"].append(
-                    comparison_value
-                )
+                stats_cells[f"{statline + j}"].append(comparison_value)
                 tempstatline = statline + j
             statline = tempstatline + 1
-            stats_cells[f"{statline}"].append(str(list(dataset_unique_reacs.values())[0]))
-            stats_cells[f"{statline + 1}"].append(str(list(dataset_unique_reacs.values())[1]))
+            stats_cells[f"{statline}"].append(
+                str(list(dataset_unique_reacs.values())[0])
+            )
+            stats_cells[f"{statline + 1}"].append(
+                str(list(dataset_unique_reacs.values())[1])
+            )
             statline += 2
         else:
             for line_letter in (f"{statline + j}" for j in range(8)):
@@ -857,8 +903,10 @@ def create_cobrak_spreadsheet(
 
         if opt_dataset.with_kinetic_differences:
             unoptimized_reactions = get_unoptimized_reactions_in_nlp_solution(
-                cobrak_model, opt_dataset.data,
-                regard_iota=has_any_iota, regard_alpha=has_any_alpha,
+                cobrak_model,
+                opt_dataset.data,
+                regard_iota=has_any_iota,
+                regard_alpha=has_any_alpha,
             )
             prot_pool_sum = 0.0
             for reac_id, reac_data in cobrak_model.reactions.items():
@@ -1018,8 +1066,10 @@ def create_cobrak_spreadsheet(
         if opt_dataset.with_kinetic_differences:
             reac_titles.append(Title('"Real" flux', WIDTH_DEFAULT))
             unoptimized_reactions = get_unoptimized_reactions_in_nlp_solution(
-                cobrak_model, opt_dataset.data,
-                regard_alpha=True, regard_iota=True,
+                cobrak_model,
+                opt_dataset.data,
+                regard_alpha=True,
+                regard_iota=True,
             )
         opt_reac_ids = set(all_reac_ids) & set(opt_dataset.data.keys())
         reacs_with_too_low_flux = []
@@ -1355,7 +1405,7 @@ def create_cobrak_spreadsheet(
                 Title("Reaction ID", WIDTH_DEFAULT),
                 Title("α", WIDTH_DEFAULT),
                 Title("Reaction ID", WIDTH_DEFAULT),
-                Title("κ⋅γ⋅ι⋅α", WIDTH_DEFAULT),
+                Title(kappa_gamma_iota_alpha_str, WIDTH_DEFAULT),
             )
         )
 
@@ -1544,7 +1594,9 @@ def create_cobrak_spreadsheet(
         num_processed_datasets += 1
 
     if correction_cells != {}:
-        titles_and_data_dict[f"{'H' if has_any_alpha or has_any_iota or has_any_gamma or has_any_kappa else 'G'}) Corrections"] = (correction_titles, correction_cells)
+        titles_and_data_dict[
+            f"{'H' if has_any_alpha or has_any_iota or has_any_gamma or has_any_kappa else 'G'}) Corrections"
+        ] = (correction_titles, correction_cells)
 
     _create_xlsx_from_datadicts(
         path=path,

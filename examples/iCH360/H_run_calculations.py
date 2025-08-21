@@ -1,6 +1,7 @@
 # IMPORTS SECTION #  # noqa: D100
 from copy import deepcopy
 from dataclasses import dataclass
+from math import log
 from os.path import exists
 from sys import argv
 from time import time
@@ -45,7 +46,7 @@ class RunConfig:  # noqa: D101
     # Model changes
     manually_changed_kms: dict[str, dict[str, float]]
     manually_changed_kcats: dict[str, float]
-    manually_changed_dG0s: dict[str, float]
+    manually_changed_dG0s: dict[str, dict[str, float]]
     # Folder settings
     results_folder: str
     # ecTFVA settings
@@ -56,6 +57,7 @@ class RunConfig:  # noqa: D101
     objective_sense: int
     deactivated_reacs: list[str]
     set_bounds: dict[str, tuple[float, float]]
+    working_results: list[dict[str, float]]
     sampling_rounds_per_metaround: int = 2
     sampling_wished_num_feasible_starts: int = 5
     sampling_max_metarounds: int = 3
@@ -63,7 +65,6 @@ class RunConfig:  # noqa: D101
     pop_size: int = 32
     protein_pool: float | None = None
     uses_bennett_concs: bool = False
-    working_results: list[dict[str, float]] = Field(default_factory=list)
     max_conc_sum: float | None = None
     nameaddition: str | None = None
     kicked_reacs: list[str] = Field(default_factory=list)
@@ -76,6 +77,9 @@ class RunConfig:  # noqa: D101
     max_dG0_variation: float | None = None
     with_iota: bool = False
     with_alpha: bool = False
+    change_known_values: bool = True
+    change_unknown_values: bool = True
+    use_shuffling_instead_of_uniform_random: bool = False
 
 
 # LOAD RUN CONFIGURATION #
@@ -111,6 +115,9 @@ if not exists(used_cobrak_model_path):
             run_config.max_ka_variation,
             run_config.max_dG0_variation,
             run_config.varied_reacs,
+            run_config.change_unknown_values,
+            run_config.change_known_values,
+            run_config.use_shuffling_instead_of_uniform_random,
         )
 
     for kicked_reac in run_config.kicked_reacs:
@@ -168,6 +175,20 @@ cobrak_model: Model = json_load(
     used_cobrak_model_path,
     Model,
 )
+
+# RUN VARIABILITY ANALYSIS #
+if run_config.uses_bennett_concs:
+    raw_bennett_data = json_load(
+        "examples/common_needed_external_resources/Bennett_2009_full_data.json"
+    )
+    for metid, value in raw_bennett_data.items():
+        if metid in cobrak_model.metabolites:
+            cobrak_model.metabolites[metid].log_min_conc = log(
+                min(0.1 * value["mean"], value["lb"])
+            )
+            cobrak_model.metabolites[metid].log_max_conc = log(
+                max(10 * value["mean"], value["ub"])
+            )
 
 
 var_dict_filepath = f"{run_config.results_folder}variability_dict_{file_suffix}.json"

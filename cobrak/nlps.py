@@ -10,7 +10,7 @@ see lps.py in the same folder.
 # IMPORTS SECTION #
 from copy import deepcopy
 from itertools import chain
-from math import log
+from math import ceil, floor, log
 
 from joblib import Parallel, delayed
 from pydantic import ConfigDict, NonNegativeFloat, validate_call
@@ -60,6 +60,8 @@ from .utilities import (
     apply_variability_dict,
     delete_unused_reactions_in_optimization_dict,
     get_full_enzyme_id,
+    get_model_kas,
+    get_model_kis,
     get_pyomo_solution_as_dict,
     get_reaction_enzyme_var_id,
     get_stoichiometrically_coupled_reactions,
@@ -405,16 +407,50 @@ def get_nlp_from_cobrak_model(
                 var_id = f"{LNCONC_VAR_PREFIX}{met_id}"
                 if var_id not in model_var_names:
                     continue
-                stoichiometry = abs(reaction.stoichiometries.get(
+                stoichiometry = abs(
+                    reaction.stoichiometries.get(met_id, 1.0)
+                ) * reaction.enzyme_reaction_data.hill_coefficients.iota.get(
                     met_id, 1.0
-                )) * reaction.enzyme_reaction_data.hill_coefficients.iota.get(met_id, 1.0)
-                iota_product *= 1 / (
-                    1
-                    + exp(
-                        stoichiometry * getattr(model, var_id)
-                        - stoichiometry * log(k_i)
-                    )
                 )
+                term_without_error = True
+                if (
+                    correction_config.add_ki_error_term
+                ):  # Error term to make k_I *higher*
+                    all_kis = get_model_kis(cobrak_model)
+                    if (
+                        k_i
+                        < all_kis[
+                            : ceil(correction_config.ki_error_cutoff * len(all_kis))
+                        ][-1]
+                    ):
+                        term_without_error = False
+                        ki_error_var = setattr(
+                            model,
+                            f"{ERROR_VAR_PREFIX}____{reac_id}____{met_id}____iota",
+                            Var(
+                                within=Reals,
+                                bounds=(
+                                    0.0,
+                                    log(correction_config.max_rel_ki_correction * k_i),
+                                ),
+                            ),
+                        )
+                        iota_product *= 1 / (
+                            1
+                            + exp(
+                                stoichiometry * getattr(model, var_id)
+                                - stoichiometry * log(k_i)
+                                + stoichiometry * getattr(model, ki_error_var)
+                            )
+                        )
+                if term_without_error:
+                    iota_product *= 1 / (
+                        1
+                        + exp(
+                            stoichiometry * getattr(model, var_id)
+                            - stoichiometry * log(k_i)
+                        )
+                    )
             iota_var_name = f"{IOTA_VAR_PREFIX}{reac_id}"
             setattr(
                 model,
@@ -443,21 +479,53 @@ def get_nlp_from_cobrak_model(
                 var_id = f"{LNCONC_VAR_PREFIX}{met_id}"
                 if var_id not in model_var_names:
                     continue
-                stoichiometry = abs(reaction.stoichiometries.get(
+                stoichiometry = abs(
+                    reaction.stoichiometries.get(met_id, 1.0)
+                ) * reaction.enzyme_reaction_data.hill_coefficients.alpha.get(
                     met_id, 1.0
-                )) * reaction.enzyme_reaction_data.hill_coefficients.alpha.get(met_id, 1.0)
-                # alpha_product *= 1 + k_a * exp(
-                #    getattr(model, f"{LNCONC_VAR_PREFIX}{met_id}")
-                # )
-                # alpha_product *= ((exp(getattr(model, f"{LNCONC_VAR_PREFIX}{met_id}"))) / (k_a + exp(getattr(model, f"{LNCONC_VAR_PREFIX}{met_id}"))))
-                alpha_product *= 1 / (
-                    1
-                    + exp(
-                        stoichiometry * log(k_a)
-                        - stoichiometry * getattr(model, var_id)
-                    )
                 )
-                # alpha_product *= (1 - (k_a / (k_a + exp(getattr(model, f"{LNCONC_VAR_PREFIX}{met_id}")))))
+
+                term_without_error = True
+                if (
+                    correction_config.add_ki_error_term
+                ):  # Error term to make k_A *lower*
+                    all_kas = get_model_kas(cobrak_model)
+                    if (
+                        k_a
+                        > all_kas[
+                            floor(
+                                (1 - correction_config.ka_error_cutoff) * len(all_kas)
+                            ) :
+                        ][0]
+                    ):
+                        term_without_error = False
+                        ka_error_var = setattr(
+                            model,
+                            f"{ERROR_VAR_PREFIX}____{reac_id}____{met_id}____alpha",
+                            Var(
+                                within=Reals,
+                                bounds=(
+                                    0.0,
+                                    log(correction_config.max_rel_ki_correction * k_i),
+                                ),
+                            ),
+                        )
+                        iota_product *= 1 / (
+                            1
+                            + exp(
+                                stoichiometry * log(k_a)
+                                - stoichiometry * getattr(model, var_id)
+                                - stoichiometry * getattr(model, ka_error_var)
+                            )
+                        )
+                if term_without_error:
+                    alpha_product *= 1 / (
+                        1
+                        + exp(
+                            stoichiometry * log(k_a)
+                            - stoichiometry * getattr(model, var_id)
+                        )
+                    )
 
             alpha_var_name = f"{ALPHA_VAR_PREFIX}{reac_id}"
             setattr(
@@ -586,6 +654,7 @@ def perform_nlp_reversible_optimization(
     with_flux_sum_var: bool = False,
     correction_config: CorrectionConfig = CorrectionConfig(),
     show_variable_count: bool = False,
+    var_data_abs_epsilon: float = 1e-5,
 ) -> dict[str, float]:
     """Performs a reversible MILP-based non-linear program (NLP) optimization on a COBRAk model.
 
@@ -608,6 +677,7 @@ def perform_nlp_reversible_optimization(
     * `solver_name` (`str`, optional): Used MINLP solver. Defaults to SCIP,
     * `with_flux_sum_var` (`bool`, optional): Whether to include a reaction flux sum variable of name ```cobrak.constants.FLUX_SUM_VAR```. Defaults to `False`.
     * `correction_config` (`CorrectionConfig`, optional): Parameter correction configuration. Defaults to `CorrectionConfig()`.
+    *  var_data_abs_epsilon: (`float`, optional): Under this value, any data given by the variability dict is considered to be 0. Defaults to 1e-5.
 
     #### Returns
     * `dict[str, float]`: The optimization results.
@@ -628,7 +698,11 @@ def perform_nlp_reversible_optimization(
     )
 
     nlp_model = apply_variability_dict(
-        nlp_model, cobrak_model, variability_dict, correction_config.error_scenario
+        nlp_model,
+        cobrak_model,
+        variability_dict,
+        correction_config.error_scenario,
+        var_data_abs_epsilon,
     )
     nlp_model.obj = get_objective(nlp_model, objective_target, objective_sense)
     pyomo_solver = get_solver(solver.name, solver.solver_options, solver.solver_attrs)
@@ -668,6 +742,7 @@ def perform_nlp_irreversible_optimization(
     min_flux: NonNegativeFloat = 0.0,
     with_flux_sum_var: bool = False,
     correction_config: CorrectionConfig = CorrectionConfig(),
+    var_data_abs_epsilon: float = 1e-5,
 ) -> dict[str, float]:
     """Performs an irreversible non-linear program (NLP) optimization on a COBRAk model.
 
@@ -692,6 +767,7 @@ def perform_nlp_irreversible_optimization(
     * `min_flux` (`float`, optional): Minimum flux value. Defaults to `0.0`.
     * `with_flux_sum_var` (`bool`, optional): Whether to include a reaction flux sum variable of name ```cobrak.constants.FLUX_SUM_VAR```. Defaults to `False`.
     * `correction_config` (`CorrectionConfig`, optional): Parameter correction configuration. Defaults to `CorrectionConfig()`.
+    *  var_data_abs_epsilon: (`float`, optional): Under this value, any data given by the variability dict is considered to be 0. Defaults to 1e-5.
 
     # Returns
     * `dict[str, float]`: The optimization results.
@@ -721,7 +797,11 @@ def perform_nlp_irreversible_optimization(
                 variability_dict[reac_id] = (min_flux, variability_dict[reac_id][1])
 
     nlp_model = apply_variability_dict(
-        nlp_model, cobrak_model, variability_dict, correction_config.error_scenario
+        nlp_model,
+        cobrak_model,
+        variability_dict,
+        correction_config.error_scenario,
+        var_data_abs_epsilon,
     )
     nlp_model.obj = get_objective(nlp_model, objective_target, objective_sense)
     pyomo_solver = get_solver(solver.name, solver.solver_options, solver.solver_attrs)
@@ -749,6 +829,7 @@ def perform_nlp_irreversible_optimization_with_active_reacs_only(
     solver: Solver = IPOPT,
     do_not_delete_with_z_var_one: bool = False,
     correction_config: CorrectionConfig = CorrectionConfig(),
+    var_data_abs_epsilon: float = 1e-5,
 ) -> dict[str, float]:
     """Performs an irreversible non-linear program (NLP) optimization on a COBRAk model, considering only active reactions of the optimization dict.
 
@@ -774,6 +855,7 @@ def perform_nlp_irreversible_optimization_with_active_reacs_only(
     * `do_not_delete_with_z_var_one` (`bool`, optional): Whether to delete reactions with associated Z variables (in the optimization dics) equal to one.
       Defaults to `False`.
     * `correction_config` (`CorrectionConfig`, optional): Paramter correction configuration. Defaults to `CorrectionConfig()`.
+    *  var_data_abs_epsilon: (`float`, optional): Under this value, any data given by the variability dict is considered to be 0. Defaults to 1e-5.
 
     # Returns
     * `dict[str, float]`: The optimization results.
@@ -802,6 +884,7 @@ def perform_nlp_irreversible_optimization_with_active_reacs_only(
         min_mdf=min_mdf,
         solver=solver,
         correction_config=correction_config,
+        var_data_abs_epsilon=var_data_abs_epsilon,
     )
 
 

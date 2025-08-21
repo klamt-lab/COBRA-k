@@ -776,7 +776,9 @@ def _add_kappa_substrates_and_products_vars(
             continue
         stoichiometry = (
             raw_stoichiometry
-            * reaction.enzyme_reaction_data.hill_coefficients.kappa.get(reac_met_id, 1.0)
+            * reaction.enzyme_reaction_data.hill_coefficients.kappa.get(
+                reac_met_id, 1.0
+            )
         )
         k_m = reaction.enzyme_reaction_data.k_ms[reac_met_id]
         if stoichiometry > 0.0:  # Product
@@ -1653,6 +1655,7 @@ def perform_lp_optimization(
     solver: Solver = SCIP,
     ignore_nonlinear_terms: bool = False,
     correction_config: CorrectionConfig = CorrectionConfig(),
+    var_data_abs_epsilon: float = 1e-5,
 ) -> dict[str, float]:
     """Perform linear programming optimization on a COBRAk model to determine flux distributions.
 
@@ -1680,6 +1683,7 @@ def perform_lp_optimization(
             Note: If such non-linear values exist and are included, the whole problem becomes *non-linear*, making it incompatible with any
             purely linear solver!
         correction_config (CorrectionConfig, optional): Configuration for handling prameter corrections and scenarios during optimization.
+        var_data_abs_epsilon: (float, optional): Under this value, any data given by the variability dict is considered to be 0. Defaults to 1e-5.
 
     Returns:
         dict[str, float]: A dictionary containing the flux distribution results for each reaction in the model.
@@ -1718,6 +1722,7 @@ def perform_lp_optimization(
         cobrak_model,
         variability_dict,
         correction_config.error_scenario,
+        abs_epsilon=var_data_abs_epsilon,
     )
     optimization_model.obj = get_objective(
         optimization_model, objective_target, objective_sense

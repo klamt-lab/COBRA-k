@@ -126,7 +126,7 @@ def json_write(path: str, json_data: Any) -> None:  # noqa: ANN401
 class RunConfig:  # noqa: D101
     # Model changes
     manually_changed_kms: dict[str, dict[str, float]]
-    manually_changed_kcats: dict[str, dict[str, float]]
+    manually_changed_kcats: dict[str, float]
     manually_changed_dG0s: dict[str, dict[str, float]]
     # Folder settings
     results_folder: str
@@ -158,6 +158,9 @@ class RunConfig:  # noqa: D101
     max_dG0_variation: float | None = None
     with_iota: bool = False
     with_alpha: bool = False
+    change_known_values: bool = True
+    change_unknown_values: bool = True
+    use_shuffling_instead_of_uniform_random: bool = False
 
 
 def create_and_submit_slurm_job(json_path: str) -> None:  # noqa: D103
