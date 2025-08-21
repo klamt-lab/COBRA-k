@@ -72,7 +72,7 @@ def test_toymodel_calculations() -> None:  # noqa: D103
         with_alpha=False,
         with_iota=False,
         sampling_wished_num_feasible_starts=2,
-        objvalue_json_path="examples/toymodel/evo_objvalues_genetic.json",
+        objvalue_json_path="",
         evolution_num_gens=10,
     )
     max_result = list(result.keys())[0]
@@ -93,7 +93,7 @@ def test_toymodel_calculations() -> None:  # noqa: D103
         with_alpha=False,
         with_iota=False,
         sampling_wished_num_feasible_starts=2,
-        objvalue_json_path="examples/toymodel/evo_objvalues_genetic.json",
+        objvalue_json_path="",
         evolution_num_gens=10,
     )
     max_result = list(result.keys())[0]

@@ -204,6 +204,55 @@ def get_fullsplit_cobra_model(
 
 
 @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
+def get_fullsplit_cobra_model_from_sbml(
+    sbml_path: str,
+    fwd_suffix: str = REAC_FWD_SUFFIX,
+    rev_suffix: str = REAC_REV_SUFFIX,
+    add_cobrak_sbml_annotation: bool = False,
+    cobrak_default_min_conc: float = 1e-6,
+    cobrak_default_max_conc: float = 0.2,
+    cobrak_extra_linear_constraints: list[ExtraLinearConstraint] = [],
+    cobrak_kinetic_ignored_metabolites: list[str] = [],
+    cobrak_no_extra_versions: bool = False,
+    reac_lb_ub_cap: float = float("inf"),
+) -> cobra.Model:
+    """Return a COBRApy model (loaded from the SBML) where reactions are split according to reversibility and enzymes.
+
+    "Reversibility" means that, if a reaction i can run in both directions (α_i<0), then it is split as follows:
+    Ri: A<->B [-50;100]=> Ri_FWD: A->B [0;100]; Ri_REV: B->A [0;50]
+    where the ending "FWD" and "REV" are set in COBRAk's constants REAC_FWD_SUFFIX and REAC_REV_SUFFIX.
+
+    "enzymes" means that, if a reaction i can be catalyzed by multiple enzymes (i.e., at least one OR block in the
+    reaction's gene-protein rule), then it is split for each reaction. Say, for example,
+    Rj: A->B [0;100]
+    has the following gene-protein rule:
+    (E1 OR E2)
+    ...then, Rj is split into:
+    Rj_ENZ_E1: A->B [0;100]
+    Rj_ENZ_E2: A->B [0;100]
+    where the infix "_ENZ_" is set in COBRAk's constants REAC_ENZ_SEPARATOR.
+
+    Args:
+        cobra_model (cobra.Model): The COBRApy model that shall be 'fullsplit'.
+
+    Returns:
+        cobra.Model: The 'fullsplit' COBRApy model.
+    """
+    return get_fullsplit_cobra_model(
+        cobra.io.read_sbml_model(sbml_path),
+        fwd_suffix=fwd_suffix,
+        rev_suffix=rev_suffix,
+        add_cobrak_sbml_annotation=add_cobrak_sbml_annotation,
+        cobrak_default_min_conc=cobrak_default_min_conc,
+        cobrak_default_max_conc=cobrak_default_max_conc,
+        cobrak_extra_linear_constraints=cobrak_extra_linear_constraints,
+        cobrak_kinetic_ignored_metabolites=cobrak_kinetic_ignored_metabolites,
+        cobrak_no_extra_versions=cobrak_no_extra_versions,
+        reac_lb_ub_cap=reac_lb_ub_cap,
+    )
+
+
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def create_irreversible_cobrapy_model_from_stoichiometries(
     stoichiometries: dict[str, dict[str, float]],
 ) -> cobra.Model:

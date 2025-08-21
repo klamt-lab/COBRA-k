@@ -688,7 +688,7 @@ def load_annotated_cobrapy_model_as_cobrak_model(
     cobra_model: cobra.Model,
     exclude_enzyme_constraints: bool = True,
 ) -> Model:
-    """Converts a COBRApy model with annotations into a COBRAk Model.
+    """Converts a COBRApy model with (and also without :-) annotations into a COBRAk Model.
 
     This function takes a COBRApy model, which may contain specific annotations for metabolites,
     reactions, and genes, and converts it into a COBRAk model. The conversion involves extracting
@@ -786,6 +786,8 @@ def load_annotated_cobrapy_model_as_cobrak_model(
             for key in reaction.annotation
             if key.startswith("cobrak_id_")
         ]
+        if version_data == []:
+            version_data = [("0", reaction.id)]
         for version, version_reac_id in version_data:
             if f"cobrak_dG0_{version}" in reaction.annotation:
                 dG0 = float(reaction.annotation[f"cobrak_dG0_{version}"])
@@ -921,7 +923,7 @@ def load_annotated_sbml_model_as_cobrak_model(
     filepath: str,
 ) -> Model:
     """
-    Load an annotated SBML model from a file and convert it into a COBRAk Model.
+    Load an annotated (and also un-annotated :-) SBML model from a file and convert it into a COBRAk Model.
 
     This function reads an SBML file containing a metabolic model with specific annotations
     and converts it into a COBRAk Model. It uses the COBRApy library to read the SBML
