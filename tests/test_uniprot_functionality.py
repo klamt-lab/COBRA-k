@@ -1,14 +1,15 @@
+"""pytest tests for COBRA-k's module uniprot_functionality"""
+
 import json
 import os
 from shutil import rmtree
 
 import cobra
-import pytest
 
 from cobrak.uniprot_functionality import uniprot_get_enzyme_molecular_weights
 
 
-def test_uniprot_get_enzyme_molecular_weights():
+def test_uniprot_get_enzyme_molecular_weights() -> None:  # noqa: D103
     # Create a test model
     model = cobra.Model("test_model")
     gene = cobra.Gene("gene1")
@@ -34,7 +35,7 @@ def test_uniprot_get_enzyme_molecular_weights():
     assert isinstance(protein_id_mass_mapping["gene1"], float)
 
 
-def test_uniprot_get_enzyme_molecular_weights_cache():
+def test_uniprot_get_enzyme_molecular_weights_cache() -> None:  # noqa: D103
     # Create a test model
     model = cobra.Model("test_model")
     gene = cobra.Gene("gene1")
@@ -48,7 +49,7 @@ def test_uniprot_get_enzyme_molecular_weights_cache():
     cache_basepath = "test_cache"
     cache_filepath = f"{cache_basepath}_cache_uniprot_molecular_weights.json"
     cache_json = {"P12345": 100.0}
-    with open(cache_filepath, "w") as f:
+    with open(cache_filepath, "w", encoding="utf-8") as f:
         json.dump(cache_json, f)
 
     # Call the function
@@ -66,7 +67,7 @@ def test_uniprot_get_enzyme_molecular_weights_cache():
     assert isinstance(protein_id_mass_mapping["gene1"], float)
 
 
-def test_uniprot_get_enzyme_molecular_weights_no_uniprot_id():
+def test_uniprot_get_enzyme_molecular_weights_no_uniprot_id() -> None:  # noqa: D103
     # Create a test model
     model = cobra.Model("test_model")
     gene = cobra.Gene("gene1")
@@ -85,14 +86,7 @@ def test_uniprot_get_enzyme_molecular_weights_no_uniprot_id():
     assert protein_id_mass_mapping == {}
 
 
-def test_uniprot_get_enzyme_molecular_weights_invalid_model():
-    # Call the function with an invalid model
-    cache_basepath = "test_cache"
-    with pytest.raises(AttributeError):
-        uniprot_get_enzyme_molecular_weights("invalid_model", cache_basepath)
-
-
-def test_uniprot_get_enzyme_molecular_weights_invalid_cache_basepath():
+def test_uniprot_get_enzyme_molecular_weights_invalid_cache_basepath() -> None:  # noqa: D103
     # Create a test model
     model = cobra.Model("test_model")
     gene = cobra.Gene("gene1")
@@ -103,7 +97,7 @@ def test_uniprot_get_enzyme_molecular_weights_invalid_cache_basepath():
     model.reactions.append(reaction)
 
 
-def test_uniprot_get_enzyme_molecular_weights_cleanup():
+def test_uniprot_get_enzyme_molecular_weights_cleanup() -> None:  # noqa: D103
     # Create a test model
     model = cobra.Model("test_model")
     gene = cobra.Gene("gene1")

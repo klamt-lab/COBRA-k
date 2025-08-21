@@ -1,6 +1,6 @@
 [project]
 name = "cobrak"
-version = "0.0.3"
+version = "0.0.4"
 authors = [
   { name="Pavlos Stephanos Bekiaris" },
 ]
@@ -74,3 +74,10 @@ lint.select = [
   "W",
   "YTT",
 ]
+
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.package-data]
+cobrak = ["cobrak/data/iCH360.json"]

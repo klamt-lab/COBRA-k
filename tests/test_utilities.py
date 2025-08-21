@@ -1,3 +1,7 @@
+"""pytest tests for COBRA-k's module utilities"""
+
+from typing import Any
+
 import pytest
 
 from cobrak.constants import (
@@ -18,7 +22,6 @@ from cobrak.dataclasses import (
     Reaction,
 )
 from cobrak.utilities import (
-    add_statuses_to_optimziation_dict,
     compare_optimization_result_reaction_uses,
     delete_orphaned_metabolites_and_enzymes,
     delete_unused_reactions_in_optimization_dict,
@@ -49,7 +52,7 @@ from cobrak.utilities import (
 
 # Example fixtures and mock objects
 @pytest.fixture
-def mock_optimization_dict():
+def mock_optimization_dict() -> None:  # noqa: D103
     return {
         "R1": 1.0,
         "R2": 2.0,
@@ -62,7 +65,7 @@ def mock_optimization_dict():
 
 
 @pytest.fixture
-def mock_pyomo_results():
+def mock_pyomo_results() -> None:  # noqa: D103
     class MockSolverResults:
         solver = type(
             "Solver", (object,), {"status": "ok", "termination_condition": "optimal"}
@@ -72,7 +75,7 @@ def mock_pyomo_results():
 
 
 @pytest.fixture
-def mock_model():
+def mock_model() -> None:  # noqa: D103
     return Model(
         reactions={
             "R1": Reaction(
@@ -132,7 +135,7 @@ def mock_model():
 
 
 @pytest.fixture
-def mock_variability_dict():
+def mock_variability_dict() -> None:  # noqa: D103
     return {
         "R1": (0.0, 10.0),
         "R2": (-5.0, 5.0),
@@ -141,7 +144,7 @@ def mock_variability_dict():
 
 
 @pytest.fixture
-def mock_datasets():
+def mock_datasets() -> None:  # noqa: D103
     return [
         {
             "R1": EnzymeReactionData(
@@ -167,28 +170,21 @@ def mock_datasets():
 
 
 # Test functions
-def test_add_statuses_to_optimziation_dict(mock_optimization_dict, mock_pyomo_results):
-    result = add_statuses_to_optimziation_dict(
-        mock_optimization_dict, mock_pyomo_results
-    )
-    assert result[SOLVER_STATUS_KEY] == 0
-    assert result[TERMINATION_CONDITION_KEY] == 0.2
-    assert result[ALL_OK_KEY]
-
-
-def test_get_base_id():
+def test_get_base_id() -> None:  # noqa: D103
     assert get_base_id(f"R1{REAC_FWD_SUFFIX}") == "R1"
     assert get_base_id(f"R2{REAC_REV_SUFFIX}") == "R2"
     assert get_base_id("R3") == "R3"
 
 
-def test_get_base_id_optimzation_result(mock_model, mock_optimization_dict):
+def test_get_base_id_optimzation_result(  # noqa: D103
+    mock_model: Model, mock_optimization_dict: dict[str, float]
+) -> None:  # noqa: D103
     result = get_base_id_optimzation_result(mock_model, mock_optimization_dict)
     assert result["R1"] == 1.0
     assert result["R2"] == 2.0
 
 
-def test_get_fwd_rev_corrected_flux():
+def test_get_fwd_rev_corrected_flux() -> None:  # noqa: D103
     # Test case where reverse reaction exists and has greater flux, and custom fwd and rev
     result = {"R1_fwd": 10.0, "R1_rev": 15.0}
     assert (
@@ -228,21 +224,26 @@ def test_get_fwd_rev_corrected_flux():
     )
 
 
-def test_get_solver_status_from_pyomo_results(mock_pyomo_results):
-    assert get_solver_status_from_pyomo_results(mock_pyomo_results) == 0
+def test_get_solver_status_from_pyomo_results(mock_pyomo_results: Any) -> None:  # noqa: ANN401, D103
+    assert get_solver_status_from_pyomo_results.__wrapped__(mock_pyomo_results) == 0
 
 
-def test_get_termination_condition_from_pyomo_results(mock_pyomo_results):
-    assert get_termination_condition_from_pyomo_results(mock_pyomo_results) == 0.2
+def test_get_termination_condition_from_pyomo_results(mock_pyomo_results: Any) -> None:  # noqa: ANN401, D103
+    assert (
+        get_termination_condition_from_pyomo_results.__wrapped__(mock_pyomo_results)
+        == 0.2
+    )
 
 
-def test_sort_dict_keys():
+def test_sort_dict_keys() -> None:  # noqa: D103
     input_dict = {"b": 2, "a": 1, "c": 3}
     result = sort_dict_keys(input_dict)
     assert result == {"a": 1, "b": 2, "c": 3}
 
 
-def test_compare_optimization_result_reaction_uses(mock_model, mock_optimization_dict):
+def test_compare_optimization_result_reaction_uses(  # noqa: D103
+    mock_model: Model, mock_optimization_dict: dict[str, float]
+) -> None:
     results = [
         mock_optimization_dict,
         {"R1": 0.5, "R2": 1.5, "R3": 2.5, "objective": 15.0},
@@ -252,7 +253,7 @@ def test_compare_optimization_result_reaction_uses(mock_model, mock_optimization
     # You can manually check the printed output or redirect stdout to capture it.
 
 
-def test_delete_orphaned_metabolites_and_enzymes(mock_model):
+def test_delete_orphaned_metabolites_and_enzymes(mock_model: Model) -> None:  # noqa: D103
     model = delete_orphaned_metabolites_and_enzymes(mock_model)
     assert "A" in model.metabolites
     assert "B" in model.metabolites
@@ -260,9 +261,9 @@ def test_delete_orphaned_metabolites_and_enzymes(mock_model):
     assert "E1" in model.enzymes
 
 
-def test_delete_unused_reactions_in_optimization_dict(
-    mock_model, mock_optimization_dict
-):
+def test_delete_unused_reactions_in_optimization_dict(  # noqa: D103
+    mock_model: Model, mock_optimization_dict: dict[str, float]
+) -> None:
     model = delete_unused_reactions_in_optimization_dict(
         mock_model, mock_optimization_dict
     )
@@ -271,7 +272,9 @@ def test_delete_unused_reactions_in_optimization_dict(
     assert "R3" not in model.reactions
 
 
-def test_delete_unused_reactions_in_variability_dict(mock_model, mock_variability_dict):
+def test_delete_unused_reactions_in_variability_dict(  # noqa: D103
+    mock_model: Model, mock_variability_dict: dict[str, tuple[float, float]]
+) -> None:  # noqa: D103
     model = delete_unused_reactions_in_variability_dict(
         mock_model, mock_variability_dict
     )
@@ -280,22 +283,24 @@ def test_delete_unused_reactions_in_variability_dict(mock_model, mock_variabilit
     assert "R3" not in model.reactions
 
 
-def test_get_active_reacs_from_optimization_dict(mock_model, mock_optimization_dict):
+def test_get_active_reacs_from_optimization_dict(  # noqa: D103
+    mock_model: Model, mock_optimization_dict: dict[str, float]
+) -> None:  # noqa: D103
     result = get_active_reacs_from_optimization_dict(mock_model, mock_optimization_dict)
     assert result == ["R1", "R2"]
 
 
-def test_get_cobrak_enzyme_reactions_string(mock_model):
+def test_get_cobrak_enzyme_reactions_string(mock_model: Model) -> None:  # noqa: D103
     result = get_cobrak_enzyme_reactions_string(mock_model, "E1")
     assert result == "R1"
 
 
-def test_get_reaction_string(mock_model):
+def test_get_reaction_string(mock_model: Model) -> None:  # noqa: D103
     result = get_reaction_string(mock_model, "R1")
     assert result == "-1.0 A \u21d2 1.0 B"
 
 
-def test_get_extra_linear_constraint_string():
+def test_get_extra_linear_constraint_string() -> None:  # noqa: D103
     constraint = ExtraLinearConstraint(
         lower_value=0.0,
         upper_value=10.0,
@@ -305,36 +310,38 @@ def test_get_extra_linear_constraint_string():
     assert result == "0.0 \u2264  + 1.0 var1 - 1.0 var2\u2264 10.0"
 
 
-def test_get_full_enzyme_id():
+def test_get_full_enzyme_id() -> None:  # noqa: D103
     result = get_full_enzyme_id(["E1", "E2"])
     assert result == "E1_AND_E2"
 
 
-def test_get_full_enzyme_mw(mock_model):
+def test_get_full_enzyme_mw(mock_model: Model) -> None:  # noqa: D103
     result = get_full_enzyme_mw(mock_model, mock_model.reactions["R1"])
     assert result == 20.0
 
 
-def test_get_metabolites_in_elementary_conservation_relations(mock_model):
+def test_get_metabolites_in_elementary_conservation_relations(  # noqa: D103
+    mock_model: Model,
+) -> None:  # noqa: D103
     result = get_metabolites_in_elementary_conservation_relations(mock_model)
     assert sorted(result) == ["A", "B", "C"]
 
 
-def test_get_potentially_active_reactions_in_variability_dict(
-    mock_model, mock_variability_dict
-):
+def test_get_potentially_active_reactions_in_variability_dict(  # noqa: D103
+    mock_model: Model, mock_variability_dict: dict[str, tuple[float, float]]
+) -> None:
     result = get_potentially_active_reactions_in_variability_dict(
         mock_model, mock_variability_dict
     )
     assert result == ["R1", "R2"]
 
 
-def test_get_reaction_enzyme_var_id(mock_model):
+def test_get_reaction_enzyme_var_id(mock_model: Model) -> None:  # noqa: D103
     result = get_reaction_enzyme_var_id("R1", mock_model.reactions["R1"])
     assert result == f"enzyme_E1_AND_E1B{ENZYME_VAR_INFIX}R1"
 
 
-def test_get_stoichiometric_matrix(mock_model):
+def test_get_stoichiometric_matrix(mock_model: Model) -> None:  # noqa: D103
     result = get_stoichiometric_matrix(mock_model)
     assert result == [
         [-1, 0.0],
@@ -343,29 +350,29 @@ def test_get_stoichiometric_matrix(mock_model):
     ]
 
 
-def test_get_stoichiometrically_coupled_reactions(mock_model):
+def test_get_stoichiometrically_coupled_reactions(mock_model: Model) -> None:  # noqa: D103
     result = get_stoichiometrically_coupled_reactions(mock_model)
     assert result == [["R1", "R2"]]
 
 
-def test_get_substrate_and_product_exchanges(mock_model):
+def test_get_substrate_and_product_exchanges(mock_model: Model) -> None:  # noqa: D103
     result = get_substrate_and_product_exchanges(mock_model)
-    assert result == (tuple(), tuple())
+    assert result == ((), ())
 
 
-def test_have_all_unignored_km(mock_model):
+def test_have_all_unignored_km(mock_model: Model) -> None:  # noqa: D103
     result = have_all_unignored_km(
         mock_model.reactions["R1"], mock_model.kinetic_ignored_metabolites
     )
     assert not result
 
 
-def test_is_objsense_maximization():
+def test_is_objsense_maximization() -> None:  # noqa: D103
     assert is_objsense_maximization(1)
     assert not is_objsense_maximization(-1)
 
 
-def test_last_n_elements_equal():
+def test_last_n_elements_equal() -> None:  # noqa: D103
     # Test cases where the last n elements are equal
     assert last_n_elements_equal([1, 2, 3, 4, 4, 4], 3)
     assert last_n_elements_equal(["a", "b", "b", "b"], 3)

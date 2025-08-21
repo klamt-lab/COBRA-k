@@ -25,7 +25,6 @@ from .lps import (
     perform_lp_variability_analysis,
 )
 from .nlps import perform_nlp_irreversible_optimization_with_active_reacs_only
-from .pso_parallel import COBRAKPAPSO
 from .pyomo_functionality import (
     add_objective_to_model,
     get_solver,
@@ -60,7 +59,7 @@ class COBRAKProblem:
         with_iota (bool, optional): Whether to use iota parameter. Defaults to True.
         with_alpha (bool, optional): Whether to use alpha parameter. Defaults to True.
         num_gens (int, optional): The number of generations in the evolutionary algorithm. Defaults to 5.
-        algorithm (Literal["pso", "genetic"], optional): The type of optimization algorithm to use. Defaults to "pso".
+        algorithm (Literal["genetic"], optional): The type of optimization algorithm to use. Defaults to "genetic", the only available algorithm right now.
         lp_solver (Solver, optional): The linear programming solver to use. Defaults to SCIP.
         nlp_solver (Solver, optional): The nonlinear programming solver to use. Defaults to IPOPT.
         objvalue_json_path (str, optional): The path to the JSON file for storing objective values. Defaults to "".
@@ -68,6 +67,7 @@ class COBRAKProblem:
         correction_config (CorrectionConfig, optional): Configuration for corrections during optimization. Defaults to CorrectionConfig().
         min_abs_objvalue (float, optional): The minimum absolute value of the objective function to consider as valid. Defaults to 1e-6.
         pop_size (int | None, optional): The population size for the evolutionary algorithm. Defaults to None.
+        ignore_nonlinear_extra_terms_in_ectfbas: (bool, optional): Whether or not non-linear watches/constraints shall be ignored in ecTFBAs. Defaults to True.
 
     Attributes:
         original_cobrak_model (Model): A deep copy of the original COBRA-k model.
@@ -100,14 +100,17 @@ class COBRAKProblem:
         with_iota: bool = True,
         with_alpha: bool = True,
         num_gens: int = 5,
-        algorithm: Literal["pso", "genetic"] = "pso",
+        algorithm: Literal["genetic"] = "genetic",
         lp_solver: Solver = SCIP,
         nlp_solver: Solver = IPOPT,
+        nlp_strict_mode: bool = False,
+        nlp_single_strict_reacs: list[str] = [],
         objvalue_json_path: str = "",
         max_rounds_same_objvalue: float = float("inf"),
         correction_config: CorrectionConfig = CorrectionConfig(),
         min_abs_objvalue: float = 1e-6,
         pop_size: int | None = None,
+        ignore_nonlinear_extra_terms_in_ectfbas: bool = True,
     ) -> None:
         """Initializes a COBRAKProblem object.
 
@@ -123,14 +126,18 @@ class COBRAKProblem:
             with_iota (bool, optional): Whether to use iota parameter. Defaults to True.
             with_alpha (bool, optional): Whether to use alpha parameter. Defaults to True.
             num_gens (int, optional): The number of generations in the evolutionary algorithm. Defaults to 5.
-            algorithm (Literal["pso", "genetic"], optional): The type of optimization algorithm to use. Defaults to "pso".
+            algorithm (Literal["genetic"], optional): The type of optimization algorithm to use. Defaults to "genetic", the only algorithm currently available.
             lp_solver (Solver, optional): The linear programming solver to use. Defaults to SCIP.
             nlp_solver (Solver, optional): The nonlinear programming solver to use. Defaults to IPOPT.
+            nlp_strict_mode (bool, optional): Whether or not the <= heuristic (True) or not (False; i.e. setting all equations to ==) shall be used. Defaults to False.
+            nlp_single_strict_reacs (list[str], optional): List of single reactions that shall be in strict mode (see ```nlp_strict_mode```argument above).
+                If ```nlp_strict_mode=True```, this has no effect. Defaults to [].
             objvalue_json_path (str, optional): The path to the JSON file for storing objective values. Defaults to "".
             max_rounds_same_objvalue (float, optional): The maximum number of rounds with the same objective value before stopping. Defaults to float("inf").
             correction_config (CorrectionConfig, optional): Configuration for corrections during optimization. Defaults to CorrectionConfig().
             min_abs_objvalue (float, optional): The minimum absolute value of the objective function to consider as valid. Defaults to 1e-6.
             pop_size (int | None, optional): The population size for the evolutionary algorithm. Defaults to None.
+            ignore_nonlinear_extra_terms_in_ectfbas: (bool, optional): Whether or not non-linear watches/constraints shall be ignored in ecTFBAs. Defaults to True.
         """
         self.original_cobrak_model: Model = deepcopy(cobrak_model)
         self.objective_target = objective_target
@@ -183,11 +190,11 @@ class COBRAKProblem:
                 first_reac_id = filtered_reac_couplex[0]
                 if (first_reac_id in nlp_dict) and (nlp_dict[first_reac_id] > 0.0):
                     self.initial_xs_list[nlp_idx].append(
-                        1.0 if algorithm == "pso" else 1
+                        1.0 if algorithm != "genetic" else 1
                     )
                 else:
                     self.initial_xs_list[nlp_idx].append(
-                        0.0 if algorithm == "pso" else 0
+                        0.0 if algorithm != "genetic" else 0
                     )
 
                 nlp_idx += 1  # noqa: SIM113
@@ -203,6 +210,8 @@ class COBRAKProblem:
         self.num_gens = num_gens
         self.lp_solver = lp_solver
         self.nlp_solver = nlp_solver
+        self.nlp_strict_mode = nlp_strict_mode
+        self.nlp_single_strict_reacs = nlp_single_strict_reacs
         self.temp_directory_name = ""
         self.best_value = best_value
         self.objvalue_json_path = objvalue_json_path
@@ -210,6 +219,9 @@ class COBRAKProblem:
         self.correction_config = correction_config
         self.min_abs_objvalue = min_abs_objvalue
         self.pop_size = pop_size
+        self.ignore_nonlinear_extra_terms_in_ectfbas = (
+            ignore_nonlinear_extra_terms_in_ectfbas
+        )
 
     def fitness(
         self,
@@ -241,6 +253,7 @@ class COBRAKProblem:
                 ignored_reacs=deactivated_reactions,
                 solver=self.lp_solver,
                 correction_config=self.correction_config,
+                ignore_nonlinear_terms=self.ignore_nonlinear_extra_terms_in_ectfbas,
             )
         except (ApplicationError, AttributeError, ValueError):
             first_ectfba_dict = {ALL_OK_KEY: False}
@@ -291,6 +304,7 @@ class COBRAKProblem:
                 ignored_reacs=deactivated_reactions,
                 solver=self.lp_solver,
                 correction_config=self.correction_config,
+                ignore_nonlinear_terms=self.ignore_nonlinear_extra_terms_in_ectfbas,
             )
         except (ApplicationError, AttributeError, ValueError):
             maxz_ectfba_dict = {ALL_OK_KEY: False}
@@ -327,6 +341,8 @@ class COBRAKProblem:
                             with_alpha=self.with_alpha,
                             solver=self.nlp_solver,
                             correction_config=self.correction_config,
+                            strict_mode=self.nlp_strict_mode,
+                            single_strict_reacs=self.nlp_single_strict_reacs,
                         )
                     )
                     if second_nlp_dict[ALL_OK_KEY] and (
@@ -349,6 +365,7 @@ class COBRAKProblem:
                 ignored_reacs=deactivated_reactions,
                 solver=self.lp_solver,
                 correction_config=self.correction_config,
+                ignore_nonlinear_terms=self.ignore_nonlinear_extra_terms_in_ectfbas,
             )
         except (ApplicationError, AttributeError, ValueError):
             minz_ectfba_dict = {ALL_OK_KEY: False}
@@ -385,6 +402,8 @@ class COBRAKProblem:
                             with_alpha=self.with_alpha,
                             solver=self.nlp_solver,
                             correction_config=self.correction_config,
+                            strict_mode=self.nlp_strict_mode,
+                            single_strict_reacs=self.nlp_single_strict_reacs,
                         )
                     )
                     if third_nlp_dict[ALL_OK_KEY] and (
@@ -439,16 +458,6 @@ class COBRAKProblem:
         self.temp_directory_name = standardize_folder(temp_directory.name)
 
         match self.algorithm:
-            case "pso":
-                evolution = COBRAKPAPSO(
-                    fitness_function=self.fitness,
-                    xs_dim=self.dim,
-                    extra_xs=self.initial_xs_list,
-                    gen=self.num_gens,
-                    objvalue_json_path=self.objvalue_json_path,
-                    max_rounds_same_objvalue=self.max_rounds_same_objvalue,
-                    pop_size=self.pop_size,
-                )
             case "genetic":
                 evolution = COBRAKGENETIC(
                     fitness_function=self.fitness,
@@ -461,7 +470,7 @@ class COBRAKProblem:
                 )
             case _:
                 print(
-                    f"ERROR: Evolution algorithm {self.algorithm} does not exist! Use either 'pso' or 'genetic'."
+                    f"ERROR: Evolution algorithm {self.algorithm} does not exist! Use 'genetic'."
                 )
                 raise ValueError
         evolution.run()
@@ -496,9 +505,13 @@ def _postprocess_batch(
     with_alpha: bool = False,
     lp_solver: Solver = SCIP,
     nlp_solver: Solver = IPOPT,
+    nlp_strict_mode: bool = False,
+    nlp_single_strict_reacs: list[str] = [],
     verbose: bool = False,
     correction_config: CorrectionConfig = CorrectionConfig(),
     onlytested: str = "",
+    ignore_nonlinear_extra_terms_in_ectfbas: bool = True,
+    var_data_abs_epsilon: float = 1e-5,
 ) -> list[str, tuple[str], dict[str, float], str, int]:
     """Postprocesses a batch of reactions to find feasible switches.
 
@@ -517,9 +530,14 @@ def _postprocess_batch(
         with_alpha (bool, optional): Whether to use alpha parameter. Defaults to False.
         lp_solver (Solver, optional): The linear programming solver to use. Defaults to SCIP.
         nlp_solver (Solver, optional): The nonlinear programming solver to use. Defaults to IPOPT.
+        nlp_strict_mode (bool, optional): Whether or not the <= heuristic (True) or not (False; i.e. setting all equations to ==) shall be used. Defaults to False.
+        nlp_single_strict_reacs (list[str], optional): List of single reactions that shall be in strict mode (see ```nlp_strict_mode```argument above).
+            If ```nlp_strict_mode=True```, this has no effect. Defaults to [].
         verbose (bool, optional): Whether to enable verbose output. Defaults to False.
         correction_config (CorrectionConfig, optional): Configuration for corrections during optimization. Defaults to CorrectionConfig().
         onlytested (str, optional): Specific reactions to test during postprocessing. Defaults to "".
+        ignore_nonlinear_extra_terms_in_ectfbas: (bool, optional): Whether or not non-linear watches/constraints shall be ignored in ecTFBAs.
+        var_data_abs_epsilon: (float, optional): Under this value, any data given by the variability dict is considered to be 0. Defaults to 1e-5.
 
     Returns:
         list[str, tuple[str], dict[str, float], str, int]: List of feasible switches found with extra data, as follows:
@@ -560,12 +578,14 @@ def _postprocess_batch(
                 with_flux_sum_var=False,
                 add_extra_linear_constraints=True,
                 correction_config=correction_config,
+                ignore_nonlinear_terms=ignore_nonlinear_extra_terms_in_ectfbas,
             )
             baselp = apply_variability_dict(
                 baselp,
                 target_cobrak_model,
                 variability_data,
                 error_scenario=correction_config.error_scenario,
+                min_abs_objvalue=var_data_abs_epsilon,
             )
 
             active_z_var_changes_sum = 0.0
@@ -708,9 +728,6 @@ def _postprocess_batch(
                     results = pyomo_lp_solver.solve(
                         baselp, tee=verbose, **lp_solver.solve_extra_options
                     )
-                except (ApplicationError, AttributeError, ValueError):
-                    lp_resultdict = {ALL_OK_KEY: False}
-                try:
                     lp_resultdict = add_statuses_to_optimziation_dict(
                         get_pyomo_solution_as_dict(baselp), results
                     )
@@ -736,6 +753,8 @@ def _postprocess_batch(
                             with_alpha=with_alpha,
                             solver=nlp_solver,
                             correction_config=correction_config,
+                            strict_mode=nlp_strict_mode,
+                            single_strict_reacs=nlp_single_strict_reacs,
                         )
                     )
                     if nlp_resultdict[ALL_OK_KEY]:
@@ -770,9 +789,12 @@ def postprocess(
     with_alpha: bool = False,
     lp_solver: Solver = SCIP,
     nlp_solver: Solver = IPOPT,
+    nlp_strict_mode: bool = False,
+    nlp_single_strict_reacs: list[str] = [],
     verbose: bool = False,
     correction_config: CorrectionConfig = CorrectionConfig(),
     onlytested: str = "",
+    ignore_nonlinear_extra_terms_in_ectfbas: bool = True,
 ) -> tuple[float, list[float | int]]:
     """Postprocesses the optimization results to find feasible switches.
 
@@ -788,9 +810,13 @@ def postprocess(
         with_alpha (bool, optional): Whether to use alpha parameter. Defaults to False.
         lp_solver (Solver, optional): The linear programming solver to use. Defaults to SCIP.
         nlp_solver (Solver, optional): The nonlinear programming solver to use. Defaults to IPOPT.
+        nlp_strict_mode (bool, optional): Whether or not the <= heuristic (True) or not (False; i.e. setting all equations to ==) shall be used. Defaults to False.
+        nlp_single_strict_reacs (list[str], optional): List of single reactions that shall be in strict mode (see ```nlp_strict_mode```argument above).
+            If ```nlp_strict_mode=True```, this has no effect. Defaults to [].
         verbose (bool, optional): Whether to enable verbose output. Defaults to False.
         correction_config (CorrectionConfig, optional): Configuration for corrections during optimization. Defaults to CorrectionConfig().
         onlytested (str, optional): Specific reactions to test during postprocessing. Defaults to "".
+        ignore_nonlinear_extra_terms_in_ectfbas: (bool, optional): Whether or not non-linear watches/constraints shall be ignored in ecTFBAs.
 
     Returns:
         tuple[float, list[float | int]]: Best result and a list of feasible switches.
@@ -802,6 +828,7 @@ def postprocess(
             with_thermodynamic_constraints=True,
             active_reactions=[],
             solver=lp_solver,
+            ignore_nonlinear_terms=ignore_nonlinear_extra_terms_in_ectfbas,
         )
     else:
         variability_data = deepcopy(variability_data)
@@ -866,9 +893,12 @@ def postprocess(
             with_alpha,
             lp_solver,
             nlp_solver,
+            nlp_strict_mode,
+            nlp_single_strict_reacs,
             verbose,
             correction_config,
             onlytested,
+            ignore_nonlinear_extra_terms_in_ectfbas,
         )
         for targets_batch in split_list(targets, cpu_count())
     )
@@ -904,8 +934,11 @@ def _sampling_routine(
     deactivated_reaction_lists: list[list[str]],
     lp_solver: Solver,
     nlp_solver: Solver,
+    nlp_strict_mode: bool,
+    nlp_single_strict_reacs: list[str],
     correction_config: CorrectionConfig,
     min_abs_objvalue: float,
+    ignore_nonlinear_extra_terms_in_ectfbas: bool,
 ) -> list[dict[str, float]]:
     """Runs the sampling routine to find feasible initial solutions.
 
@@ -921,8 +954,12 @@ def _sampling_routine(
         deactivated_reaction_lists (list[list[str]]): List of deactivated reaction lists.
         lp_solver (Solver): The linear programming solver to use.
         nlp_solver (Solver): The nonlinear programming solver to use.
+        nlp_strict_mode (bool, optional): Whether or not the <= heuristic (True) or not (False; i.e. setting all equations to ==) shall be used. Defaults to False.
+        nlp_single_strict_reacs (list[str], optional): List of single reactions that shall be in strict mode (see ```nlp_strict_mode```argument above).
+            If ```nlp_strict_mode=True```, this has no effect. Defaults to [].
         correction_config (CorrectionConfig): Configuration for corrections during optimization.
         min_abs_objvalue (float): Minimum absolute value of objective function to consider valid.
+        ignore_nonlinear_extra_terms_in_ectfbas: (bool, optional): Whether or not non-linear watches/constraints shall be ignored in ecTFBAs.
 
     Returns:
         list[dict[str, float]]: List of feasible solutions found.
@@ -941,6 +978,7 @@ def _sampling_routine(
                 ignored_reacs=deactivated_reaction_set,
                 solver=lp_solver,
                 correction_config=correction_config,
+                ignore_nonlinear_terms=ignore_nonlinear_extra_terms_in_ectfbas,
             )
         except (ApplicationError, AttributeError, ValueError):
             continue
@@ -976,6 +1014,8 @@ def _sampling_routine(
                 verbose=False,
                 solver=nlp_solver,
                 correction_config=correction_config,
+                strict_mode=nlp_strict_mode,
+                single_strict_reacs=nlp_single_strict_reacs,
             )
         except (ApplicationError, AttributeError, ValueError):
             continue
@@ -1004,15 +1044,18 @@ def perform_nlp_evolutionary_optimization(
     sampling_max_deactivated_reactions: int = 5,
     sampling_always_deactivated_reactions: list[str] = [],
     evolution_num_gens: int = 5,
-    algorithm: Literal["pso", "genetic"] = "genetic",
+    algorithm: Literal["genetic"] = "genetic",
     lp_solver: Solver = SCIP,
     nlp_solver: Solver = IPOPT,
+    nlp_strict_mode: bool = False,
+    nlp_single_strict_reacs: list[str] = [],
     objvalue_json_path: str = "",
     max_rounds_same_objvalue: float = float("inf"),
     correction_config: CorrectionConfig = CorrectionConfig(),
     min_abs_objvalue: float = 1e-13,
     pop_size: int | None = None,
     working_results: list[dict[str, float]] = [],
+    ignore_nonlinear_extra_terms_in_ectfbas: bool = True,
 ) -> dict[float, list[dict[str, float]]]:
     """Performs NLP evolutionary optimization on the given COBRA-k model.
 
@@ -1031,15 +1074,19 @@ def perform_nlp_evolutionary_optimization(
         sampling_max_deactivated_reactions (int, optional): Maximum number of deactivated reactions allowed. Defaults to 5.
         sampling_always_deactivated_reactions (list[str], optional): List of reactions that should always be deactivated. Defaults to [].
         evolution_num_gens (int, optional): Number of generations for the evolutionary algorithm. Defaults to 5.
-        algorithm (Literal["pso", "genetic"], optional): Type of optimization algorithm to use. Defaults to "genetic", which is also the only algorithm currently available.
+        algorithm (Literal["genetic"], optional): Type of optimization algorithm to use. Defaults to "genetic", which is also the only algorithm currently available.
         lp_solver (Solver, optional): The linear programming solver to use. Defaults to SCIP.
         nlp_solver (Solver, optional): The nonlinear programming solver to use. Defaults to IPOPT.
+        nlp_strict_mode (bool, optional): Whether or not the <= heuristic (True) or not (False; i.e. setting all equations to ==) shall be used. Defaults to False.
+        nlp_single_strict_reacs (list[str], optional): List of single reactions that shall be in strict mode (see ```nlp_strict_mode```argument above).
+            If ```nlp_strict_mode=True```, this has no effect. Defaults to [].
         objvalue_json_path (str, optional): Path to the JSON file for objective values. Defaults to "".
         max_rounds_same_objvalue (float, optional): Maximum number of rounds with same objective value before stopping. Defaults to float("inf").
         correction_config (CorrectionConfig, optional): Configuration for corrections during optimization. Defaults to CorrectionConfig().
         min_abs_objvalue (float, optional): Minimum absolute value of objective function to consider valid. Defaults to 1e-13.
         pop_size (int | None, optional): Population size for the evolutionary algorithm. Defaults to None.
         working_results (list[dict[str, float]], optional): List of initial feasible results. Defaults to [].
+        ignore_nonlinear_extra_terms_in_ectfbas: (bool, optional): Whether or not non-linear watches/constraints shall be ignored in ecTFBAs. Defaults to True.
 
     Returns:
         dict[float, list[dict[str, float]]]: Dictionary of objective values and corresponding solutions.
@@ -1051,6 +1098,7 @@ def perform_nlp_evolutionary_optimization(
             with_thermodynamic_constraints=True,
             active_reactions=[],
             solver=lp_solver,
+            ignore_nonlinear_terms=ignore_nonlinear_extra_terms_in_ectfbas,
         )
     else:
         variability_dict = deepcopy(variability_dict)
@@ -1102,8 +1150,11 @@ def perform_nlp_evolutionary_optimization(
                 deactivated_reaction_lists,
                 lp_solver,
                 nlp_solver,
+                nlp_strict_mode,
+                nlp_single_strict_reacs,
                 correction_config,
                 min_abs_objvalue,
+                ignore_nonlinear_extra_terms_in_ectfbas,
             )
             for deactivated_reaction_lists in all_deactivated_reaction_lists
         )
@@ -1113,19 +1164,19 @@ def perform_nlp_evolutionary_optimization(
             -float("inf") if is_objsense_maximization(objective_sense) else float("inf")
         )
         for result in results:
-            for tfba_dict in result:
+            for nlp_dict in result:
                 active_reacs_tuple = tuple(
                     sorted(
-                        get_active_reacs_from_optimization_dict(cobrak_model, tfba_dict)
+                        get_active_reacs_from_optimization_dict(cobrak_model, nlp_dict)
                     )
                 )
                 distinct_feasible_start_solutions[active_reacs_tuple] = deepcopy(
-                    tfba_dict
+                    nlp_dict
                 )
                 if is_objsense_maximization(objective_sense):
-                    best_result = max(tfba_dict[OBJECTIVE_VAR_NAME], best_result)
+                    best_result = max(nlp_dict[OBJECTIVE_VAR_NAME], best_result)
                 else:
-                    best_result = min(tfba_dict[OBJECTIVE_VAR_NAME], best_result)
+                    best_result = min(nlp_dict[OBJECTIVE_VAR_NAME], best_result)
 
         if (
             len(distinct_feasible_start_solutions.keys())
@@ -1133,11 +1184,9 @@ def perform_nlp_evolutionary_optimization(
         ):
             break
 
-    print(best_result)
-
     if len(distinct_feasible_start_solutions.keys()) == 0:
         print(
-            "ERROR: No feasible sampling solution found! Check feasibility of problem and/or adjust sampling settings."
+            "ERROR in initial sampling: No feasible sampling solution found! Check feasibility of problem and/or adjust sampling settings."
         )
         raise ValueError
     if (
@@ -1167,6 +1216,9 @@ def perform_nlp_evolutionary_optimization(
         correction_config=correction_config,
         min_abs_objvalue=min_abs_objvalue,
         pop_size=pop_size,
+        ignore_nonlinear_extra_terms_in_ectfbas=ignore_nonlinear_extra_terms_in_ectfbas,
+        nlp_strict_mode=nlp_strict_mode,
+        nlp_single_strict_reacs=nlp_single_strict_reacs,
     )
 
     return problem.optimize()

@@ -271,7 +271,7 @@ print_optimization_result(toy_model, tfba_result)
 Note that the printed results now also show reaction driving forces and metabolite concentrations in a solution.
 
 !!! info Metabolite legarithmic concentration variables
-    In COBRA-k result dictionaries, logarithmic metabolite concentration variables start with ```cobrak.constant.LN_CONC_PREFIX```, by default ```x_```. E.g., the logarithmic metabolite concentration of metabolite ```atp_c``` (cytosolic ATP) would be called ```x_atp_c```.
+    In COBRA-k result dictionaries, logarithmic metabolite concentration variables start with ```cobrak.constant.LNCONC_PREFIX```, by default ```x_```. E.g., the logarithmic metabolite concentration of metabolite ```atp_c``` (cytosolic ATP) would be called ```x_atp_c```.
 
 !!! warning
     Just like in a non-thermodynamic FBA, there may be up to infinite many alternative solutions for the same optimal value. For an elucidation of the full solution space, you may use a TFVA (see below).

@@ -1,4 +1,4 @@
-from statistics import mean
+from statistics import mean  # noqa: D100
 
 import z_add_path  # noqa: F401
 

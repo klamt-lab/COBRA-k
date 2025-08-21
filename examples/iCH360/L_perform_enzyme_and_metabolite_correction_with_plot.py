@@ -1,4 +1,4 @@
-# IMPORTS SECTION #
+# IMPORTS SECTION #  # noqa: D100
 from math import exp, log
 
 import matplotlib.pyplot as plt
@@ -86,7 +86,7 @@ ensure_folder_existence(correction_folder)
 
 
 # Correction and plot functions #
-def run_metabolite_correction() -> dict[str, float]:
+def run_metabolite_correction() -> dict[str, float]:  # noqa: D103
     met_correction_error_scenario: ErrorScenario = {
         f"{LNCONC_VAR_PREFIX}{met_id}": (
             log(bennett_data[met_id]["lb"]),
@@ -126,7 +126,7 @@ def run_metabolite_correction() -> dict[str, float]:
     return metcorrection_result
 
 
-def run_enzyme_correction() -> dict[str, float]:
+def run_enzyme_correction() -> dict[str, float]:  # noqa: D103
     enzcorrection_result = perform_nlp_irreversible_optimization_with_active_reacs_only(
         cobrak_model=cobrak_model,
         objective_target=ERROR_SUM_VAR_ID,
@@ -164,7 +164,7 @@ def run_enzyme_correction() -> dict[str, float]:
     return enzcorrection_result
 
 
-def plot_metabolite_result(
+def plot_metabolite_result(  # noqa: D103
     nlp_result: dict[str, float], ax: plt.Axes, title: str
 ) -> None:
     variability_nlp: list[tuple[float, float]] = []
@@ -220,7 +220,7 @@ def plot_metabolite_result(
     )
 
 
-def plot_enzyme_result(nlp_result: dict[str, float], ax: plt.Axes, title: str) -> None:
+def plot_enzyme_result(nlp_result: dict[str, float], ax: plt.Axes, title: str) -> None:  # noqa: D103
     variability_nlp: list[tuple[float, float]] = []
     variability_schmidt: list[tuple[float, float]] = []
     labels: list[str] = []
@@ -283,64 +283,73 @@ def plot_enzyme_result(nlp_result: dict[str, float], ax: plt.Axes, title: str) -
     )
 
 
-def plot_flux_result(predicted_data: dict[str, float], ax: plt.Axes, title: str) -> None:
+def plot_flux_result(  # noqa: D103
+    predicted_data: dict[str, float], ax: plt.Axes, title: str
+) -> None:
     # http://dx.doi.org/10.1016/j.cels.2015.09.008
     # Supplemental Data S1. sheet "Metabolic Fluxes". Glucose condition
     measured_data: dict[str, tuple[float, float, float]] = {
-        "Ace_Ex":        (1.0289, -6.8270, "EX_ac_e_fw"),
-        "Fru_Ex":        (0.0000, 0.0000, "EX_fru_e_fw"),
-        "Gal_Ex":        (0.0000, 0.0000, ""),
-        "Glc_Ex":        (0.0380, 9.6540, "EX_glc__D_e_bw"),
-        "Gly_Ex":        (0.0000, 0.0000, "EX_glyc_e_fw"),
-        "Gln_Ex":        (0.0000, 0.0000, "EX_gln__L_e_fw"),
-        "Pyr_Ex":        (0.0000, 0.0000, "EX_pyr_e_fw"),
-        "Suc_Ex":        (0.0000, 0.0000, "EX_succ_e_fw"),
-        "Fum_Ex":        (0.0000, 0.0000, "EX_fum_e_fw"),
-        "Lac_Ex":        (0.0000, 0.0000, "EX_lac__D_e_fw"),
-        "PGI":           (0.3110, 5.7000, "PGI_fw"),
-        "PFK-FBP":       (0.1417, 7.0585, "PFK_fw"),
-        "FBA":           (0.0525, 7.0585, "FBA_fw"),
-        "TPI":           (0.1417, 7.0585, "TPI_fw"),
-        "Middle_EMP":    (0.1417, 15.7104, "GAPD_fw"),
-        "Low_EMP":       (0.1417, 14.5577, "PGM_bw"),
-        "PYK-PPS":       (0.1417, 2.4873, "PYK_fw"),
-        "PDH":           (0.0906, 11.2985, "PDH_fw"),
-        "ED":            (0.0799, 1.0870, "N/A"),
+        "Ace_Ex": (1.0289, -6.8270, "EX_ac_e_fw"),
+        "Fru_Ex": (0.0000, 0.0000, "EX_fru_e_fw"),
+        "Gal_Ex": (0.0000, 0.0000, ""),
+        "Glc_Ex": (0.0380, 9.6540, "EX_glc__D_e_bw"),
+        "Gly_Ex": (0.0000, 0.0000, "EX_glyc_e_fw"),
+        "Gln_Ex": (0.0000, 0.0000, "EX_gln__L_e_fw"),
+        "Pyr_Ex": (0.0000, 0.0000, "EX_pyr_e_fw"),
+        "Suc_Ex": (0.0000, 0.0000, "EX_succ_e_fw"),
+        "Fum_Ex": (0.0000, 0.0000, "EX_fum_e_fw"),
+        "Lac_Ex": (0.0000, 0.0000, "EX_lac__D_e_fw"),
+        "PGI": (0.3110, 5.7000, "PGI_fw"),
+        "PFK-FBP": (0.1417, 7.0585, "PFK_fw"),
+        "FBA": (0.0525, 7.0585, "FBA_fw"),
+        "TPI": (0.1417, 7.0585, "TPI_fw"),
+        "Middle_EMP": (0.1417, 15.7104, "GAPD_fw"),
+        "Low_EMP": (0.1417, 14.5577, "PGM_bw"),
+        "PYK-PPS": (0.1417, 2.4873, "PYK_fw"),
+        "PDH": (0.0906, 11.2985, "PDH_fw"),
+        "ED": (0.0799, 1.0870, "N/A"),
         "PPP_ED_branch": (0.2833, 3.9193, "N/A"),
-        "Early_PPP":     (0.2718, 2.8323, "GND_fw"),
-        "RPI":           (0.0906, 1.4274, "RPI_bw"),
-        "RPE":           (0.0906, 1.4048, "RPE_fw"),
-        "Non-ox_PPP":    (0.0906, 0.8202, "TKT1_fw"),
-        "TKT2":          (0.0906, 0.5846, "TKT2_fw"),
-        "PPC":           (0.1208, 2.4533, "PPC_fw"),
-        "PPCK":          (0.1208, 0.5409, "N/A"),
-        "Early_TCA":     (0.0906, 2.9780, "CS_fw"),
-        "ICDH":          (0.0906, 2.9780, "ICDHyr_fw"),
-        "Int_TCA":       (0.0906, 2.1381, "AKGDH_fw"),  # and SUCOAS!
-        "SUCDH3":        (0.0906, 2.1381, "SUCDi_fw"),
-        "FUM":           (0.0906, 2.1381, "FUM_fw"),
-        "MDH+MQO":       (0.0906, 2.1381, "MDH_fw"),
-        "ME":            (0.0000, 0.0000, "ME1_fw"),
-        "Glx_Cycle":     (0.0000, 0.0000, "ICL_fw"),
-        "Growth_rate":   (0.0100, 0.6500, "Biomass_fw"),
+        "Early_PPP": (0.2718, 2.8323, "GND_fw"),
+        "RPI": (0.0906, 1.4274, "RPI_bw"),
+        "RPE": (0.0906, 1.4048, "RPE_fw"),
+        "Non-ox_PPP": (0.0906, 0.8202, "TKT1_fw"),
+        "TKT2": (0.0906, 0.5846, "TKT2_fw"),
+        "PPC": (0.1208, 2.4533, "PPC_fw"),
+        "PPCK": (0.1208, 0.5409, "N/A"),
+        "Early_TCA": (0.0906, 2.9780, "CS_fw"),
+        "ICDH": (0.0906, 2.9780, "ICDHyr_fw"),
+        "Int_TCA": (0.0906, 2.1381, "AKGDH_fw"),  # and SUCOAS!
+        "SUCDH3": (0.0906, 2.1381, "SUCDi_fw"),
+        "FUM": (0.0906, 2.1381, "FUM_fw"),
+        "MDH+MQO": (0.0906, 2.1381, "MDH_fw"),
+        "ME": (0.0000, 0.0000, "ME1_fw"),
+        "Glx_Cycle": (0.0000, 0.0000, "ICL_fw"),
+        "Growth_rate": (0.0100, 0.6500, "Biomass_fw"),
     }
 
     measured_datalist = []
     predicted_datalist = []
     standard_deviation_datalist = []
     labels = []
-    for measured_id, (standard_deviation, measured_flux, predicted_id) in measured_data.items():
+    for measured_id, (
+        standard_deviation,
+        measured_flux,
+        predicted_id,
+    ) in measured_data.items():
         predicted_flux = predicted_data.get(predicted_id, 0.0)
         print(measured_id, abs(round(predicted_flux, 4)), abs(measured_flux))
 
-        if not (((measured_flux == 0.0) and (predicted_flux <= 1e-7)) or ((predicted_flux == 0.0) and (predicted_id == "N/A"))):
+        if not (
+            ((measured_flux == 0.0) and (predicted_flux <= 1e-7))
+            or ((predicted_flux == 0.0) and (predicted_id == "N/A"))
+        ):
             measured_datalist.append(abs(measured_flux))
             predicted_datalist.append(abs(predicted_flux))
             standard_deviation_datalist.append(abs(standard_deviation))
             labels.append(predicted_id)
 
     _, _, r_value, _, _ = linregress(measured_datalist, predicted_datalist)
-    r_squared = r_value ** 2
+    r_squared = r_value**2
     scatterplot_with_labels(
         [
             (

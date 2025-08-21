@@ -1,3 +1,5 @@
+"""pytest tests for COBRA-k's module pyomo_functionality"""
+
 import unittest
 
 from pyomo.environ import (
@@ -11,14 +13,14 @@ from pyomo.solvers.plugins.solvers.GLPK import GLPKSHELL
 from cobrak.pyomo_functionality import get_objective, get_solver
 
 
-def test_get_objective_single_variable():
+def test_get_objective_single_variable() -> None:  # noqa: D103
     model = ConcreteModel()
     model.test_var = Var(within=Reals, bounds=(-1, 1))
     objective = get_objective(model, "test_var", 1)
     assert isinstance(objective, Objective)
 
 
-def test_get_objective_weighted_sum():
+def test_get_objective_weighted_sum() -> None:  # noqa: D103
     model = ConcreteModel()
     model.test_var1 = Var(within=Reals, bounds=(-1, 1))
     model.test_var2 = Var(within=Reals, bounds=(-1, 1))
@@ -26,21 +28,21 @@ def test_get_objective_weighted_sum():
     assert isinstance(objective, Objective)
 
 
-def test_get_objective_minimization():
+def test_get_objective_minimization() -> None:  # noqa: D103
     model = ConcreteModel()
     model.test_var = Var(within=Reals, bounds=(-1, 1))
     objective = get_objective(model, "test_var", -1)
     assert isinstance(objective, Objective)
 
 
-def test_get_objective_zero_sense():
+def test_get_objective_zero_sense() -> None:  # noqa: D103
     model = ConcreteModel()
     model.test_var = Var(within=Reals, bounds=(-1, 1))
     objective = get_objective(model, "test_var", 0)
     assert isinstance(objective, Objective)
 
 
-def test_get_solver():
+def test_get_solver() -> None:  # noqa: D103
     solver = get_solver("glpk", {"timelimit": 600, "mipgap": 0.01}, {})
     assert isinstance(solver, GLPKSHELL)
 

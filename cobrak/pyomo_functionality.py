@@ -32,6 +32,7 @@ class ApproximationPoint:
     - intercept (float): The y-intercept of the line passing through this point.
     - x_point (float): The x-coordinate of this point.
     """
+
     slope: float
     intercept: float
     x_point: float
@@ -323,7 +324,6 @@ def get_solver(
         solver = SolverFactory(solver_name)
     for attr_name, attr_value in solver_attrs.items():
         setattr(solver, attr_name, attr_value)
-    if not solver_name.startswith("multistart"):
-        for option_name, option_value in solver_options.items():
-            solver.options[option_name] = option_value
+    for option_name, option_value in solver_options.items():
+        solver.options[option_name] = option_value
     return solver

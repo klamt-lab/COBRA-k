@@ -1,7 +1,9 @@
-"""Currently just contains the toy model form COBRAk's documentation as example model"""
+"""Contains the toy model from COBRAk's documentation and publication as example model as well as iCH360_cobrak."""
 
 # IMPORT SECTION
+import importlib.resources as r
 from math import log
+from typing import Any
 
 from .constants import STANDARD_R, STANDARD_T
 from .dataclasses import (
@@ -12,8 +14,28 @@ from .dataclasses import (
     Model,
     Reaction,
 )
+from .io import json_load
 
-# EXAMPLE MODEL DEFINITION SECTION
+
+# LAZY (ONLY LOADED ON CALL) MODEL DEFINITIONS
+def __getattr__(name: str) -> Any:  # called only for missing attrs  # noqa: ANN401
+    """Called by Python when an attribute that does not yet exist in the
+    module namespace is requested.
+
+    We use it to load the JSON the first time ``iCH360_cobrak`` is asked
+    for, then store the result in ``globals()`` so the load happens only
+    once.
+    """
+    if name == "iCH360_cobrak":
+        data = json_load(
+            str(r.files("cobrak").joinpath("data/iCH360_cobrak.json"))
+        )  # <-load the file now
+        globals()[name] = data  # cache for future accesses
+        return data
+    raise AttributeError(name)
+
+
+# DIRECT EXAMPLE MODEL DEFINITION SECTION
 toy_model = Model(
     reactions={
         # Metabolic reactions

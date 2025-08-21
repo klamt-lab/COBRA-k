@@ -8,10 +8,13 @@ import os
 from typing import Any
 from zipfile import ZipFile
 
+from pydantic import NonNegativeInt, validate_call
+
 from .io import json_zip_write, standardize_folder
 
 
 # PUBLIC FUNCTIONS #
+@validate_call(validate_return=True)
 def parse_ncbi_taxonomy(
     ncbi_taxdmp_zipfile_path: str,
     ncbi_parsed_json_path: str,
@@ -73,6 +76,7 @@ def parse_ncbi_taxonomy(
     json_zip_write(ncbi_parsed_json_path, parsed_json_data)
 
 
+@validate_call(validate_return=True)
 def get_taxonomy_dict_from_nbci_taxonomy(
     organisms: list[str],
     parsed_json_data: dict[str, Any],
@@ -96,7 +100,7 @@ def get_taxonomy_dict_from_nbci_taxonomy(
     names_to_number_dict = parsed_json_data["names_to_number_dict"]
     nodes_dict = parsed_json_data["nodes_dict"]
 
-    organism_to_taxonomy_dicts = {}
+    organism_to_taxonomy_dicts: dict[str, list[str]] = {}
     for organism in organisms:
         try:
             node_train = [names_to_number_dict[organism]]
@@ -115,10 +119,11 @@ def get_taxonomy_dict_from_nbci_taxonomy(
     return organism_to_taxonomy_dicts
 
 
+@validate_call(validate_return=True)
 def get_taxonomy_scores(
     base_species: str,
     taxonomy_dict: dict[str, list[str]],
-) -> dict[str, int]:
+) -> dict[str, NonNegativeInt]:
     """Returns a dictionary with a taxonomic distance from the given organism.
 
     e.g. if base_species is "Escherichia coli" and taxonomy_dict is
@@ -159,6 +164,7 @@ def get_taxonomy_scores(
     return taxonomy_scores
 
 
+@validate_call(validate_return=True)
 def most_taxonomic_similar(
     base_species: str, taxonomy_dict: dict[str, list[str]]
 ) -> dict[str, int]:

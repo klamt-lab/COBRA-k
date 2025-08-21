@@ -72,8 +72,8 @@ name_to_bigg_ids["nadph"] = "nadph_c"
 # hexose-pa is a general term
 # pentose-pd is a general term
 
-for name in name_to_bigg_ids:
-    if name_to_bigg_ids[name] == "N/A":
+for name, value in name_to_bigg_ids.items():
+    if value == "N/A":
         print("MISSING:", name)
 
 with open(

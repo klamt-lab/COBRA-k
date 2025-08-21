@@ -1,10 +1,12 @@
+"""pytest tests for COBRA-k's module ncbi_taxonomy"""
+
 from cobrak.ncbi_taxonomy_functionality import (
     get_taxonomy_scores,
     most_taxonomic_similar,
 )
 
 
-def test_get_taxonomy_scores(tmp_path):
+def test_get_taxonomy_scores() -> None:  # noqa: D103
     base_species = "Escherichia coli"
     taxonomy_dict = {
         "Escherichia coli": ["Escherichia", "Bacteria", "Organism"],
@@ -17,7 +19,7 @@ def test_get_taxonomy_scores(tmp_path):
     assert taxonomy_scores["Homo sapiens"] == 2
 
 
-def test_most_taxonomic_similar(tmp_path):
+def test_most_taxonomic_similar() -> None:  # noqa: D103
     base_species = "Escherichia coli"
     taxonomy_dict = {
         "Escherichia coli": ["Escherichia", "Bacteria", "Organism"],

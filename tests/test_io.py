@@ -1,3 +1,5 @@
+"""pytest tests for COBRA-k's module io"""
+
 import json
 import os
 import pickle
@@ -12,7 +14,7 @@ from cobrak.dataclasses import (
     Reaction,
 )
 from cobrak.io import (
-    _add_annotation_to_cobra_reaction,
+    _add_annotation_to_cobra_reaction,  # noqa: PLC2701
     convert_cobrak_model_to_annotated_cobrapy_model,
     ensure_folder_existence,
     ensure_json_existence,
@@ -30,7 +32,7 @@ from cobrak.io import (
 )
 
 
-def test_get_base_id():
+def test_get_base_id() -> None:  # noqa: D103
     reac_id = "reaction_id"
     fwd_suffix = "fwd_suffix"
     rev_suffix = "rev_suffix"
@@ -42,19 +44,19 @@ def test_get_base_id():
     )
 
 
-def test_ensure_folder_existence(tmp_path):
+def test_ensure_folder_existence(tmp_path: str) -> None:  # noqa: D103
     folder = str(tmp_path / "test_folder")
     ensure_folder_existence(folder)
     assert os.path.isdir(folder)
 
 
-def test_ensure_json_existence(tmp_path):
+def test_ensure_json_existence(tmp_path: str) -> None:  # noqa: D103
     path = str(tmp_path / "test_json.json")
     ensure_json_existence(path)
     assert os.path.isfile(path)
 
 
-def test_add_annotation_to_cobra_reaction():
+def test_add_annotation_to_cobra_reaction() -> None:  # noqa: D103
     cobra_reaction = cobra.Reaction("reaction_id")
     reac_id = "reaction_id"
     reac_data = Reaction(
@@ -84,7 +86,7 @@ def test_add_annotation_to_cobra_reaction():
     assert cobra_reaction.annotation["cobrak_special_stoichiometries_V0"] == "{}"
 
 
-def test_convert_cobrak_model_to_annotated_cobrapy_model(tmp_path):
+def test_convert_cobrak_model_to_annotated_cobrapy_model() -> None:  # noqa: D103
     cobrak_model = Model(
         reactions={
             "reaction_id": Reaction(
@@ -117,7 +119,7 @@ def test_convert_cobrak_model_to_annotated_cobrapy_model(tmp_path):
     assert len(cobra_model.metabolites) == 1
 
 
-def test_save_cobrak_model_as_annotated_sbml_model(tmp_path):
+def test_save_cobrak_model_as_annotated_sbml_model(tmp_path: str) -> None:  # noqa: D103
     cobrak_model = Model(
         reactions={
             "reaction_id": Reaction(
@@ -149,18 +151,18 @@ def test_save_cobrak_model_as_annotated_sbml_model(tmp_path):
     assert os.path.isfile(filepath)
 
 
-def test_get_files(tmp_path):
+def test_get_files(tmp_path: str) -> None:  # noqa: D103
     folder = str(tmp_path / "test_folder")
     os.makedirs(folder)
-    with open(os.path.join(folder, "file1.txt"), "w", encoding="utf-8") as f:
+    with open(os.path.join(folder, "file1.txt"), "w", encoding="utf-8") as f:  # noqa: FURB103
         f.write("Hello, world!")
-    with open(os.path.join(folder, "file2.txt"), "w", encoding="utf-8") as f:
+    with open(os.path.join(folder, "file2.txt"), "w", encoding="utf-8") as f:  # noqa: FURB103
         f.write("Goodbye, world!")
     files = get_files(folder)
     assert set(files) == {"file1.txt", "file2.txt"}
 
 
-def test_get_folders(tmp_path):
+def test_get_folders(tmp_path: str) -> None:  # noqa: D103
     folder = str(tmp_path / "test_folder")
     os.makedirs(folder)
     os.makedirs(os.path.join(folder, "subfolder"))
@@ -168,7 +170,7 @@ def test_get_folders(tmp_path):
     assert folders == ["subfolder"]
 
 
-def test_json_load(tmp_path):
+def test_json_load(tmp_path: str) -> None:  # noqa: D103
     path = str(tmp_path / "test_json.json")
     with open(path, "w", encoding="utf-8") as f:
         json.dump({"key": "value"}, f)
@@ -176,16 +178,16 @@ def test_json_load(tmp_path):
     assert json_data == {"key": "value"}
 
 
-def test_json_write(tmp_path):
+def test_json_write(tmp_path: str) -> None:  # noqa: D103
     path = str(tmp_path / "test_json.json")
     json_data = {"key": "value"}
     json_write(path, json_data)
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         json_data_read = json.load(f)
     assert json_data_read == {"key": "value"}
 
 
-def test_json_zip_write_and_load(tmp_path):
+def test_json_zip_write_and_load(tmp_path: str) -> None:  # noqa: D103
     path = str(tmp_path / "test_json.json")
     json_data = {"key": "value"}
     json_zip_write(path, json_data)
@@ -193,14 +195,14 @@ def test_json_zip_write_and_load(tmp_path):
     assert json_data_read == {"key": "value"}
 
 
-def test_pickle_load(tmp_path):
+def test_pickle_load(tmp_path: str) -> None:  # noqa: D103
     path = str(tmp_path / "test_pickle.pkl")
     pickle_write(path, {"key": "value"})
     pickled_object = pickle_load(path)
     assert pickled_object == {"key": "value"}
 
 
-def test_pickle_write(tmp_path):
+def test_pickle_write(tmp_path: str) -> None:  # noqa: D103
     path = str(tmp_path / "test_pickle.pkl")
     pickled_object = {"key": "value"}
     pickle_write(path, pickled_object)
@@ -209,7 +211,7 @@ def test_pickle_write(tmp_path):
     assert pickled_object_read == {"key": "value"}
 
 
-def test_standardize_folder():
+def test_standardize_folder() -> None:  # noqa: D103
     folder = "C:\\test"
     standardized_folder = standardize_folder(folder)
     assert standardized_folder == "C:/test/"

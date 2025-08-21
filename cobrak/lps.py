@@ -15,7 +15,7 @@ from typing import Any
 
 from joblib import Parallel, cpu_count, delayed
 from numpy import percentile
-from pyomo.common.errors import ApplicationError
+from pydantic import ConfigDict, validate_call
 from pyomo.environ import (
     Binary,
     ConcreteModel,
@@ -31,12 +31,10 @@ from pyomo.environ import (
     minimize,
     value,
 )
-from pyomo.opt.base.solvers import SolverFactoryClass
 
 from cobrak.pyomo_functionality import add_linear_approximation_to_pyomo_model
 
 from .constants import (
-    ALL_OK_KEY,
     BIG_M,
     DF_VAR_PREFIX,
     DG0_VAR_PREFIX,
@@ -57,7 +55,6 @@ from .constants import (
     QUASI_INF,
     STANDARD_MIN_MDF,
     Z_VAR_PREFIX,
-    ZB_VAR_PREFIX,
 )
 from .dataclasses import CorrectionConfig, Model, Reaction, Solver
 from .pyomo_functionality import get_model_var_names, get_objective, get_solver
@@ -83,6 +80,7 @@ from .utilities import (
 
 
 # "PRIVATE" FUNCTIONS SECTION #
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def _add_concentration_vars_and_constraints(
     model: ConcreteModel,
     cobrak_model: Model,
@@ -138,6 +136,7 @@ def _add_concentration_vars_and_constraints(
     return model
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def _add_conc_sum_constraints(
     cobrak_model: Model,
     model: ConcreteModel,
@@ -186,6 +185,7 @@ def _add_conc_sum_constraints(
     return model
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def _add_df_and_dG0_var_for_reaction(
     model: ConcreteModel,
     reac_id: str,
@@ -272,17 +272,18 @@ def _add_df_and_dG0_var_for_reaction(
     return model, f_var_name
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def _add_error_sum_to_model(
     model: ConcreteModel,
     cobrak_model: Model,
     correction_config: CorrectionConfig,
 ) -> Model:
     """Adds an error sum to the model, which can be either a quadratic or linear sum of error variables,
-       optionally weighted based on certain parameters from the COBRA-k model.
+       optionally weighted based on certain parameters from the COBRA model.
 
     Args:
         model (ConcreteModel): The Pyomo model to which the error sum will be added.
-        cobrak_model (Model): The COBRA-k model containing the necessary parameters for weighting.
+        cobrak_model (Model): The COBRA model containing the necessary parameters for weighting.
         correction_config (CorrectionConfig): The correction configuration determining how the sum is built.
 
     Returns:
@@ -348,25 +349,57 @@ def _add_error_sum_to_model(
     return model
 
 
-def _add_extra_linear_constraints_to_lp(
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
+def _add_extra_watches_and_constraints_to_lp(
     model: ConcreteModel,
     cobrak_model: Model,
+    ignore_nonlinear_terms: bool,
 ) -> ConcreteModel:
-    """Adds extra linear constraints from the COBRAk Model to the Pyomo model.
+    """Adds extra (non)-linear constraints from the COBRAk Model to the Pyomo model.
 
-    This function iterates through each extra linear constraint defined in the COBRAk Model.
-    For each constraint, it checks if all required variables exist in the current Pyomo model.
-    If any variable is missing, the constraint is skipped. Otherwise, it adds the constraint
+    This function iterates through each extra (non-)linear watch & constraint defined in the COBRAk Model.
+    For each watch/constraint, it checks if all required variables exist in the current Pyomo model.
+    If any variable is missing, the watch/constraint is skipped. Otherwise, it adds the watch/constraint
     to the model, setting either a lower bound, an upper bound, or both, based on the values
     specified in the COBRAk model.
 
     Args:
         model (ConcreteModel): The Pyomo model to which the constraints will be added.
         cobrak_model (Model): The COBRAk Model containing the extra linear constraints.
+        ignore_nonlinear_terms (bool): Whether nonlinear terms are just ignored.
 
     Returns:
         ConcreteModel: The updated Pyomo model with the added extra linear constraints.
     """
+    # Linear watches
+    for (
+        linear_watch_name,
+        extra_linear_watch,
+    ) in cobrak_model.extra_linear_watches.items():
+        missing_var = False
+        extra_watch_lhs = 0.0
+        for var_id in extra_linear_watch.stoichiometries:
+            if var_id not in get_model_var_names(model):
+                missing_var = True
+                continue
+            extra_watch_lhs += extra_linear_watch.stoichiometries[var_id] * getattr(
+                model, var_id
+            )
+        if missing_var:
+            continue
+
+        setattr(
+            model,
+            linear_watch_name,
+            Var(within=Reals),
+        )
+        setattr(
+            model,
+            f"{linear_watch_name}_watch_constraint",
+            Constraint(expr=extra_watch_lhs == getattr(model, linear_watch_name)),
+        )
+
+    # Linear constraints
     for extra_constraint_counter, extra_linear_constraint in enumerate(
         cobrak_model.extra_linear_constraints
     ):
@@ -383,8 +416,9 @@ def _add_extra_linear_constraints_to_lp(
         if missing_var:
             continue
 
-        base_extra_constraint_name = f"Extra_constraint_{extra_constraint_counter}_"
-
+        base_extra_constraint_name = (
+            f"Extra_linear_constraint_{extra_constraint_counter}_"
+        )
         if extra_linear_constraint.lower_value is not None:
             setattr(
                 model,
@@ -401,9 +435,128 @@ def _add_extra_linear_constraints_to_lp(
                     expr=extra_constraint_lhs <= extra_linear_constraint.upper_value
                 ),
             )
+
+    # Non-linear constraints
+    if not ignore_nonlinear_terms:
+        # Non-Linear watches
+        for (
+            nonlinear_watch_name,
+            extra_nonlinear_watch,
+        ) in cobrak_model.extra_nonlinear_watches.items():
+            missing_var = False
+            extra_watch_lhs = 0.0
+            for var_id in extra_nonlinear_watch.stoichiometries:
+                if var_id not in get_model_var_names(model):
+                    missing_var = True
+                    continue
+                stoichiometry, application = extra_nonlinear_watch.stoichiometries[
+                    var_id
+                ]
+                if application.startswith("power"):
+                    extra_watch_lhs += stoichiometry * getattr(model, var_id) ** float(
+                        application[len("power") :]
+                    )
+                else:
+                    match application:
+                        case "exp":
+                            extra_watch_lhs += stoichiometry * exp(
+                                getattr(model, var_id)
+                            )
+                        case "log":
+                            extra_watch_lhs += stoichiometry * log(
+                                getattr(model, var_id)
+                            )
+                        case _:
+                            extra_watch_lhs += stoichiometry * getattr(model, var_id)
+            if missing_var:
+                continue
+
+            setattr(
+                model,
+                nonlinear_watch_name,
+                Var(within=Reals),
+            )
+            setattr(
+                model,
+                f"{nonlinear_watch_name}_watch_constraint",
+                Constraint(
+                    expr=extra_watch_lhs == getattr(model, nonlinear_watch_name)
+                ),
+            )
+
+        for extra_constraint_counter, extra_nonlinear_constraint in enumerate(
+            cobrak_model.extra_nonlinear_constraints
+        ):
+            missing_var = False
+            extra_constraint_lhs = 0.0
+            for var_id in extra_nonlinear_constraint.stoichiometries:
+                if var_id not in get_model_var_names(model):
+                    missing_var = True
+                    continue
+                stoichiometry, application = extra_nonlinear_constraint.stoichiometries[
+                    var_id
+                ]
+                if application.startswith("power"):
+                    extra_constraint_lhs += stoichiometry * getattr(
+                        model, var_id
+                    ) ** float(application[len("power") :])
+                else:
+                    match application:
+                        case "exp":
+                            extra_constraint_lhs += stoichiometry * exp(
+                                getattr(model, var_id)
+                            )
+                        case "log":
+                            extra_constraint_lhs += stoichiometry * log(
+                                getattr(model, var_id)
+                            )
+                        case _:
+                            extra_constraint_lhs += stoichiometry * getattr(
+                                model, var_id
+                            )
+
+            if missing_var:
+                continue
+
+            if extra_nonlinear_constraint.full_application.startswith("power"):
+                extra_constraint_lhs = extra_constraint_lhs ** float(
+                    extra_nonlinear_constraint.full_application[len("power") :]
+                )
+            else:
+                match extra_nonlinear_constraint.full_application:
+                    case "exp":
+                        extra_constraint_lhs = exp(extra_constraint_lhs)
+                    case "log":
+                        extra_constraint_lhs = log(extra_constraint_lhs)
+                    case _:
+                        pass
+
+            base_extra_constraint_name = (
+                f"Extra_nonlinear_constraint_{extra_constraint_counter}_"
+            )
+            if extra_nonlinear_constraint.lower_value is not None:
+                setattr(
+                    model,
+                    f"{base_extra_constraint_name}LB",
+                    Constraint(
+                        expr=extra_constraint_lhs
+                        >= extra_nonlinear_constraint.lower_value
+                    ),
+                )
+            if extra_nonlinear_constraint.upper_value is not None:
+                setattr(
+                    model,
+                    f"{base_extra_constraint_name}UB",
+                    Constraint(
+                        expr=extra_constraint_lhs
+                        <= extra_nonlinear_constraint.upper_value
+                    ),
+                )
+
     return model
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def _add_enzyme_constraints_to_lp(
     model: ConcreteModel,
     cobrak_model: Model,
@@ -556,6 +709,7 @@ def _add_enzyme_constraints_to_lp(
     return model
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def _add_kappa_substrates_and_products_vars(
     model: ConcreteModel,
     reac_id: str,
@@ -615,11 +769,17 @@ def _add_kappa_substrates_and_products_vars(
     kappa_substrates_sum = 0.0
     kappa_products_lhs: Expression = -1.0 * getattr(model, kappa_products_var_id)
     kappa_products_sum = 0.0
-    for reac_met_id, stoichiometry in reaction.stoichiometries.items():
+    for reac_met_id, raw_stoichiometry in reaction.stoichiometries.items():
         if reac_met_id in cobrak_model.kinetic_ignored_metabolites:
             continue
         if reac_met_id.startswith(ENZYME_VAR_PREFIX):
             continue
+        stoichiometry = (
+            raw_stoichiometry
+            * reaction.enzyme_reaction_data.hill_coefficients.kappa.get(
+                reac_met_id, 1.0
+            )
+        )
         k_m = reaction.enzyme_reaction_data.k_ms[reac_met_id]
         if stoichiometry > 0.0:  # Product
             kappa_products_lhs += stoichiometry * getattr(
@@ -713,6 +873,7 @@ def _add_kappa_substrates_and_products_vars(
     return model, kappa_substrates_var_id, kappa_products_var_id
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def _add_thermodynamic_constraints_to_lp(
     model: ConcreteModel,
     cobrak_model: Model,
@@ -851,6 +1012,7 @@ def _add_thermodynamic_constraints_to_lp(
     return model
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True), validate_return=True)
 def _apply_error_scenario(
     model: ConcreteModel,
     cobrak_model: Model,
@@ -866,7 +1028,7 @@ def _apply_error_scenario(
 
     Args:
         model (ConcreteModel): The Pyomo model to which the error scenario will be applied.
-        cobrak_model (Model): The COBRA-k model containing information about reactions and metabolites.
+        cobrak_model (Model): The COBRA model containing information about reactions and metabolites.
         correction_config (CorrectionConfig): The corrrection configuration determining which errors are appliued.
 
     Raises:
@@ -954,6 +1116,7 @@ def _apply_error_scenario(
     _apply_scenario(model, error_scenario)
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True), validate_return=True)
 def _apply_scenario(
     model: ConcreteModel, scenario: dict[str, tuple[float, float]]
 ) -> None:
@@ -976,8 +1139,9 @@ def _apply_scenario(
         var.setub(ub)
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True), validate_return=True)
 def _batch_variability_optimization(
-    pyomo_solver: SolverFactoryClass,
+    pyomo_solver: Any,  # noqa: ANN401
     model: ConcreteModel,
     batch: list[tuple[str, str]],
     solve_extra_options: dict[str, Any] = {},
@@ -1023,14 +1187,15 @@ def _batch_variability_optimization(
     return resultslist
 
 
+@validate_call(validate_return=True)
 def _get_dG0_highbound(cobrak_model: Model, dG0_error_cutoff: float) -> float:
     """Calculate the high bound for dG0 values based on a specified error cutoff.
 
-    This function retrieves all dG0 values from the COBRA-k model, sorts them, and determines
+    This function retrieves all dG0 values from the COBRA model, sorts them, and determines
     the high bound by selecting the value at the percentile defined by $1 - dG0_error_cutoff$.
 
     Args:
-        cobrak_model (Model): The COBRA-k model containing the dG0 values.
+        cobrak_model (Model): The COBRA model containing the dG0 values.
         dG0_error_cutoff (float): The fraction of dG0 values to consider for the high bound.
 
     Returns:
@@ -1041,15 +1206,16 @@ def _get_dG0_highbound(cobrak_model: Model, dG0_error_cutoff: float) -> float:
     return all_dG0s[floor((1 - dG0_error_cutoff) * len(all_dG0s)) :][0]
 
 
+@validate_call(validate_return=True)
 def _get_km_bounds(cobrak_model: Model, km_error_cutoff: float) -> tuple[float, float]:
     """Determine the low and high bounds for km values based on a specified error cutoff.
 
-    This function collects all km values from the reactions in the COBRA-k model, sorts them,
+    This function collects all km values from the reactions in the COBRA model, sorts them,
     and calculates both the low and high bounds by selecting the values at the percentiles
     defined by km_error_cutoff and $1 - km_error_cutoff$, respectively.
 
     Args:
-        cobrak_model (Model): The COBRA-k model containing the enzyme reaction data with km values.
+        cobrak_model (Model): The COBRA model containing the enzyme reaction data with km values.
         km_error_cutoff (float): The fraction of km values to consider for the bounds.
 
     Returns:
@@ -1067,6 +1233,7 @@ def _get_km_bounds(cobrak_model: Model, km_error_cutoff: float) -> tuple[float, 
     return kms_lowbound, kms_highbound
 
 
+@validate_call
 def _get_steady_state_lp_from_cobrak_model(
     cobrak_model: Model,
     ignored_reacs: list[str] = [],
@@ -1113,6 +1280,7 @@ def _get_steady_state_lp_from_cobrak_model(
 
 
 # "PUBLIC" FUNCTIONS SECTION #
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def add_flux_sum_var(model: ConcreteModel, cobrak_model: Model) -> ConcreteModel:
     """Add a flux sum variable to a (N/MI)LP model.
 
@@ -1146,6 +1314,7 @@ def add_flux_sum_var(model: ConcreteModel, cobrak_model: Model) -> ConcreteModel
     return model
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def add_loop_constraints_to_lp(
     model: ConcreteModel,
     cobrak_model: Model,
@@ -1205,6 +1374,7 @@ def add_loop_constraints_to_lp(
     return model
 
 
+@validate_call
 def get_lp_from_cobrak_model(
     cobrak_model: Model,
     with_enzyme_constraints: bool,
@@ -1217,6 +1387,7 @@ def get_lp_from_cobrak_model(
     strict_kappa_products_equality: bool = False,
     add_extra_linear_constraints: bool = True,
     correction_config: CorrectionConfig = CorrectionConfig(),
+    ignore_nonlinear_terms: bool = False,
 ) -> ConcreteModel:
     """Construct a linear programming (LP) model from a COBRAk model with various constraints and configurations.
 
@@ -1266,13 +1437,17 @@ def get_lp_from_cobrak_model(
     correction_config : CorrectionConfig, optional
         Configuration for parameter correction handling in the model, allowing for the inclusion of error terms
         in constraints related to enzyme activity, thermodynamics, etc. Defaults to CorrectionConfig().
+    ignore_nonlinear_terms: bool, optional
+        Whether or not non-linear extra watches and constraints shall *not* be included. Defaults to False.
+        Note: If such non-linear values exist and are included, the whole problem becomes *non-linear*, making it
+        incompatible with any purely linear solver!
 
     Returns
     -------
     ConcreteModel
         The constructed LP model with the specified constraints and configurations.
     """
-    # Initialize the steady-state LP model from the COBRA-k model, ignoring specified reactions
+    # Initialize the steady-state LP model from the COBRA model, ignoring specified reactions
     model: ConcreteModel = _get_steady_state_lp_from_cobrak_model(
         cobrak_model=cobrak_model,
         ignored_reacs=ignored_reacs,
@@ -1343,14 +1518,16 @@ def get_lp_from_cobrak_model(
 
     # Add extra linear constraints if enabled
     if add_extra_linear_constraints:
-        model = _add_extra_linear_constraints_to_lp(
-            model,
-            cobrak_model,
+        model = _add_extra_watches_and_constraints_to_lp(
+            model=model,
+            cobrak_model=cobrak_model,
+            ignore_nonlinear_terms=ignore_nonlinear_terms,
         )
 
     return model
 
 
+@validate_call(validate_return=True)
 def perform_lp_min_active_reactions_analysis(
     cobrak_model: Model,
     with_enzyme_constraints: bool,
@@ -1358,6 +1535,7 @@ def perform_lp_min_active_reactions_analysis(
     min_mdf: float = 0.0,
     verbose: bool = False,
     solver: Solver = SCIP,
+    ignore_nonlinear_terms: bool = False,
 ) -> float:
     """Run a mixed-integer linear program to determine the minimum number of active reactions.
 
@@ -1370,7 +1548,7 @@ def perform_lp_min_active_reactions_analysis(
     Parameters
     ----------
     cobrak_model : Model
-        The COBRA-k model containing the metabolic network and reaction data.
+        The COBRA model containing the metabolic network and reaction data.
     with_enzyme_constraints : bool
         If True, includes enzyme-pool constraints in the model.
     variability_dict : dict[str, tuple[float, float]]
@@ -1383,6 +1561,10 @@ def perform_lp_min_active_reactions_analysis(
         If True, enables solver output. Defaults to False.
     solver: Solver
         The MILP solver used for this analysis. Defaults to SCIP.
+    ignore_nonlinear_terms: bool, optional
+        Whether or not non-linear extra watches and constraints shall *not* be included. Defaults to False.
+        Note: If such non-linear values exist and are included, the whole problem becomes *non-linear*, making it
+        incompatible with any purely linear solver!
 
     Returns
     -------
@@ -1404,6 +1586,7 @@ def perform_lp_min_active_reactions_analysis(
         with_thermodynamic_constraints=True,
         with_loop_constraints=False,
         min_mdf=min_mdf,
+        ignore_nonlinear_terms=ignore_nonlinear_terms,
     )
 
     # Initialize the sum of binary variables to zero
@@ -1456,6 +1639,7 @@ def perform_lp_min_active_reactions_analysis(
     return minz_dict["extrazsum"]
 
 
+@validate_call
 def perform_lp_optimization(
     cobrak_model: Model,
     objective_target: str | dict[str, float],
@@ -1469,7 +1653,9 @@ def perform_lp_optimization(
     verbose: bool = False,
     with_flux_sum_var: bool = False,
     solver: Solver = SCIP,
+    ignore_nonlinear_terms: bool = False,
     correction_config: CorrectionConfig = CorrectionConfig(),
+    var_data_abs_epsilon: float = 1e-5,
 ) -> dict[str, float]:
     """Perform linear programming optimization on a COBRAk model to determine flux distributions.
 
@@ -1493,7 +1679,11 @@ def perform_lp_optimization(
         verbose (bool, optional): Whether to print solver output information. Defaults to False.
         with_flux_sum_var (bool, optional): Whether to include flux sum variable in the model. Defaults to False.
         solver (Solver, optional): Solver used for LP. Default is SCIP.
+        ignore_nonlinear_terms: (bool): Whether or not non-linear watches/constraints shall be ignored in ecTFBAs. Defaults to True.
+            Note: If such non-linear values exist and are included, the whole problem becomes *non-linear*, making it incompatible with any
+            purely linear solver!
         correction_config (CorrectionConfig, optional): Configuration for handling prameter corrections and scenarios during optimization.
+        var_data_abs_epsilon: (float, optional): Under this value, any data given by the variability dict is considered to be 0. Defaults to 1e-5.
 
     Returns:
         dict[str, float]: A dictionary containing the flux distribution results for each reaction in the model.
@@ -1511,6 +1701,7 @@ def perform_lp_optimization(
         with_loop_constraints=with_loop_constraints,
         with_flux_sum_var=with_flux_sum_var,
         min_mdf=min_mdf,
+        ignore_nonlinear_terms=ignore_nonlinear_terms,
         correction_config=correction_config,
     )
 
@@ -1531,6 +1722,7 @@ def perform_lp_optimization(
         cobrak_model,
         variability_dict,
         correction_config.error_scenario,
+        abs_epsilon=var_data_abs_epsilon,
     )
     optimization_model.obj = get_objective(
         optimization_model, objective_target, objective_sense
@@ -1546,13 +1738,15 @@ def perform_lp_optimization(
     return add_statuses_to_optimziation_dict(fba_dict, results)
 
 
+@validate_call(validate_return=True)
 def perform_lp_thermodynamic_bottleneck_analysis(
     cobrak_model: Model,
     with_enzyme_constraints: bool = False,
     min_mdf: float = STANDARD_MIN_MDF,
     verbose: bool = False,
     solver: Solver = SCIP,
-) -> tuple[list[str], dict[str, float]]:
+    ignore_nonlinear_terms: bool = False,
+) -> list[str]:
     """Perform thermodynamic bottleneck analysis on a COBRAk model using mixed-integer linear programming.
 
     This function identifies a minimal set of thermodynamic bottlenecks in a COBRAk model by minimizing the sum of
@@ -1571,9 +1765,13 @@ def perform_lp_thermodynamic_bottleneck_analysis(
         solver_name (str, optional): Name of the solver to use for optimization. Defaults to "scip".
         solver_options (dict[str, float | int | str], optional): Options for the solver, such as number of threads
                                                                  and LP method. Defaults to an empty dictionary.
+        ignore_nonlinear_terms: bool, optional
+            Whether or not non-linear extra watches and constraints shall *not* be included. Defaults to False.
+            Note: If such non-linear values exist and are included, the whole problem becomes *non-linear*, making it
+            incompatible with any purely linear solver!
 
     Returns:
-        list[str], dict[str, float]: A list of reaction IDs identified as thermodynamic bottlenecks, and the associated solution dict.
+        list[str]: A list of reaction IDs identified as thermodynamic bottlenecks.
     """
     cobrak_model = deepcopy(cobrak_model)
     thermo_constraint_lp = get_lp_from_cobrak_model(
@@ -1583,6 +1781,7 @@ def perform_lp_thermodynamic_bottleneck_analysis(
         with_loop_constraints=False,
         add_thermobottleneck_analysis_vars=True,
         min_mdf=min_mdf,
+        ignore_nonlinear_terms=ignore_nonlinear_terms,
     )
 
     thermo_constraint_lp.obj = get_objective(
@@ -1591,22 +1790,17 @@ def perform_lp_thermodynamic_bottleneck_analysis(
         objective_sense=-1,
     )
     pyomo_solver = get_solver(solver.name, solver.solver_options, solver.solver_attrs)
-    try:
-        pyomo_solver.solve(
-            thermo_constraint_lp, tee=verbose, **solver.solve_extra_options
-        )
-        solution_dict = get_pyomo_solution_as_dict(thermo_constraint_lp)
-    except (ApplicationError, AttributeError, ValueError):
-        solution_dict = {ALL_OK_KEY: False}
+    pyomo_solver.solve(thermo_constraint_lp, tee=verbose, **solver.solve_extra_options)
+    solution_dict = get_pyomo_solution_as_dict(thermo_constraint_lp)
 
     bottleneck_counter = 1
     bottleneck_reactions = []
     for var_id, var_value in solution_dict.items():
-        if not var_id.startswith(ZB_VAR_PREFIX):
+        if not var_id.startswith("zb_var_"):
             continue
         if var_value <= 0.01:
             continue
-        bottleneck_reac_id = var_id.replace(ZB_VAR_PREFIX, "")
+        bottleneck_reac_id = var_id.replace("zb_var_", "")
         bottleneck_reactions.append(bottleneck_reac_id)
         if verbose:
             bottleneck_dG0 = cobrak_model.reactions[bottleneck_reac_id].dG0
@@ -1618,9 +1812,10 @@ def perform_lp_thermodynamic_bottleneck_analysis(
             )
         bottleneck_counter += 1
 
-    return bottleneck_reactions, solution_dict
+    return bottleneck_reactions
 
 
+@validate_call
 def perform_lp_variability_analysis(
     cobrak_model: Model,
     with_enzyme_constraints: bool = False,
@@ -1638,6 +1833,7 @@ def perform_lp_variability_analysis(
     max_active_enzyme_cutoff: float = 1e-4,
     solver: Solver = SCIP,
     parallel_verbosity_level: int = 0,
+    ignore_nonlinear_terms: bool = False,
 ) -> dict[str, tuple[float, float]]:
     """Perform linear programming variability analysis on a COBRAk model.
 
@@ -1665,6 +1861,9 @@ def perform_lp_variability_analysis(
                                    or GUROBI_FOR_VARIABILITY_ANALYSIS if you have a CPLEX or Gurobi license.
         parallel_verbosity_level (int, optional): Sets the verbosity level for the analysis parallelization. The higher,
                                                   the value, the more is printed. Default: 0.
+        ignore_nonlinear_terms: (bool): Whether or not non-linear watches/constraints shall be ignored in ecTFBAs. Defaults to True.
+            Note: If such non-linear values exist and are included, the whole problem becomes *non-linear*, making it incompatible with any
+            purely linear solver!
 
     Returns:
         dict[str, tuple[float, float]]: A dictionary mapping variable IDs to their minimum and maximum values
@@ -1681,6 +1880,7 @@ def perform_lp_variability_analysis(
         with_loop_constraints=True,
         min_mdf=min_mdf,
         strict_kappa_products_equality=True,
+        ignore_nonlinear_terms=False,
     )
     model_var_names = get_model_var_names(model)
 
@@ -1697,6 +1897,7 @@ def perform_lp_variability_analysis(
         with_loop_constraints=True,
         with_flux_sum_var=True,
         solver=solver,
+        ignore_nonlinear_terms=False,
     )
     min_flux_sum_result = perform_lp_optimization(
         cobrak_model,
@@ -1707,6 +1908,7 @@ def perform_lp_variability_analysis(
         with_loop_constraints=True,
         with_flux_sum_var=True,
         solver=solver,
+        ignore_nonlinear_terms=ignore_nonlinear_terms,
     )
 
     if (calculate_concs or calculate_rest) and with_thermodynamic_constraints:
@@ -1718,6 +1920,7 @@ def perform_lp_variability_analysis(
             with_thermodynamic_constraints=True,
             with_loop_constraints=True,
             solver=solver,
+            ignore_nonlinear_terms=ignore_nonlinear_terms,
         )
         max_mdf_result = perform_lp_optimization(
             cobrak_model,
@@ -1727,6 +1930,7 @@ def perform_lp_variability_analysis(
             with_thermodynamic_constraints=True,
             with_loop_constraints=True,
             solver=solver,
+            ignore_nonlinear_terms=ignore_nonlinear_terms,
         )
 
     if calculate_concs:

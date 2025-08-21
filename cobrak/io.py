@@ -14,7 +14,7 @@ from zipfile import ZipFile
 
 import cobra
 from numpy import exp, log
-from pydantic import BaseModel, TypeAdapter
+from pydantic import BaseModel, ConfigDict, TypeAdapter, validate_call
 
 from .constants import (
     REAC_ENZ_SEPARATOR,
@@ -36,6 +36,7 @@ from .dataclasses import (
 T = TypeVar("T")
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def _add_annotation_to_cobra_reaction(
     cobra_reaction: cobra.Reaction,
     reac_id: str,
@@ -98,6 +99,7 @@ def _add_annotation_to_cobra_reaction(
 
 
 # "PUBLIC" FUNCTIONS SECTION #
+@validate_call
 def get_base_id(
     reac_id: str,
     fwd_suffix: str = REAC_FWD_SUFFIX,
@@ -128,6 +130,7 @@ def get_base_id(
 
 
 # FUNCTIONS SECTION #
+@validate_call
 def ensure_folder_existence(folder: str) -> None:
     """Checks if the given folder exists. If not, the folder is created.
 
@@ -141,6 +144,7 @@ def ensure_folder_existence(folder: str) -> None:
         os.makedirs(folder)
 
 
+@validate_call
 def ensure_json_existence(path: str) -> None:
     """Ensures that a JSON file exists at the specified path.
 
@@ -155,6 +159,7 @@ def ensure_json_existence(path: str) -> None:
         f.write("{}")
 
 
+@validate_call
 def convert_cobrak_model_to_annotated_cobrapy_model(
     cobrak_model: Model,
     combine_base_reactions: bool = False,
@@ -483,6 +488,7 @@ def convert_cobrak_model_to_annotated_cobrapy_model(
     return cobra_model
 
 
+@validate_call
 def save_cobrak_model_as_annotated_sbml_model(
     cobrak_model: Model,
     filepath: str,
@@ -511,6 +517,7 @@ def save_cobrak_model_as_annotated_sbml_model(
     )
 
 
+@validate_call
 def get_files(path: str) -> list[str]:
     """Returns the names of the files in the given folder as a list of strings.
 
@@ -524,6 +531,7 @@ def get_files(path: str) -> list[str]:
     return files
 
 
+@validate_call
 def get_folders(path: str) -> list[str]:
     """Returns the names of the folders in the given folder as a list of strings.
 
@@ -538,6 +546,7 @@ def get_folders(path: str) -> list[str]:
     ]
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def json_load(path: str, dataclass_type: T = Any) -> T:
     """Load JSON data from a file and validate it against a specified dataclass type.
 
@@ -584,6 +593,7 @@ def json_load(path: str, dataclass_type: T = Any) -> T:
     return TypeAdapter(dataclass_type).validate_json(data)
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def json_write(path: str, json_data: Any) -> None:  # noqa: ANN401
     """Writes a JSON file at the given path with the given data as content.
 
@@ -622,6 +632,7 @@ def json_write(path: str, json_data: Any) -> None:  # noqa: ANN401
             f.write(json_output)
 
 
+@validate_call
 def json_zip_load(path: str) -> dict:
     """Loads the given zipped JSON file and returns it as json_data (a list
     or a dictionary).
@@ -653,6 +664,7 @@ def json_zip_load(path: str) -> dict:
     return json_data
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def json_zip_write(
     path: str,
     json_data: Any,  # noqa: ANN401
@@ -671,11 +683,12 @@ def json_zip_write(
         zip_file.writestr(os.path.basename(path), json_output)
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def load_annotated_cobrapy_model_as_cobrak_model(
     cobra_model: cobra.Model,
     exclude_enzyme_constraints: bool = True,
 ) -> Model:
-    """Converts a COBRApy model with annotations into a COBRAk Model.
+    """Converts a COBRApy model with (and also without :-) annotations into a COBRAk Model.
 
     This function takes a COBRApy model, which may contain specific annotations for metabolites,
     reactions, and genes, and converts it into a COBRAk model. The conversion involves extracting
@@ -773,6 +786,8 @@ def load_annotated_cobrapy_model_as_cobrak_model(
             for key in reaction.annotation
             if key.startswith("cobrak_id_")
         ]
+        if version_data == []:
+            version_data = [("0", reaction.id)]
         for version, version_reac_id in version_data:
             if f"cobrak_dG0_{version}" in reaction.annotation:
                 dG0 = float(reaction.annotation[f"cobrak_dG0_{version}"])
@@ -903,11 +918,12 @@ def load_annotated_cobrapy_model_as_cobrak_model(
     )
 
 
+@validate_call
 def load_annotated_sbml_model_as_cobrak_model(
     filepath: str,
 ) -> Model:
     """
-    Load an annotated SBML model from a file and convert it into a COBRAk Model.
+    Load an annotated (and also un-annotated :-) SBML model from a file and convert it into a COBRAk Model.
 
     This function reads an SBML file containing a metabolic model with specific annotations
     and converts it into a COBRAk Model. It uses the COBRApy library to read the SBML
@@ -926,6 +942,7 @@ def load_annotated_sbml_model_as_cobrak_model(
     )
 
 
+@validate_call
 def load_unannotated_sbml_as_cobrapy_model(path: str) -> cobra.Model:
     """Loads an unannotated SBML model from a file into a COBRApy model.
 
@@ -942,6 +959,7 @@ def load_unannotated_sbml_as_cobrapy_model(path: str) -> cobra.Model:
     return cobra.io.read_sbml_model(path)
 
 
+@validate_call
 def pickle_load(path: str) -> Any:  # noqa: ANN401
     """Returns the value of the given pickle file.
 
@@ -953,6 +971,7 @@ def pickle_load(path: str) -> Any:  # noqa: ANN401
         return pickle.load(pickle_file)
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def pickle_write(path: str, pickled_object: Any) -> None:  # noqa: ANN401
     """Writes the given object as pickled file with the given path
 
@@ -965,6 +984,7 @@ def pickle_write(path: str, pickled_object: Any) -> None:  # noqa: ANN401
         pickle.dump(pickled_object, pickle_file)
 
 
+@validate_call
 def standardize_folder(folder: str) -> str:
     """Returns for the given folder path is returned in a more standardized way.
 

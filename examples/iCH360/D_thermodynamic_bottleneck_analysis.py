@@ -1,4 +1,4 @@
-# IMPORTS SECTION #
+# IMPORTS SECTION #  # noqa: D100
 
 import z_add_path  # noqa: F401
 
@@ -72,7 +72,7 @@ with cobrak_model as enforced_biomass_model:
     enforced_biomass_model.reactions[biomass_reac_id].min_flux = (
         fba_result[biomass_reac_id] - 1e-6
     )
-    bottleneck_reactions, _ = perform_lp_thermodynamic_bottleneck_analysis(
+    bottleneck_reactions = perform_lp_thermodynamic_bottleneck_analysis(
         cobrak_model=enforced_biomass_model,
         with_enzyme_constraints=True,
         verbose=False,

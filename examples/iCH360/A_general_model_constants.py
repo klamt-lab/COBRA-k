@@ -1,4 +1,4 @@
-kinetic_ignored_metabolites: list[str] = [
+kinetic_ignored_metabolites: list[str] = [  # noqa: D100
     "h2o_c",
     "h2o_p",
     "h2o_e",

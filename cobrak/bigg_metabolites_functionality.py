@@ -5,10 +5,13 @@ into an machine-readable JSON.
 """
 
 # IMPORTS SECTION #
+from pydantic import validate_call
+
 from .io import json_write
 
 
 # PUBLIC FUNCTIONS SECTION #
+@validate_call
 def bigg_parse_metabolites_file(
     bigg_metabolites_txt_path: str,
     bigg_metabolites_json_path: str,

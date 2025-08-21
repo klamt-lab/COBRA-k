@@ -81,6 +81,30 @@ class ParameterReference:
 
 
 @dataclass
+class HillParameterReferences:
+    """Represents the database reference for the ι, α and κ Hill coefficients."""
+
+    kappa: dict[str, list[ParameterReference]] = Field(default_factory=dict)
+    """References for κ Hill coefficients."""
+    iota: dict[str, list[ParameterReference]] = Field(default_factory=dict)
+    """References for ι Hill coefficients."""
+    alpha: dict[str, list[ParameterReference]] = Field(default_factory=dict)
+    """References for α Hill coefficients."""
+
+
+@dataclass
+class HillCoefficients:
+    """Represents the Hill coefficients of a reactions, seperated according to efficiency terms"""
+
+    kappa: dict[str, PositiveFloat] = Field(default_factory=dict)
+    """Hill coefficients affecting the κ saturation term. Metabolite IDs are keys, coefficients values. Defaults to {}."""
+    iota: dict[str, PositiveFloat] = Field(default_factory=dict)
+    """Hill coefficients affecting the ι inhibition term. Metabolite IDs are keys, coefficients values. Defaults to {}."""
+    alpha: dict[str, PositiveFloat] = Field(default_factory=dict)
+    """Hill coefficients affecting the α activation term. Metabolite IDs are keys, coefficients values. Defaults to {}."""
+
+
+@dataclass
 class EnzymeReactionData:
     """Represents the enzymes used by a reaction."""
 
@@ -91,19 +115,46 @@ class EnzymeReactionData:
     k_cat_references: list[ParameterReference] = Field(default_factory=list)
     """[Optional] List of references showing the source(s) of the k_cat value"""
     k_ms: dict[str, PositiveFloat] = Field(default_factory=dict)
-    """[Optional] The reaction's k_ms (Michaelis-Menten constants) in M=mol⋅l⁻¹. Metabolite IDs are keys, k_ms values. Default is {}"""
+    """[Optional] The reaction's k_ms (Michaelis-Menten constants) in M=mol⋅l⁻¹. Metabolite IDs are keys, k_ms the values. Default is {}"""
     k_m_references: dict[str, list[ParameterReference]] = Field(default_factory=dict)
     """[Optional] References showing the source(s) of the k_m values. Metabolite IDs are keys, the source lists values. Default is {}"""
     k_is: dict[str, PositiveFloat] = Field(default_factory=dict)
-    """[Optional] The reaction's k_is (Inhibition constants) in M=mol⋅l⁻¹. Metabolite IDs are keys, k_ms values. Default is {}"""
+    """[Optional] The reaction's k_is (Inhibition constants) in M=mol⋅l⁻¹. Metabolite IDs are keys, k_is the values. Default is {}"""
     k_i_references: dict[str, list[ParameterReference]] = Field(default_factory=dict)
     """[Optional] References showing the source(s) of the k_i values. Metabolite IDs are keys, the source lists values. Default is {}"""
     k_as: dict[str, PositiveFloat] = Field(default_factory=dict)
-    """[Optional] The reaction's k_as (Activation constants) in M=mol⋅l⁻¹. Metabolite IDs are keys, k_ms values. Default is {}"""
+    """[Optional] The reaction's k_as (Activation constants) in M=mol⋅l⁻¹. Metabolite IDs are keys, k_as the values. Default is {}"""
     k_a_references: dict[str, list[ParameterReference]] = Field(default_factory=dict)
     """[Optional] References showing the source(s) of the k_a values. Metabolite IDs are keys, the source lists values. Default is {}"""
+    hill_coefficients: HillCoefficients = HillCoefficients()
+    """[Optional] If given, the reaction's Hill coefficients. Metabolite IDs are keys, coefficients the  in form of HillCoefficients instances. Default is empty HillCoefficients()."""
+    hill_coefficient_references: HillParameterReferences = HillParameterReferences()
+    """[Optional] References showing the source(s) of the Hill coefficients. Metabolite IDs are keys, the source lists values. Default is {}"""
     special_stoichiometries: dict[str, PositiveFloat] = Field(default_factory=dict)
-    """[Optional] Special (non-1) stoichiometries of polypeptides in the reaction's enzyme. Default is {}"""
+    """[Optional] Special (non-1) stoichiometries of polypeptides/enzymes in the reaction's enzyme. Default is {}"""
+
+
+@dataclass
+class ExtraLinearWatch:
+    """Represents a linear 'watch', i.e. a variable that shows the linear sum of other variables.
+
+    A watch can be not only about reactions, but also all other
+    variables (except of watches that are defined *after* this one in the Model's extra_linear_watches
+    member variable) set in a COBRAk model. E.g., if one wants (for whatever
+    reason) a variable for the following constraint:
+    [A] - 2 * r_R1, we set
+    ExtraLinearWatch(
+        stoichiometries = {
+            "x_A": 1.0,
+            "R1": -2,
+        },
+    )
+
+    The name of the watch is set in as dictionary key for the model's extra_linear_watches
+    member variable.
+    """
+
+    stoichiometries: dict[str, float]
 
 
 @dataclass
@@ -111,7 +162,7 @@ class ExtraLinearConstraint:
     """Represents a general linear Model constraint.
 
     This can affect not only reactions, but also all other
-    variables set in a COBRAk model. E.g., if one wants (for whatever
+    variables (including watches) set in a COBRAk model. E.g., if one wants (for whatever
     reason) the following constraint:
     0.5 <= [A] - 2 * r_R1 <= 2.1
     the corresponding ExtraLinearConstraint instance would be:
@@ -128,6 +179,71 @@ class ExtraLinearConstraint:
 
     stoichiometries: dict[str, float]
     """Keys: Model variable names; Children: Multipliers of constraint"""
+    lower_value: float | None = None
+    """Minimal numeric constraint value. Either this and/or upper_value must be not None. Defaults to None."""
+    upper_value: float | None = None
+    """Maximal numeric constraint value. Either this and/or lower_value must be not None. Defaults to None."""
+
+
+@dataclass
+class ExtraNonlinearWatch:
+    """Represents a non-linear 'watch', i.e. a variable that shows the linear sum of other variables.
+
+    Important note: Setting such a non-linear watch makes any optimization non-linear and thus incompatible
+    with linear solvers and computationally much more expensive!
+
+    A watch can be not only about reactions, but also all other
+    variables (except of watches that are defined *after* this one in the Model's extra_linear_watches
+    member variable) set in a COBRAk model. E.g., if one wants (for whatever
+    reason) a variable for the following constraint:
+    exp([A]) - 2 * r_R1^3, we set
+    ExtraLinearWatch(
+        stoichiometries = {
+            "x_A": (1.0, "exp"),
+            "R1": (-2, "power3"),
+        },
+    )
+
+    Allowed non-linear functions are currently 'powerX' (with X as float-readable exponent), 'exp' and 'log'. If you just want
+    the normal value, 'same' can be used (i.e. multiply with 1).
+    The name of the watch is set in as dictionary key for the model's extra_linear_watches
+    member variable.
+    """
+
+    stoichiometries: dict[str, tuple[float, str]]
+
+
+@dataclass
+class ExtraNonlinearConstraint:
+    """Represents a general non-linear Model constraint.
+
+    Important note: Setting such a non-linear watch makes any optimization non-linear and thus incompatible
+    with linear solvers and computationally much more expensive!
+
+    This can affect not only reactions, but also all other
+    variables (including watches) set in a COBRA-k model. E.g., if one wants (for whatever
+    reason) the following constraint:
+    0.5 <= log([A]^2 - 2 * exp(r_R1)) <= 2.1
+    the corresponding ExtraNonlinearConstraint instance would be:
+    ExtraNonlinearConstraint(
+        stoichiometries = {
+            "x_A": (1.0, "power2"),
+            "R1": (-2, "exp"),
+        },
+        full_application = "log",
+        lower_value = 0.5,
+        upper_value = 2.1,
+    )
+    Allowed non-linear functions are currently 'powerX' (with X as float-readable exponent), 'exp' and 'log'. If you just want
+    the normal value, 'same' can be used (i.e. multiply with 1).
+    lower_value or upper_value can be None if no such limit is desired.
+    Also, full_application is by default 'same', which is to be set if no function on the full term is wished.
+    """
+
+    stoichiometries: dict[str, tuple[float, str]]
+    """Keys: Model variable names; Children: (Multipliers of constraint, function name 'same' (multiply with 1), 'powerX' (with X as float-readable exponent), 'exp' or 'log')"""
+    full_application: str = "same"
+    """Either function name 'same' (multiply with 1), 'powerX' (with X as float-readable exponent), 'exp' or 'log'). Defaults to 'same'."""
     lower_value: float | None = None
     """Minimal numeric constraint value. Either this and/or upper_value must be not None. Defaults to None."""
     upper_value: float | None = None
@@ -174,6 +290,7 @@ class Reaction:
             k_ms=None,
             k_is=None,
             k_as=None,
+            hill_coefficients=None,
         ),
         annotation={}, # Can be also ignored
     )
@@ -214,8 +331,18 @@ class Model:
     """[Only neccessary with enzymatic constraints] Keys: Enzyme IDs; Children: Enzyme instances; default is {}"""
     max_prot_pool: PositiveFloat = Field(default=1e9)
     """[Only neccessary with enzymatic constraints] Maximal usable protein pool in g/gDW; default is 1e9, i.e. basically unrestricted"""
+    extra_linear_watches: dict[str, ExtraLinearWatch] = Field(default_factory=dict)
+    """[Optional] Extra non-linear watches. Keys are watch names, children the watch definition."""
+    extra_nonlinear_watches: dict[str, ExtraNonlinearWatch] = Field(
+        default_factory=dict
+    )
+    """[Optional] Extra non-linear watches. Keys are watch names, children the watch definition."""
     extra_linear_constraints: list[ExtraLinearConstraint] = Field(default_factory=list)
     """[Optional] Extra linear constraints"""
+    extra_nonlinear_constraints: list[ExtraNonlinearConstraint] = Field(
+        default_factory=list
+    )
+    """[Optional] Extra non-linear constraints"""
     kinetic_ignored_metabolites: list[str] = Field(default_factory=list)
     """[Optional and only works with saturation term constraints] Metabolite IDs for which no k_m is neccessary"""
     R: PositiveFloat = Field(default=STANDARD_R)
@@ -255,7 +382,7 @@ class Model:
 class CorrectionConfig:
     """Stores the configuration for corrections in a model (see parameter corrections chapter in documentation)."""
 
-    error_scenario: dict[str, tuple[float, float]] = Field(default_factory=list)
+    error_scenario: dict[str, tuple[float, float]] = Field(default_factory=dict)
     """A dictionary where keys are error scenarios and values are tuples representing the lower and upper bounds of the error. Defaults to {}."""
     add_flux_error_term: bool = False
     """Indicates whether to add flux error terms. Defaults to False."""
@@ -281,6 +408,18 @@ class CorrectionConfig:
     """Cutoff value for the κ error term. Defaults to 1.0."""
     max_rel_km_correction: PositiveFloat = 0.999
     """Maximal relative correction for the κ error term. Defaults to 0.999."""
+    add_ki_error_term: bool = False
+    """Indicates whether to add a ι error term. Defaults to False."""
+    ki_error_cutoff: PositiveFloat = 1.0
+    """Cutoff value for the ι error term. Defaults to 1.0."""
+    max_rel_ki_correction: PositiveFloat = 0.999
+    """Maximal relative correction for the ι error term. Defaults to 0.999."""
+    add_ka_error_term: bool = False
+    """Indicates whether to add an α error term. Defaults to False."""
+    ka_error_cutoff: PositiveFloat = 1.0
+    """Cutoff value for the α error term. Defaults to 1.0."""
+    max_rel_ka_correction: PositiveFloat = 0.999
+    """Maximal relative correction for the α error term. Defaults to 0.999."""
     error_sum_as_qp: bool = False
     """Indicates whether to use a quadratic programming approach for the error sum. Defaults to False."""
     add_error_sum_term: bool = True

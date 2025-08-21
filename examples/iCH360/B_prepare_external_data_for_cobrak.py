@@ -1,4 +1,4 @@
-# IMPORTS SECTION #
+# IMPORTS SECTION #  # noqa: D100
 import cobra
 import z_add_path  # noqa: F401
 
@@ -92,6 +92,7 @@ sabio_enzyme_reaction_data = sabio_select_enzyme_kinetic_data_for_model(
     kcat_overwrite=kcat_per_h,
     transfered_ec_number_json=f"{common_input_folder}ec_number_transfers.json",
     max_taxonomy_level=6,
+    add_hill_coefficients=False,
 )
 
 full_enzyme_reaction_data = combine_enzyme_reaction_datasets(

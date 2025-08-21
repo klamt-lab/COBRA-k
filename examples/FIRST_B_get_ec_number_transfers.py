@@ -1,4 +1,4 @@
-from cobrak.expasy_functionality import get_ec_number_transfers
+from cobrak.expasy_functionality import get_ec_number_transfers  # noqa: D100
 from cobrak.io import json_write
 
 ec_number_transfers = get_ec_number_transfers(

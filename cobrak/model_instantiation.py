@@ -379,6 +379,7 @@ def get_cobrak_model_with_kinetic_data_from_sbml_model_alone(
     keep_parameter_refs: bool = False,
     enzymes_to_delete: list[str] = [],
     max_taxonomy_level: float = float("inf"),
+    add_hill_coefficients: bool = True,
 ) -> Model:
     """This functions creates a Model out of an SBML model and automatically collects kinetic and thermodynamic data.
 
@@ -412,6 +413,8 @@ def get_cobrak_model_with_kinetic_data_from_sbml_model_alone(
         data_cache_folder (str, optional): _description_. Defaults to "".
         R (float, optional): _description_. Defaults to STANDARD_R.
         T (float, optional): _description_. Defaults to STANDARD_T.
+        add_hill_coefficients (bool, optional): Whether Hill coefficeints shall be collected (True) or not (False).
+            They are added (as they cannot be separated for κ, ι *and* α as HilLCoefficient instances). Defaults to True.
 
     Returns:
         Model: _description_
@@ -465,6 +468,7 @@ def get_cobrak_model_with_kinetic_data_from_sbml_model_alone(
             kinetic_ignored_enzyme_ids=kinetic_ignored_enzymes,
             custom_enzyme_kinetic_data=custom_kms_and_kcats,
             max_taxonomy_level=max_taxonomy_level,
+            add_hill_coefficients=add_hill_coefficients,
         )
 
         enzyme_reaction_data = combine_enzyme_reaction_datasets(

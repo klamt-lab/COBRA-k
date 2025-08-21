@@ -1,3 +1,5 @@
+"""Methods for COBRA-k's genetic algorithm used in the COBRA-k evolutionary algorithm"""
+
 import operator
 from collections.abc import Callable
 from copy import deepcopy
@@ -13,6 +15,21 @@ from .utilities import count_last_equal_elements, last_n_elements_equal
 
 
 class COBRAKGENETIC:
+    """A class for performing genetic algorithm optimization.
+
+    Attributes:
+        fitness_function (Callable): A function that takes a list of integers/floats
+            and returns a tuple containing the fitness score and a list of integers/floats.
+        xs_dim (int): The dimensionality of the search space.
+        gen (int): The number of generations to run the algorithm for.
+        seed (int | None): The seed for the random number generator.
+        objvalue_json_path (str): The path to a JSON file to store objective values.
+        max_rounds_same_objvalue (float): The maximum number of rounds with the same
+            objective value before stopping the algorithm.
+        pop_size (int | None): The size of the population. If None, defaults to the
+            number of CPUs.
+    """
+
     def __init__(
         self,
         fitness_function: Callable[
@@ -26,13 +43,28 @@ class COBRAKGENETIC:
         max_rounds_same_objvalue: float = float("inf"),
         pop_size: int | None = None,
     ) -> None:
+        """Initializes the COBRAKGENETIC object.
+
+        Args:
+            fitness_function (Callable): The fitness function to evaluate solutions.
+            xs_dim (int): The dimensionality of the search space.
+            gen (int): The number of generations to run.
+            extra_xs (list[list[int]], optional): Extra particles to initialize the population.
+                Defaults to [].
+            seed (int | None, optional): Seed for the random number generator. Defaults to None.
+            objvalue_json_path (str, optional): Path to a JSON file to store objective values.
+                Defaults to "".
+            max_rounds_same_objvalue (float, optional): Maximum rounds with the same objective
+                value before stopping. Defaults to infinity.
+            pop_size (int | None, optional): Population size. Defaults to None.
+        """
         # Parameters
         self.fitness_function = fitness_function
         self.xs_dim = xs_dim
         self.gen = gen
         self.seed = seed
         if seed is not None:
-            np.random.seed(seed)
+            np.random.seed(seed)  # noqa: NPY002
 
         # Initialization of random particles
         cpu_count_value = cpu_count() if pop_size is None else pop_size
@@ -56,12 +88,23 @@ class COBRAKGENETIC:
         self.max_rounds_same_objvalue = max_rounds_same_objvalue
 
     def _get_sorted_list_from_tested_xs(self) -> list[tuple[float, tuple[int, ...]]]:
+        """Returns a sorted list of tuples containing fitness scores and solutions.
+
+        Returns:
+            list[tuple[float, tuple[int, ...]]]: A sorted list of (fitness, solution) tuples.
+        """
         return sorted(
             [(fitness, x) for (x, fitness) in self.tested_xs.items()],
             key=operator.itemgetter(0),
         )
 
     def run(self) -> tuple[float, tuple[int, ...]]:
+        """Runs the genetic algorithm optimization.
+
+        Returns:
+            tuple[float, tuple[int, ...]]: A tuple containing the best fitness score and the
+            corresponding solution.
+        """
         init_fitnesses = Parallel(n_jobs=-1)(
             delayed(self.fitness_function)(x) for x in self.init_xs
         )
@@ -157,6 +200,17 @@ class COBRAKGENETIC:
         chosen_x: list[int],
         num_rounds_without_best_change: int,
     ) -> tuple[float, list[int], list[int]]:
+        """Updates a single particle by introducing mutations.
+
+        Args:
+            chosen_x (list[int]): The current solution represented as a list of integers.
+            num_rounds_without_best_change (int): The number of rounds without a change in the
+                best fitness score.
+
+        Returns:
+            tuple[list[list[float]], list[int]]: A tuple containing a list of fitness scores
+            and the mutated solution.
+        """
         if not len(chosen_x):
             return [[1_000_000, []]], []
 

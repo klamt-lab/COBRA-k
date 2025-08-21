@@ -15,7 +15,12 @@ import cobra
 import requests
 from dataclasses_json import dataclass_json
 
-from .dataclasses import EnzymeReactionData, ParameterReference
+from .dataclasses import (
+    EnzymeReactionData,
+    HillCoefficients,
+    HillParameterReferences,
+    ParameterReference,
+)
 from .io import (
     ensure_folder_existence,
     get_files,
@@ -74,11 +79,11 @@ class SabioDict:
     """Turnover number entries"""
     km_entries: dict[str, list[SabioEntry]]
     """Michaelis-Menten constant entries"""
-    ki_entires: dict[str, list[SabioEntry]]
+    ki_entries: dict[str, list[SabioEntry]]
     """Inhibition constant entries"""
-    ka_entires: dict[str, list[SabioEntry]]
+    ka_entries: dict[str, list[SabioEntry]]
     """Activation constant entries"""
-    hill_entires: dict[str, list[SabioEntry]]
+    hill_entries: dict[str, list[SabioEntry]]
     """Hill number entries"""
 
 
@@ -363,11 +368,11 @@ def get_full_sabio_dict(sabio_target_folder: str) -> SabioDict:
             case "km":
                 sabio_dict_pointer = sabio_dict.km_entries
             case "ki":
-                sabio_dict_pointer = sabio_dict.ki_entires
+                sabio_dict_pointer = sabio_dict.ki_entries
             case "activation constant":
-                sabio_dict_pointer = sabio_dict.ka_entires
+                sabio_dict_pointer = sabio_dict.ka_entries
             case "hill coefficient":
-                sabio_dict_pointer = sabio_dict.hill_entires
+                sabio_dict_pointer = sabio_dict.hill_entries
             case _:
                 continue
 
@@ -429,6 +434,7 @@ def sabio_select_enzyme_kinetic_data_for_model(
     kcat_overwrite: dict[str, float] = {},
     transfered_ec_number_json: str = "",
     max_taxonomy_level: int = float("inf"),
+    add_hill_coefficients: bool = True,
 ) -> dict[str, EnzymeReactionData | None]:
     """Selects enzyme kinetic data for a given COBRA-k model using SABIO-RK data.
 
@@ -456,6 +462,7 @@ def sabio_select_enzyme_kinetic_data_for_model(
         max_temperature (float, optional): Maximum temperature value for filtering. Defaults to float("inf").
         accept_nan_temperature (bool, optional): Whether to accept entries with NaN temperature values. Defaults to True.
         kcat_overwrite (dict[str, float], optional): Dictionary to overwrite kcat values. Defaults to {}.
+        add_hill_coefficients (bool, optional): Whether Hill coefficeints shall be collected (True) or not (False). Defaults to True.
 
     Returns:
         dict[str, EnzymeReactionData | None]: A dictionary mapping reaction IDs to enzyme kinetic data.
@@ -561,7 +568,7 @@ def sabio_select_enzyme_kinetic_data_for_model(
             (
                 "ki",
                 _get_ec_code_entries(
-                    sabio_dict.ki_entires,
+                    sabio_dict.ki_entries,
                     ec_codes,
                     min_ph,
                     max_ph,
@@ -577,7 +584,23 @@ def sabio_select_enzyme_kinetic_data_for_model(
             (
                 "ka",
                 _get_ec_code_entries(
-                    sabio_dict.ka_entires,
+                    sabio_dict.ka_entries,
+                    ec_codes,
+                    min_ph,
+                    max_ph,
+                    accept_nan_ph,
+                    min_temperature,
+                    max_temperature,
+                    accept_nan_temperature,
+                    substrate_bigg_ids,
+                    product_bigg_ids,
+                    name_to_bigg_id_dict,
+                ),
+            ),
+            (
+                "hill",
+                _get_ec_code_entries(
+                    sabio_dict.hill_entries,
                     ec_codes,
                     min_ph,
                     max_ph,
@@ -603,6 +626,8 @@ def sabio_select_enzyme_kinetic_data_for_model(
         k_i_refs_per_tax_score: dict[str, dict[int, list[ParameterReference]]] = {}
         k_as_per_tax_score: dict[str, dict[int, list[float]]] = {}
         k_a_refs_per_tax_score: dict[str, dict[int, list[ParameterReference]]] = {}
+        hills_per_tax_score: dict[str, dict[int, list[float]]] = {}
+        hill_refs_per_tax_score: dict[str, dict[int, list[ParameterReference]]] = {}
         for entries_type, entries in all_entries:
             if entries_type == "kcat":  # Reaction-wide search
                 for entry in entries:
@@ -646,6 +671,11 @@ def sabio_select_enzyme_kinetic_data_for_model(
                     case "km":
                         values_pointer = k_ms_per_tax_score
                         ref_pointer = k_m_refs_per_tax_score
+                    case "hill":
+                        if not add_hill_coefficients:
+                            continue
+                        values_pointer = hills_per_tax_score
+                        ref_pointer = hill_refs_per_tax_score
                     case _:
                         raise ValueError
                 for met in cobra_model.metabolites:
@@ -679,7 +709,9 @@ def sabio_select_enzyme_kinetic_data_for_model(
                                 applier = lambda x: 1 / x  # noqa: E731
                             case "M":
                                 applier = lambda x: x  # noqa: E731
-                            case _:
+                            case "-":  # e.g. for Hill coefficients
+                                applier = lambda x: x  # noqa: E731
+                            case _:  # unknown unit
                                 continue
                         taxonomy_dict = get_taxonomy_dict_from_nbci_taxonomy(
                             [base_species, entry.organism], ncbi_parsed_json_data
@@ -748,6 +780,22 @@ def sabio_select_enzyme_kinetic_data_for_model(
                 min(k_a_per_tax_score.keys())
             ]
 
+        hills: HillCoefficients = HillCoefficients()
+        hill_references: dict[str, list[ParameterReference]] = {}
+        for met_id, hills_per_tax_score in hills_per_tax_score.items():
+            hills.kappa[met_id] = median(
+                hills_per_tax_score[min(hills_per_tax_score.keys())]
+            )
+            hills.iota[met_id] = median(
+                hills_per_tax_score[min(hills_per_tax_score.keys())]
+            )
+            hills.alpha[met_id] = median(
+                hills_per_tax_score[min(hills_per_tax_score.keys())]
+            )
+            hill_references[met_id] = hill_refs_per_tax_score[met_id][
+                min(hills_per_tax_score.keys())
+            ]
+
         enzyme_reaction_data[reaction.id] = EnzymeReactionData(
             identifiers=enzyme_identifiers,
             k_cat=k_cat,
@@ -758,6 +806,12 @@ def sabio_select_enzyme_kinetic_data_for_model(
             k_i_references=k_i_references,
             k_as=k_as,
             k_a_references=k_a_references,
+            hill_coefficients=hills,
+            hill_coefficient_references=HillParameterReferences(
+                kappa=hill_references,
+                iota=hill_references,
+                alpha=hill_references,
+            ),
         )
 
     enzyme_reaction_data = {**enzyme_reaction_data, **custom_enzyme_kinetic_data}

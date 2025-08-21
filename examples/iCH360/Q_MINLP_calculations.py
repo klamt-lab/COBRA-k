@@ -1,4 +1,4 @@
-import z_add_path  # noqa: F401
+import z_add_path  # noqa: D100, F401
 
 from cobrak.dataclasses import Model, VarResult
 from cobrak.io import json_load

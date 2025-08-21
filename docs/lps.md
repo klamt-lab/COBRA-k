@@ -344,7 +344,7 @@ These constraints allow us to restrict the fluxes in our flux vector $\mathbf{v}
 
 ### Extra linear flux constraints
 
-Optionally, you can also introduce extra linear constraints (corresponding to the ```ExtraLinearConstraint``` dataclass, used in ```Model```) that set constrained relationships between single fluxes:
+Optionally, you can also introduce extra linear constraints (corresponding to the ```ExtraLinearConstraint``` dataclass, used in ```Model```) that set constrained relationships between variables, such as single fluxes:
 
 $$ \mathbf{A} ⋅ \mathbf{v} ≤ \mathbf{b} $$
 
@@ -354,6 +354,31 @@ A common example for a flux extra constraint is making the flux of two reactions
 
 !!! note
     While, in CBM, only extra constraints between fluxes are possible, they can also be set for and between concentrations, driving fluxes and so on.
+
+### Extra linear watches
+
+Optionally, you can also introduce extra linear *watch variables* (corresponding to the ```ExtraLinearWatch``` dataclass, used in ```Model```) that add a variable with a fixed relationships to single fluxes. E.g., if you want a variable that represents the sum of the exchange reactions EX_A, EX_C and EX_P in our toy model, you could set a linear watch. Just like linear flux constraints (explained above), linear watches represent a weighted sum of other variable values Here's an example where we set a watch to the  doubled of the flux of EX_S:
+
+```py
+from cobrak.dataclasses import ExtraLinearWatch
+
+# Let's define v_EX_P <= 2 * exp(x_C)
+toy_model.extra_linear_watches = {
+    "two_times_EX_S": ExtraLinearWatch(
+        stoichiometries={
+            "EX_S": 2.0,
+        },
+    )
+}
+```
+
+...now, we have a variable ```two_times_EX_S``` that is also added to results after LP (or NLP) optimizations.
+
+!!! info
+    Watches are added to the model in the order given through the directory. I.e.,
+    if you would define a watch after ```two_times_EX_S``` in this example, this watch could use ```two_times_EX_S```
+    as a variable, too :-) Also, constraints can be defined on watches.
+
 
 ## Flux Balance Analysis (FBA) and pretty-printing results in console
 

@@ -8,11 +8,13 @@ from typing import Any
 
 import cobra
 from equilibrator_api import Q_, ComponentContribution, Reaction
+from pydantic import ConfigDict, validate_call
 
 from .constants import USED_IDENTIFIERS_FOR_EQUILIBRATOR
 
 
 # PUBLIC FUNCTIONS #
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def equilibrator_get_model_dG0_and_uncertainty_values(
     sbml_path: str,
     inner_to_outer_compartments: list[str],

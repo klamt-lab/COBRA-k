@@ -6,12 +6,22 @@ This module does not include I/O functions which are found in COBRAk's "io" modu
 # IMPORT SECTION #
 import os
 from copy import deepcopy
+from random import choice
 from statistics import mean, median
 from typing import Any, TypeVar
 
 import numpy as np
 from numpy import array, exp, percentile
 from numpy.random import uniform
+from pydantic import (
+    ConfigDict,
+    NonNegativeFloat,
+    NonNegativeInt,
+    PositiveFloat,
+    PositiveInt,
+    conint,
+    validate_call,
+)
 from pyomo.environ import ConcreteModel, Var, log
 from pyomo.opt import SolverStatus, TerminationCondition
 from pyomo.opt.results import SolverResults
@@ -21,6 +31,7 @@ from sympy import Matrix
 from .bigg_metabolites_functionality import bigg_parse_metabolites_file
 from .constants import (
     ALL_OK_KEY,
+    ALPHA_VAR_PREFIX,
     DF_VAR_PREFIX,
     DG0_VAR_PREFIX,
     ENZYME_VAR_INFIX,
@@ -29,6 +40,7 @@ from .constants import (
     ERROR_BOUND_UPPER_CHANGE_PREFIX,
     ERROR_VAR_PREFIX,
     GAMMA_VAR_PREFIX,
+    IOTA_VAR_PREFIX,
     KAPPA_VAR_PREFIX,
     LNCONC_VAR_PREFIX,
     OBJECTIVE_VAR_NAME,
@@ -56,11 +68,12 @@ T = TypeVar("T")  # Not neccessary anymore as soon as Python >= 3.12 can be used
 
 
 # "PRIVATE" FUNCTIONS SECTION #
+@validate_call(validate_return=True)
 def _compare_two_results_with_statistics(
     cobrak_model: Model,
     result_1: dict[str, float],
     result_2: dict[str, float],
-    min_reac_flux: float,
+    min_reac_flux: NonNegativeFloat,
 ) -> tuple[dict[str, float], dict[int, list[str]]]:
     """Compares two optimization results and calculates statistics on the absolute flux differences.
 
@@ -114,6 +127,7 @@ def _compare_two_results_with_statistics(
 
 
 # "PUBLIC" FUNCTIONS SECTION #
+@validate_call(validate_return=True)
 def add_objective_value_as_extra_linear_constraint(
     cobrak_model: Model,
     objective_value: float,
@@ -192,17 +206,19 @@ def add_statuses_to_optimziation_dict(
     return optimization_dict
 
 
+@validate_call(validate_return=True)
 def apply_error_correction_on_model(
     cobrak_model: Model,
     correction_result: dict[str, float],
-    min_abs_error_value: float = 0.01,
-    min_rel_error_value: float = 0.01,
+    min_abs_error_value: NonNegativeFloat = 0.01,
+    min_rel_error_value: NonNegativeFloat = 0.01,
     verbose: bool = False,
 ) -> Model:
     """Applies error corrections to a COBRAl model based on a correction result dictionary.
 
     This function iterates through the `correction_result` dictionary and applies corrections
-    to reaction k_cat values, Michaelis-Menten constants (k_M), and Gibbs free energy changes (ΔᵣG'°).
+    to reaction k_cat values, Michaelis-Menten constants (k_M), Gibbs free energy changes (ΔᵣG'°)
+    as well as the inhibition terms (k_I) and activation terms (k_A).
     The corrections are applied only if the (for all parameters except ΔᵣG'°) relative or (for ΔᵣG'°) absolute
     error exceeds specified thresholds.
 
@@ -270,6 +286,38 @@ def apply_error_correction_on_model(
                 print(
                     f"Correct km of {met_id} in {reac_id} from {original_km} to {changed_model.reactions[reac_id].enzyme_reaction_data.k_ms[met_id]}"
                 )
+        elif key.endswith("_iota"):
+            reac_id = key.split("____")[1]
+            met_id = key.split("____")[2]
+            original_ki = cobrak_model.reactions[reac_id].enzyme_reaction_data.k_i[
+                met_id
+            ]
+            new_value = exp(log(original_ki) + value)
+            if new_value / original_ki < (min_rel_error_value + 1.0):
+                continue
+            changed_model.reactions[reac_id].enzyme_reaction_data.k_is[met_id] = exp(
+                log(original_ki) + value
+            )
+            if verbose:
+                print(
+                    f"Correct ki of {met_id} in {reac_id} from {original_ki} to {changed_model.reactions[reac_id].enzyme_reaction_data.k_is[met_id]}"
+                )
+        elif key.endswith("_alpha"):
+            reac_id = key.split("____")[1]
+            met_id = key.split("____")[2]
+            original_ka = cobrak_model.reactions[reac_id].enzyme_reaction_data.k_a[
+                met_id
+            ]
+            new_value = exp(log(original_ka) + value)
+            if new_value / original_ka < (min_rel_error_value + 1.0):
+                continue
+            changed_model.reactions[reac_id].enzyme_reaction_data.k_as[met_id] = exp(
+                log(original_ka) + value
+            )
+            if verbose:
+                print(
+                    f"Correct ka of {met_id} in {reac_id} from {original_ka} to {changed_model.reactions[reac_id].enzyme_reaction_data.k_as[met_id]}"
+                )
         elif "dG0_" in key:
             if value < min_abs_error_value:
                 continue
@@ -278,18 +326,19 @@ def apply_error_correction_on_model(
             if verbose:
                 original_dG0 = cobrak_model.reactions[reac_id].dG0
                 print(
-                    f"Correct dG0 {reac_id} from {original_dG0} to {changed_model.reactions[reac_id].dG0}"
+                    f"Correct ΔG'° {reac_id} from {original_dG0} to {changed_model.reactions[reac_id].dG0}"
                 )
 
     return changed_model
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True), validate_return=True)
 def apply_variability_dict(
     model: ConcreteModel,
     cobrak_model: Model,  # noqa: ARG001
     variability_dict: dict[str, tuple[float, float]],
     error_scenario: dict[str, tuple[float, float]] = {},
-    abs_epsilon: float = 1e-5,
+    abs_epsilon: NonNegativeFloat = 1e-5,
 ) -> ConcreteModel:
     """Applies the variability data as new variable bounds in the pyomo model
 
@@ -335,6 +384,7 @@ def apply_variability_dict(
     return model
 
 
+@validate_call(validate_return=True)
 def combine_enzyme_reaction_datasets(
     datasets: list[dict[str, EnzymeReactionData | None]],
 ) -> dict[str, EnzymeReactionData | None]:
@@ -397,13 +447,55 @@ def combine_enzyme_reaction_datasets(
                         enzyme_reaction_data.k_a_references[met_id]
                     )
 
+            hills = enzyme_reaction_data.hill_coefficients
+            for met_id in hills.kappa:
+                if met_id not in combined_data[reac_id].hill_coefficients.kappa or (
+                    combined_data[reac_id]
+                    .hill_coefficient_references.kappa[met_id][0]
+                    .tax_distance
+                    > enzyme_reaction_data.hill_coefficient_references.kappa[met_id][
+                        0
+                    ].tax_distance
+                ):
+                    combined_data[reac_id].hill_coefficients.kappa[met_id] = hills.kappa
+                    combined_data[reac_id].hill_coefficient_references.kappa[met_id] = (
+                        enzyme_reaction_data.hill_coefficient_references.kappa[met_id]
+                    )
+            for met_id in hills.iota:
+                if met_id not in combined_data[reac_id].hill_coefficients.iota or (
+                    combined_data[reac_id]
+                    .hill_coefficient_references.iota[met_id][0]
+                    .tax_distance
+                    > enzyme_reaction_data.hill_coefficient_references.iota[met_id][
+                        0
+                    ].tax_distance
+                ):
+                    combined_data[reac_id].hill_coefficients.iota[met_id] = hills.iota
+                    combined_data[reac_id].hill_coefficient_references.iota[met_id] = (
+                        enzyme_reaction_data.hill_coefficient_references.iota[met_id]
+                    )
+            for met_id in hills.alpha:
+                if met_id not in combined_data[reac_id].hill_coefficients.alpha or (
+                    combined_data[reac_id]
+                    .hill_coefficient_references.alpha[met_id][0]
+                    .tax_distance
+                    > enzyme_reaction_data.hill_coefficient_references.alpha[met_id][
+                        0
+                    ].tax_distance
+                ):
+                    combined_data[reac_id].hill_coefficients.alpha[met_id] = hills.alpha
+                    combined_data[reac_id].hill_coefficient_references.alpha[met_id] = (
+                        enzyme_reaction_data.hill_coefficient_references.alpha[met_id]
+                    )
+
     return combined_data
 
 
+@validate_call(validate_return=True)
 def compare_optimization_result_reaction_uses(
     cobrak_model: Model,
     results: list[dict[str, float]],
-    min_abs_flux: float = 1e-6,
+    min_abs_flux: NonNegativeFloat = 1e-6,
 ) -> None:
     """Compares the usage of reactions across multiple optimization (e.g. FBA) results.
 
@@ -466,6 +558,7 @@ def compare_optimization_result_reaction_uses(
         print("===")
 
 
+@validate_call(validate_return=True)
 def compare_optimization_result_fluxes(
     cobrak_model: Model,
     result_1: dict[str, float],
@@ -529,6 +622,7 @@ def compare_optimization_result_fluxes(
     return abs_results
 
 
+@validate_call(validate_return=True)
 def compare_multiple_results_to_best(
     cobrak_model: Model,
     results: list[dict[str, float]],
@@ -586,6 +680,7 @@ def compare_multiple_results_to_best(
     return comparisons
 
 
+@validate_call(validate_return=True)
 def count_last_equal_elements(lst: list[Any]) -> int:
     """Counts the number of consecutive equal elements from the end of the list.
 
@@ -621,6 +716,7 @@ def count_last_equal_elements(lst: list[Any]) -> int:
     return count
 
 
+@validate_call(validate_return=True)
 def create_cnapy_scenario_out_of_optimization_dict(
     path: str,
     cobrak_model: Model,
@@ -653,6 +749,7 @@ def create_cnapy_scenario_out_of_optimization_dict(
     json_write(path, cnapy_scenario)
 
 
+@validate_call(validate_return=True)
 def create_cnapy_scenario_out_of_variability_dict(
     path: str,
     cobrak_model: Model,
@@ -699,6 +796,7 @@ def create_cnapy_scenario_out_of_variability_dict(
     json_write(path, cnapy_scenario)
 
 
+@validate_call(validate_return=True)
 def delete_orphaned_metabolites_and_enzymes(cobrak_model: Model) -> Model:
     """Removes orphaned metabolites and enzymes from a COBRAk model.
 
@@ -741,12 +839,13 @@ def delete_orphaned_metabolites_and_enzymes(cobrak_model: Model) -> Model:
     return cobrak_model
 
 
+@validate_call(validate_return=True)
 def delete_unused_reactions_in_optimization_dict(
     cobrak_model: Model,
     optimization_dict: dict[str, float],
     exception_prefix: str = "",
     delete_missing_reactions: bool = True,
-    min_abs_flux: float = 1e-15,
+    min_abs_flux: NonNegativeFloat = 1e-15,
     do_not_delete_with_z_var_one: bool = True,
 ) -> Model:
     """Delete unused reactions in a COBRAk model based on an optimization dictionary.
@@ -794,6 +893,7 @@ def delete_unused_reactions_in_optimization_dict(
     return delete_orphaned_metabolites_and_enzymes(cobrak_model)
 
 
+@validate_call(validate_return=True)
 def delete_unused_reactions_in_variability_dict(
     cobrak_model: Model,
     variability_dict: dict[str, tuple[float, float]],
@@ -827,6 +927,7 @@ def delete_unused_reactions_in_variability_dict(
     return delete_orphaned_metabolites_and_enzymes(cobrak_model)
 
 
+@validate_call(validate_return=True)
 def get_active_reacs_from_optimization_dict(
     cobrak_model: Model,
     fba_dict: dict[str, float],
@@ -852,6 +953,7 @@ def get_active_reacs_from_optimization_dict(
     return active_reacs
 
 
+@validate_call(validate_return=True)
 def get_base_id(
     reac_id: str,
     fwd_suffix: str = REAC_FWD_SUFFIX,
@@ -881,6 +983,7 @@ def get_base_id(
     )
 
 
+@validate_call(validate_return=True)
 def get_base_id_optimzation_result(
     cobrak_model: Model,
     optimization_dict: dict[str, float],
@@ -924,6 +1027,7 @@ def get_base_id_optimzation_result(
     return base_id_scenario
 
 
+@validate_call(validate_return=True)
 def get_cobrak_enzyme_reactions_string(cobrak_model: Model, enzyme_id: str) -> str:
     """Get string of reaction IDs associated with a specific enzyme in the COBRAk model.
 
@@ -947,6 +1051,7 @@ def get_cobrak_enzyme_reactions_string(cobrak_model: Model, enzyme_id: str) -> s
     return "; ".join(enzyme_reactions)
 
 
+@validate_call(validate_return=True)
 def get_elementary_conservation_relations(
     cobrak_model: Model,
 ) -> str:
@@ -984,12 +1089,13 @@ def get_elementary_conservation_relations(
     return conservation_relations
 
 
+@validate_call(validate_return=True)
 def get_enzyme_usage_by_protein_pool_fraction(
     cobrak_model: Model,
     result: dict[str, float],
-    min_conc: float = 1e-12,
-    rounding: int = 5,
-) -> dict[float, list[str]]:
+    min_conc: NonNegativeFloat = 1e-12,
+    rounding: NonNegativeInt = 5,
+) -> dict[NonNegativeFloat, list[str]]:
     """Return enzyme usage as a fraction of the total protein pool in a COBRAk model.
 
     This function computes the fraction of the total protein pool used by each enzyme based on the given result dictionary.
@@ -1003,7 +1109,7 @@ def get_enzyme_usage_by_protein_pool_fraction(
         rounding (int, optional): The number of decimal places to round the protein pool fractions. Defaults to 5.
 
     Returns:
-        dict[float, list[str]]: A dictionary where the keys are protein pool fractions and the values are lists of
+        dict[NonNegativeFloat, list[str]]: A dictionary where the keys are protein pool fractions and the values are lists of
                                 reaction IDs that use that fraction of the protein pool.
     """
     protein_pool_fractions: dict[float, list[str]] = {}
@@ -1025,6 +1131,7 @@ def get_enzyme_usage_by_protein_pool_fraction(
     return dict(sorted(protein_pool_fractions.items()))
 
 
+@validate_call(validate_return=True)
 def get_extra_linear_constraint_string(
     extra_linear_constraint: ExtraLinearConstraint,
 ) -> str:
@@ -1059,6 +1166,7 @@ def get_extra_linear_constraint_string(
     return string.lstrip()
 
 
+@validate_call(validate_return=True)
 def get_fwd_rev_corrected_flux(
     reac_id: str,
     usable_reac_ids: list[str] | set[str],
@@ -1097,6 +1205,7 @@ def get_fwd_rev_corrected_flux(
     return flux
 
 
+@validate_call(validate_return=True)
 def get_full_enzyme_id(identifiers: list[str]) -> str:
     """Generate a full enzyme ID by concatenating the list of enzyme identifiers with a specific separator.
 
@@ -1109,6 +1218,7 @@ def get_full_enzyme_id(identifiers: list[str]) -> str:
     return "_AND_".join(identifiers)
 
 
+@validate_call(validate_return=True)
 def get_full_enzyme_mw(cobrak_model: Model, reaction: Reaction) -> float:
     """Calculate the full molecular weight of enzymes (in kDa) involved in a given reaction.
 
@@ -1143,24 +1253,30 @@ def get_full_enzyme_mw(cobrak_model: Model, reaction: Reaction) -> float:
     return full_mw
 
 
-def get_df_kappa_and_gamma_sorted_lists(
+@validate_call(validate_return=True)
+def get_df_and_efficiency_factors_sorted_lists(
     cobrak_model: Model,
     result: dict[str, float],
-    min_flux: float = 0.0,
+    min_flux: NonNegativeFloat = 0.0,
 ) -> tuple[
-    dict[str, float], dict[str, float], dict[str, float], dict[str, tuple[float, int]]
+    dict[str, float],
+    dict[str, float],
+    dict[str, float],
+    dict[str, float],
+    dict[str, float],
+    dict[str, tuple[float, int]],
 ]:
-    """Extracts and sorts lists of flux values (df), kappa values, and gamma values from a result dictionary.
+    """Extracts and sorts lists of flux values (df) and κ, γ, ι, α values from a result dictionary.
 
-    This function processes a dictionary of results ( a COBRA-k optimization)
-    to extract and sort lists of flux values (df), kappa values, and gamma values.  It filters
+    This function processes a dictionary of results of a COBRA-k optimization
+    to extract and sort lists of flux values (df) and κ, γ, ι, α values values. It filters
     these values based on a minimum flux threshold and returns them as sorted dictionaries.
     The function also calculates and returns a dictionary of kappa times gamma values,
     along with a status indicator representing the number of these values present for each reaction.
 
     Args:
-        cobrak_model: The COBRA Model object.
-        result: A dictionary containing the simulation or optimization results.  Keys are expected to
+        cobrak_model: The COBRA-k Model object.
+        result: A dictionary containing optimization results.  Keys are expected to
             start with prefixes like 'DF_VAR_PREFIX', 'KAPPA_VAR_PREFIX', and 'GAMMA_VAR_PREFIX'.
         min_flux: The minimum flux value to consider when filtering the results.  Values below this
             threshold are excluded.  Defaults to 0.0.
@@ -1168,13 +1284,19 @@ def get_df_kappa_and_gamma_sorted_lists(
     Returns:
         A tuple containing four dictionaries:
         1. A dictionary of sorted flux values (df) above the minimum flux.
-        2. A dictionary of sorted kappa values above the minimum flux.
-        3. A dictionary of sorted gamma values above the minimum flux.
-        4. A dictionary of sorted kappa times gamma values, along with a status indicator.
+        2. A dictionary of sorted κ values above the minimum flux.
+        3. A dictionary of sorted γ values above the minimum flux.
+        4. A dictionary of sorted ι values above the minimum flux.
+        5. A dictionary of sorted α values above the minimum flux.
+        6. A dictionary of sorted κ⋅γ⋅ι⋅α values, along with a status indicator. If, for a reaction,
+           one or more of these efficiency factors is missing, the respective factor is assumed to be 1.0
+           thus having no effect on the multiplied value.
     """
     dfs: dict[str, float] = {}
     kappas: dict[str, float] = {}
     gammas: dict[str, float] = {}
+    iotas: dict[str, float] = {}
+    alphas: dict[str, float] = {}
     for var_id, value in result.items():
         if var_id.startswith(DF_VAR_PREFIX):
             reac_id = var_id[len(DF_VAR_PREFIX) :]
@@ -1185,37 +1307,54 @@ def get_df_kappa_and_gamma_sorted_lists(
         elif var_id.startswith(GAMMA_VAR_PREFIX):
             reac_id = var_id[len(GAMMA_VAR_PREFIX) :]
             gammas[reac_id] = value
+        elif var_id.startswith(IOTA_VAR_PREFIX):
+            reac_id = var_id[len(IOTA_VAR_PREFIX) :]
+            iotas[reac_id] = value
+        elif var_id.startswith(ALPHA_VAR_PREFIX):
+            reac_id = var_id[len(ALPHA_VAR_PREFIX) :]
+            alphas[reac_id] = value
 
-    kappa_times_gamma_dict: dict[str, tuple[float, int]] = {}
+    all_multiplied_dict: dict[str, tuple[float, int]] = {}
     for reac_id in cobrak_model.reactions:
         status = 0
-        kappa_times_gamma = 1.0
+        product = 1.0
         if reac_id in kappas:
-            kappa_times_gamma *= kappas[reac_id]
+            product *= kappas[reac_id]
             status += 1
         if reac_id in gammas:
-            kappa_times_gamma *= gammas[reac_id]
+            product *= gammas[reac_id]
             status += 1
-        kappa_times_gamma_dict[reac_id] = (kappa_times_gamma, status)
+        if reac_id in iotas:
+            product *= iotas[reac_id]
+            status += 1
+        if reac_id in alphas:
+            product *= alphas[reac_id]
+            status += 1
+        all_multiplied_dict[reac_id] = (product, status)
 
     sorted_df_keys = sorted(dfs, key=lambda k: dfs[k], reverse=False)
     sorted_kappa_keys = sorted(kappas, key=lambda k: kappas[k], reverse=False)
     sorted_gamma_keys = sorted(gammas, key=lambda k: gammas[k], reverse=False)
-    sorted_kappa_times_gamma_keys = sorted(
-        kappas, key=lambda k: kappa_times_gamma_dict[k], reverse=False
+    sorted_iota_keys = sorted(iotas, key=lambda k: iotas[k], reverse=False)
+    sorted_alpha_keys = sorted(alphas, key=lambda k: alphas[k], reverse=False)
+    sorted_product_keys = sorted(
+        all_multiplied_dict, key=lambda k: all_multiplied_dict[k], reverse=False
     )
     return (
         {key: dfs[key] for key in sorted_df_keys if result[key] > min_flux},
         {key: kappas[key] for key in sorted_kappa_keys if result[key] > min_flux},
         {key: gammas[key] for key in sorted_gamma_keys if result[key] > min_flux},
+        {key: iotas[key] for key in sorted_iota_keys if result[key] > min_flux},
+        {key: alphas[key] for key in sorted_alpha_keys if result[key] > min_flux},
         {
-            key: kappa_times_gamma_dict[key]
-            for key in sorted_kappa_times_gamma_keys
-            if result[key] > min_flux
+            key: all_multiplied_dict[key]
+            for key in sorted_product_keys
+            if key in result and result[key] > min_flux
         },
     )
 
 
+@validate_call(validate_return=True)
 def get_metabolite_consumption_and_production(
     cobrak_model: Model, met_id: str, optimization_dict: dict[str, float]
 ) -> tuple[float, float]:
@@ -1249,6 +1388,7 @@ def get_metabolite_consumption_and_production(
     return consumption, production
 
 
+@validate_call(validate_return=True)
 def get_model_kcats(cobrak_model: Model) -> list[float]:
     """Extracts k_cat values from reactions with enzyme data in the model.
 
@@ -1265,6 +1405,7 @@ def get_model_kcats(cobrak_model: Model) -> list[float]:
     return kcats
 
 
+@validate_call(validate_return=True)
 def get_model_kms(cobrak_model: Model) -> list[float]:
     """Extracts k_m values from reactions with enzyme data in the model.
 
@@ -1281,7 +1422,11 @@ def get_model_kms(cobrak_model: Model) -> list[float]:
     return kms
 
 
-def get_model_kms_by_usage(cobrak_model: Model) -> tuple[list[float], list[float]]:
+@validate_call(validate_return=True)
+def get_model_kms_by_usage(
+    cobrak_model: Model,
+    return_only_values_with_reference: bool = False,
+) -> tuple[list[PositiveFloat], list[PositiveFloat]]:
     """Collects k_M values from a COBRA-k model, separating them into substrate and product lists.
 
     This function iterates through the reactions in a COBRA-k model and extracts the
@@ -1291,19 +1436,28 @@ def get_model_kms_by_usage(cobrak_model: Model) -> tuple[list[float], list[float
 
     Args:
         cobrak_model: The COBRA-k Model object.
+        return_only_values_with_reference: Returns only values with a given database reference. Defaults to False.
 
     Returns:
         A tuple containing two lists: the first list contains k_M values for substrates,
         and the second list contains k_M values for products.
     """
-    substrate_kms = []
-    product_kms = []
+    substrate_kms: list[PositiveFloat] = []
+    product_kms: list[PositiveFloat] = []
     for reaction in cobrak_model.reactions.values():
         if reaction.enzyme_reaction_data is None:
             continue
         for met_id, stoichiometry in reaction.stoichiometries.items():
             if met_id not in reaction.enzyme_reaction_data.k_ms:
                 continue
+            if return_only_values_with_reference:
+                references = reaction.enzyme_reaction_data.k_m_references
+                if (met_id not in references) or (len(references[met_id]) == 0):
+                    tax_distance = -1
+                else:
+                    tax_distance = references[met_id][0].tax_distance
+                if tax_distance < 0:
+                    continue
             met_km = reaction.enzyme_reaction_data.k_ms[met_id]
             if stoichiometry < 0:
                 substrate_kms.append(met_km)
@@ -1312,14 +1466,162 @@ def get_model_kms_by_usage(cobrak_model: Model) -> tuple[list[float], list[float
     return substrate_kms, product_kms
 
 
-def get_model_mws(cobrak_model: Model) -> list[float]:
+@validate_call(validate_return=True)
+def get_model_kis(
+    cobrak_model: Model,
+    return_only_values_with_reference: bool = False,
+) -> list[PositiveFloat]:
+    """Collects k_I values from a COBRA-k model.
+
+    This function iterates through the reactions in a COBRA-k model and extracts the
+    k_I values associated with each metabolite
+
+    Args:
+        cobrak_model: The COBRA-k Model object.
+        return_only_values_with_reference: Returns only values with a given database reference. Defaults to False.
+
+    Returns:
+        A list containing the k_I values
+    """
+    all_kis: list[PositiveFloat] = []
+    for reaction in cobrak_model.reactions.values():
+        if reaction.enzyme_reaction_data is None:
+            continue
+        for met_id, k_i in reaction.enzyme_reaction_data.k_is.items():
+            if return_only_values_with_reference:
+                references = reaction.enzyme_reaction_data.k_i_references
+                if (met_id not in references) or (len(references[met_id]) == 0):
+                    tax_distance = -1
+                else:
+                    tax_distance = references[met_id][0].tax_distance
+                if tax_distance < 0:
+                    continue
+            all_kis.append(k_i)
+    return all_kis
+
+
+@validate_call(validate_return=True)
+def get_model_kas(
+    cobrak_model: Model,
+    return_only_values_with_reference: bool = False,
+) -> list[PositiveFloat]:
+    """Collects k_A values from a COBRA-k model.
+
+    This function iterates through the reactions in a COBRA-k model and extracts the
+    k_A values associated with each metabolite
+
+    Args:
+        cobrak_model: The COBRA-k Model object.
+        return_only_values_with_reference: Returns only values with a given database reference. Defaults to False.
+
+    Returns:
+        A list containing the k_A values
+    """
+    all_kas: list[PositiveFloat] = []
+    for reaction in cobrak_model.reactions.values():
+        if reaction.enzyme_reaction_data is None:
+            continue
+        for met_id, k_a in reaction.enzyme_reaction_data.k_as.items():
+            if return_only_values_with_reference:
+                references = reaction.enzyme_reaction_data.k_a_references
+                if (met_id not in references) or (len(references[met_id]) == 0):
+                    tax_distance = -1
+                else:
+                    tax_distance = references[met_id][0].tax_distance
+                if tax_distance < 0:
+                    continue
+            all_kas.append(k_a)
+    return all_kas
+
+
+@validate_call(validate_return=True)
+def get_model_hill_coefficients(
+    cobrak_model: Model,
+    return_only_values_with_reference: bool = False,
+) -> list[PositiveFloat]:
+    """Collects k_A values from a COBRA-k model.
+
+    This function iterates through the reactions in a COBRA-k model and extracts the
+    k_A values associated with each metabolite
+
+    Args:
+        cobrak_model: The COBRA-k Model object.
+        return_only_values_with_reference: Returns only values with a given database reference. Defaults to False.
+
+    Returns:
+        A tuple containing three lists: the first list contains κ Hill coefficients, the second
+        ι Hill coefficients, the third α Hill coefficients.
+    """
+    kappa_hills: list[PositiveFloat] = []
+    iota_hills: list[PositiveFloat] = []
+    alpha_hills: list[PositiveFloat] = []
+    for reaction in cobrak_model.reactions.values():
+        if reaction.enzyme_reaction_data is None:
+            continue
+
+        # κ Hills
+        for (
+            met_id,
+            hill_coefficient,
+        ) in reaction.enzyme_reaction_data.hill_coefficients.kappa.items():
+            if return_only_values_with_reference:
+                references = (
+                    reaction.enzyme_reaction_data.hill_coefficient_references.kappa
+                )
+                if (met_id not in references) or (len(references[met_id]) == 0):
+                    tax_distance = -1
+                else:
+                    tax_distance = references[met_id][0].tax_distance
+                if tax_distance < 0:
+                    continue
+            kappa_hills.append(hill_coefficient)
+
+        # ι Hills
+        for (
+            met_id,
+            hill_coefficient,
+        ) in reaction.enzyme_reaction_data.hill_coefficients.iota.items():
+            if return_only_values_with_reference:
+                references = (
+                    reaction.enzyme_reaction_data.hill_coefficient_references.iota
+                )
+                if (met_id not in references) or (len(references[met_id]) == 0):
+                    tax_distance = -1
+                else:
+                    tax_distance = references[met_id][0].tax_distance
+                if tax_distance < 0:
+                    continue
+            iota_hills.append(hill_coefficient)
+
+        # α Hills
+        for (
+            met_id,
+            hill_coefficient,
+        ) in reaction.enzyme_reaction_data.hill_coefficients.alpha.items():
+            if return_only_values_with_reference:
+                references = (
+                    reaction.enzyme_reaction_data.hill_coefficient_references.alpha
+                )
+                if (met_id not in references) or (len(references[met_id]) == 0):
+                    tax_distance = -1
+                else:
+                    tax_distance = references[met_id][0].tax_distance
+                if tax_distance < 0:
+                    continue
+            alpha_hills.append(hill_coefficient)
+
+    return kappa_hills, iota_hills, alpha_hills
+
+
+@validate_call(validate_return=True)
+def get_model_mws(cobrak_model: Model) -> list[PositiveFloat]:
     """Extracts molecular weights of enzymes from the model.
 
     Args:
         cobrak_model (Model): The COBRAk model containing enzyme data.
 
     Returns:
-        list[float]: A list of molecular weights for each enzyme in the model.
+        list[PositiveFloat]: A list of molecular weights for each enzyme in the model.
     """
     mws = []
     for enzyme in cobrak_model.enzymes.values():
@@ -1327,6 +1629,7 @@ def get_model_mws(cobrak_model: Model) -> list[float]:
     return mws
 
 
+@validate_call(validate_return=True)
 def get_model_dG0s(cobrak_model: Model, abs_values: bool = False) -> list[float]:
     """Extracts standard Gibbs free energy changes (dG0) from reactions in the model.
 
@@ -1346,7 +1649,8 @@ def get_model_dG0s(cobrak_model: Model, abs_values: bool = False) -> list[float]
     return dG0s
 
 
-def get_model_max_kcat_times_e_values(cobrak_model: Model) -> list[float]:
+@validate_call(validate_return=True)
+def get_model_max_kcat_times_e_values(cobrak_model: Model) -> list[NonNegativeFloat]:
     """Calculates the maximum k_cat * E (enzyme concentration in terms of its molecular weight)
     for each reaction with enzyme data and returns these values.
 
@@ -1377,10 +1681,11 @@ def get_model_max_kcat_times_e_values(cobrak_model: Model) -> list[float]:
     return max_kcat_times_e_values
 
 
+@validate_call(validate_return=True)
 def get_model_with_filled_missing_parameters(
     cobrak_model: Model,
     add_dG0_extra_constraints: bool = False,
-    param_percentile: int = 90,
+    param_percentile: conint(ge=0, le=100) = 90,
     ignore_prefixes: list[str] = ["EX_"],
     use_median_for_kms: bool = True,
     use_median_for_kcats: bool = True,
@@ -1412,7 +1717,6 @@ def get_model_with_filled_missing_parameters(
     all_mws = get_model_mws(cobrak_model)
     all_kcats = get_model_kcats(cobrak_model)
     substrate_kms, product_kms = get_model_kms_by_usage(cobrak_model)
-    all_kms = substrate_kms + product_kms
     all_abs_dG0s = [abs(dG0) for dG0 in get_model_dG0s(cobrak_model)]
     dG0_reverse_couples: set[tuple[str]] = set()
     for reac_id in cobrak_model.reactions:
@@ -1472,7 +1776,7 @@ def get_model_with_filled_missing_parameters(
                         met_id
                     ] = float(
                         percentile(
-                            all_kms,
+                            product_kms if stoichiometry > 0.0 else substrate_kms,
                             param_percentile
                             if stoichiometry > 0.0
                             else 100 - param_percentile,
@@ -1503,6 +1807,7 @@ def get_model_with_filled_missing_parameters(
     return cobrak_model
 
 
+@validate_call(validate_return=True)
 def get_reaction_string(cobrak_model: Model, reac_id: str) -> str:
     """Generate a string representation of a reaction in a COBRAk model.
 
@@ -1538,6 +1843,7 @@ def get_reaction_string(cobrak_model: Model, reac_id: str) -> str:
     return " + ".join(educt_parts) + " " + arrow + " " + " + ".join(product_parts)
 
 
+@validate_call(validate_return=True)
 def get_reverse_reac_id_if_existing(
     reac_id: str,
     fwd_suffix: str = REAC_FWD_SUFFIX,
@@ -1560,6 +1866,7 @@ def get_reverse_reac_id_if_existing(
     return ""
 
 
+@validate_call(validate_return=True)
 def get_metabolites_in_elementary_conservation_relations(
     cobrak_model: Model,
 ) -> list[str]:
@@ -1598,13 +1905,19 @@ def get_metabolites_in_elementary_conservation_relations(
     return list(set(dependencies))
 
 
+@validate_call(validate_return=True)
 def get_model_with_varied_parameters(
     model: Model,
-    max_km_variation: float | None = None,
-    max_kcat_variation: float | None = None,
-    max_ki_variation: float | None = None,
-    max_ka_variation: float | None = None,
-    max_dG0_variation: float | None = None,
+    max_km_variation: NonNegativeFloat | None = None,
+    max_kcat_variation: NonNegativeFloat | None = None,
+    max_ki_variation: NonNegativeFloat | None = None,
+    max_ka_variation: NonNegativeFloat | None = None,
+    max_dG0_variation: NonNegativeFloat | None = None,
+    varied_reacs: list[str] = [],
+    change_unknown_values: bool = True,
+    change_known_values: bool = True,
+    use_shuffling_instead_of_uniform_random: bool = False,
+    shuffle_using_distribution_of_values_with_reference: bool = True,
 ) -> Model:
     """Generates a modified copy of the input Model with varied reaction parameters.
 
@@ -1619,23 +1932,57 @@ def get_model_with_varied_parameters(
     Args:
         model: The Model object to be modified.
         max_km_variation: Maximum factor by which to vary Kms.  Defaults to None.
+            No effect (except if it is None, then nothing happens) if ```use_shuffling_instead_of_uniform_random=True```.
         max_kcat_variation: Maximum factor by which to vary k_cat. Defaults to None.
+            No effect (except if it is None, then nothing happens) if ```use_shuffling_instead_of_uniform_random=True```.
         max_ki_variation: Maximum factor by which to vary k_is. Defaults to None.
+            No effect (except if it is None, then nothing happens) if ```use_shuffling_instead_of_uniform_random=True```.
         max_ka_variation: Maximum factor by which to vary k_as. Defaults to None.
+            No effect (except if it is None, then nothing happens) if ```use_shuffling_instead_of_uniform_random=True```.
         max_dG0_variation: Maximum factor by which to vary dG0. Defaults to None.
+            No effect (except if it is None, then nothing happens) if ```use_shuffling_instead_of_uniform_random=True```.
+        varied_reacs: If not [], only reactions with IDs in this list are varied. Defaults to [].
+        change_known_values: Change values if they *are* set with a
+            taxonomic distance in their reference. Defaults to True.
+        change_unknown_values: Change values if they are *not* set with a
+            taxonomic distance in their reference. Defaults to True.
+        use_shuffling_instead_of_uniform_random: Overwrites max variation parameters, and switches
+            to shuffling inside the known kcats, educt kms, product kms and so on.
+        shuffle_using_distribution_of_values_with_reference: If True (the default), the shuffling will only
+            choose values with a reference for the shuffling; note that if ```change_unknown_values=True```,
+            the unknown values will still be shuffled, but if ```shuffle_using_distribution_of_values_with_reference=True````
+            just using the distribution with values with references.
 
     Returns:
         A deep copy of the input model with varied reaction parameters.
     """
     varied_model = deepcopy(model)
     tested_rev_reacs: list[str] = []
+    if use_shuffling_instead_of_uniform_random:
+        substrate_kms, product_kms = get_model_kms_by_usage(
+            model,
+            return_only_values_with_reference=shuffle_using_distribution_of_values_with_reference,
+        )
+        if max_dG0_variation is not None:
+            all_dG0s = get_model_dG0s(model)
+        if max_kcat_variation is not None:
+            all_kcats = get_model_kcats(model)
+        if max_ki_variation is not None:
+            all_kis = get_model_kis(model)
+        if max_ka_variation is not None:
+            all_kas = get_model_kas(model)
     for reac_id, reaction in varied_model.reactions.items():
+        if (varied_reacs != []) and (reac_id not in varied_reacs):
+            continue
         if (
             max_dG0_variation is not None
             and reaction.dG0 is not None
             and reac_id not in tested_rev_reacs
         ):
-            reaction.dG0 += uniform(-max_dG0_variation, +max_dG0_variation)  # noqa: NPY002
+            if use_shuffling_instead_of_uniform_random:
+                reaction.dG0 = choice(all_dG0s)
+            else:
+                reaction.dG0 += uniform(-max_dG0_variation, +max_dG0_variation)  # noqa: NPY002
             rev_id = get_reverse_reac_id_if_existing(
                 reac_id=reac_id,
                 fwd_suffix=varied_model.fwd_suffix,
@@ -1646,35 +1993,102 @@ def get_model_with_varied_parameters(
                 tested_rev_reacs.append(rev_id)
         if reaction.enzyme_reaction_data is not None:
             if max_kcat_variation is not None:
-                reaction.enzyme_reaction_data.k_cat *= max_kcat_variation ** (
-                    uniform(-1, 1)
-                )  # noqa: NPY002
+                kcat_tax_distance = (
+                    -1
+                    if len(reaction.enzyme_reaction_data.k_cat_references) == 0
+                    else reaction.enzyme_reaction_data.k_cat_references[0].tax_distance
+                )
+                if (change_known_values and kcat_tax_distance >= 0) or (
+                    change_unknown_values and kcat_tax_distance < 0
+                ):
+                    if use_shuffling_instead_of_uniform_random:
+                        reaction.enzyme_reaction_data.k_cat = choice(all_kcats)
+                    else:
+                        reaction.enzyme_reaction_data.k_cat *= max_kcat_variation ** (
+                            uniform(-1, 1)  # noqa: NPY002
+                        )  # noqa: NPY002
             if max_km_variation is not None:
                 for met_id in reaction.enzyme_reaction_data.k_ms:
+                    references = reaction.enzyme_reaction_data.k_m_references
+                    km_tax_distance = (
+                        -1
+                        if met_id not in references or len(references[met_id]) == 0
+                        else references[met_id][0].tax_distance
+                    )
+                    if not (
+                        (change_known_values and km_tax_distance >= 0)
+                        or (change_unknown_values and km_tax_distance < 0)
+                    ):
+                        continue
                     if (
                         met_id in reaction.stoichiometries
                         and reaction.stoichiometries[met_id] < 0.0
-                    ):
-                        reaction.enzyme_reaction_data.k_ms[met_id] *= (
-                            max_km_variation ** (uniform(-1, 1))
-                        )  # noqa: NPY002
-                    else:
-                        reaction.enzyme_reaction_data.k_ms[met_id] *= (
-                            max_km_variation ** (uniform(-1, 1.0))
-                        )  # noqa: NPY002
+                    ):  # Substrate k_ms
+                        if use_shuffling_instead_of_uniform_random:
+                            reaction.enzyme_reaction_data.k_ms[met_id] = choice(
+                                substrate_kms
+                            )
+                        else:
+                            reaction.enzyme_reaction_data.k_ms[met_id] *= (
+                                max_km_variation ** (uniform(-1, 1))  # noqa: NPY002
+                            )  # noqa: NPY002
+                    else:  # Product k_ms
+                        if use_shuffling_instead_of_uniform_random:
+                            reaction.enzyme_reaction_data.k_ms[met_id] = choice(
+                                product_kms
+                            )
+                        else:
+                            reaction.enzyme_reaction_data.k_ms[met_id] *= (
+                                max_km_variation ** (uniform(-1, 1))  # noqa: NPY002
+                            )  # noqa: NPY002
             if max_ki_variation is not None:
+                references = reaction.enzyme_reaction_data.k_i_references
+                ki_tax_distance = (
+                    -1
+                    if met_id not in references or len(references[met_id]) == 0
+                    else references[met_id][0].tax_distance
+                )
+                if not (
+                    (change_known_values and ki_tax_distance >= 0)
+                    or (change_unknown_values and ki_tax_distance < 0)
+                ):
+                    continue
                 for met_id in reaction.enzyme_reaction_data.k_is:
-                    reaction.enzyme_reaction_data.k_is[met_id] *= max_ki_variation ** (
-                        uniform(-1, 1)
-                    )  # noqa: NPY002
+                    if use_shuffling_instead_of_uniform_random:
+                        reaction.enzyme_reaction_data.k_is[met_id] = choice(all_kis)
+                    else:
+                        reaction.enzyme_reaction_data.k_is[met_id] *= (
+                            max_ki_variation
+                            ** (
+                                uniform(-1, 1)  # noqa: NPY002
+                            )
+                        )  # noqa: NPY002
             if max_ka_variation is not None:
+                references = reaction.enzyme_reaction_data.k_a_references
+                ka_tax_distance = (
+                    -1
+                    if met_id not in references or len(references[met_id]) == 0
+                    else references[met_id][0].tax_distance
+                )
+                if not (
+                    (change_known_values and ka_tax_distance >= 0)
+                    or (change_unknown_values and ka_tax_distance < 0)
+                ):
+                    continue
                 for met_id in reaction.enzyme_reaction_data.k_as:
-                    reaction.enzyme_reaction_data.k_as[met_id] *= max_ka_variation ** (
-                        uniform(-1, 1)
-                    )  # noqa: NPY002
+                    if use_shuffling_instead_of_uniform_random:
+                        reaction.enzyme_reaction_data.k_as[met_id] = choice(all_kas)
+                    else:
+                        reaction.enzyme_reaction_data.k_as[met_id] *= (
+                            max_ka_variation
+                            ** (
+                                uniform(-1, 1)  # noqa: NPY002
+                            )
+                        )  # noqa: NPY002
     return varied_model
 
 
+@validate_call(validate_return=True)
 def get_potentially_active_reactions_in_variability_dict(
     cobrak_model: Model, variability_dict: dict[str, tuple[float, float]]
 ) -> list[str]:
@@ -1721,6 +2135,7 @@ def get_pyomo_solution_as_dict(model: ConcreteModel) -> dict[str, float]:
     return solution_dict
 
 
+@validate_call(validate_return=True)
 def get_reaction_enzyme_var_id(reac_id: str, reaction: Reaction) -> str:
     """Returns the pyomo model name of the reaction's enzyme
 
@@ -1741,7 +2156,10 @@ def get_reaction_enzyme_var_id(reac_id: str, reaction: Reaction) -> str:
     )
 
 
-def get_solver_status_from_pyomo_results(pyomo_results: SolverResults) -> int:
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True), validate_return=True)
+def get_solver_status_from_pyomo_results(
+    pyomo_results: SolverResults,
+) -> NonNegativeInt:
     """Returns the solver status from the pyomo results as an integer code.
 
     This function interprets the solver status from a `SolverResults` object and returns a corresponding integer code.
@@ -1776,6 +2194,7 @@ def get_solver_status_from_pyomo_results(pyomo_results: SolverResults) -> int:
             raise ValueError
 
 
+@validate_call(validate_return=True)
 def get_stoichiometric_matrix(cobrak_model: Model) -> list[list[float]]:
     """Returns the model's stoichiometric matrix.
 
@@ -1800,8 +2219,9 @@ def get_stoichiometric_matrix(cobrak_model: Model) -> list[list[float]]:
     return matrix
 
 
+@validate_call(validate_return=True)
 def get_stoichiometrically_coupled_reactions(
-    cobrak_model: Model, rounding: int = 10
+    cobrak_model: Model, rounding: NonNegativeInt = 10
 ) -> list[list[str]]:
     """Returns stoichiometrically coupled reactions.
 
@@ -1842,6 +2262,7 @@ def get_stoichiometrically_coupled_reactions(
     return coupled_reacs
 
 
+@validate_call(validate_return=True)
 def get_substrate_and_product_exchanges(
     cobrak_model: Model, optimization_dict: dict[str, Any] = {}
 ) -> tuple[tuple[str, ...], tuple[str, ...]]:
@@ -1879,7 +2300,10 @@ def get_substrate_and_product_exchanges(
     return tuple(substrate_reac_ids), tuple(product_reac_ids)
 
 
-def get_termination_condition_from_pyomo_results(pyomo_results: SolverResults) -> float:
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True), validate_return=True)
+def get_termination_condition_from_pyomo_results(
+    pyomo_results: SolverResults,
+) -> NonNegativeFloat:
     """Returns the termination condition from the pyomo results as a float code.
 
     This function interprets the termination condition from a `SolverResults` object and returns a corresponding float code.
@@ -1955,8 +2379,13 @@ def get_termination_condition_from_pyomo_results(pyomo_results: SolverResults) -
             raise ValueError
 
 
+@validate_call(validate_return=True)
 def get_unoptimized_reactions_in_nlp_solution(
-    cobrak_model: Model, solution: dict[str, float], verbose: bool = False
+    cobrak_model: Model,
+    solution: dict[str, float],
+    verbose: bool = False,
+    regard_iota: bool = False,
+    regard_alpha: bool = False,
 ) -> dict[str, tuple[float, float]]:
     """Identify unoptimized reactions in the NLP (Non-Linear Programming) solution.
 
@@ -1994,13 +2423,19 @@ def get_unoptimized_reactions_in_nlp_solution(
         if have_all_unignored_km(reaction, cobrak_model.kinetic_ignored_metabolites):
             kappa_substrates = 1.0
             kappa_products = 1.0
-            for met_id, stoichiometry in reaction.stoichiometries.items():
+            for met_id, raw_stoichiometry in reaction.stoichiometries.items():
                 if met_id in cobrak_model.kinetic_ignored_metabolites:
                     continue
 
+                stoichiometry = (
+                    raw_stoichiometry
+                    * reaction.enzyme_reaction_data.hill_coefficients.kappa.get(
+                        met_id, 1.0
+                    )
+                )
+                expconc = exp(solution[f"{LNCONC_VAR_PREFIX}{met_id}"])
                 multiplier = (
-                    exp(solution[f"{LNCONC_VAR_PREFIX}{met_id}"])
-                    / reaction.enzyme_reaction_data.k_ms[met_id]
+                    expconc / reaction.enzyme_reaction_data.k_ms[met_id]
                 ) ** abs(stoichiometry)
                 if stoichiometry < 0.0:
                     kappa_substrates *= multiplier
@@ -2014,17 +2449,71 @@ def get_unoptimized_reactions_in_nlp_solution(
                 has_problem = True
                 if verbose:
                     print(
-                        f"Kappa problem in {reac_id}: Real is {real_kappa}, NLP value is {nlp_kappa}"
-                    )
-                    print("E", solution[get_reaction_enzyme_var_id(reac_id, reaction)])
-                    print(
-                        "E_use",
-                        solution[get_reaction_enzyme_var_id(reac_id, reaction)]
-                        * get_full_enzyme_mw(cobrak_model, reaction),
+                        f"κ problem in {reac_id}: Real is {real_kappa}, NLP value is {nlp_kappa}"
                     )
         else:
             real_kappa = 1.0
             nlp_kappa = 1.0
+
+        # Iota and alpha check
+        real_iota = 1.0
+        real_alpha = 1.0
+        if (
+            reac_id in solution
+            and reaction.enzyme_reaction_data is not None
+            and reaction.enzyme_reaction_data.identifiers != [""]
+        ):
+            alpha_and_iota_mets = set(
+                list(reaction.enzyme_reaction_data.k_is.keys())
+                + list(reaction.enzyme_reaction_data.k_as.keys())
+            )
+            for met_id in alpha_and_iota_mets:
+                met_var_id = f"{LNCONC_VAR_PREFIX}{met_id}"
+                if met_var_id not in solution:
+                    continue
+                expconc = exp(solution[met_var_id])
+                stoichiometry_iota = abs(
+                    reaction.stoichiometries.get(met_id, 1.0)
+                ) * reaction.enzyme_reaction_data.hill_coefficients.iota.get(
+                    met_id, 1.0
+                )
+                stoichiometry_alpha = abs(
+                    reaction.stoichiometries.get(met_id, 1.0)
+                ) * reaction.enzyme_reaction_data.hill_coefficients.alpha.get(
+                    met_id, 1.0
+                )
+
+                if met_id in reaction.enzyme_reaction_data.k_is and regard_iota:
+                    real_iota *= 1 / (
+                        1
+                        + (expconc / reaction.enzyme_reaction_data.k_is[met_id])
+                        ** stoichiometry_iota
+                    )
+                if met_id in reaction.enzyme_reaction_data.k_as and regard_alpha:
+                    real_alpha *= 1 / (
+                        1
+                        + (reaction.enzyme_reaction_data.k_as[met_id] / expconc)
+                        ** stoichiometry_alpha
+                    )
+
+        nlp_iota = (
+            solution.get(f"{IOTA_VAR_PREFIX}{reac_id}", 1.0) if regard_iota else 1.0
+        )
+        if abs(nlp_iota - real_iota) > 0.001:
+            has_problem = True
+            if verbose:
+                print(
+                    f"ι problem in {reac_id}: Real is {real_iota}, NLP value is {nlp_iota}"
+                )
+        nlp_alpha = (
+            solution.get(f"{ALPHA_VAR_PREFIX}{reac_id}", 1.0) if regard_alpha else 1.0
+        )
+        if abs(nlp_alpha - real_alpha) > 0.001:
+            has_problem = True
+            if verbose:
+                print(
+                    f"α problem in {reac_id}: Real is {real_alpha}, NLP value is {nlp_alpha}"
+                )
 
         # Gamma check
         if reaction.dG0 is not None:
@@ -2048,10 +2537,10 @@ def get_unoptimized_reactions_in_nlp_solution(
                 has_problem = True
                 if verbose:
                     print(
-                        f"Gamma problem in {reac_id}: Real is {real_gamma}, NLP value is {nlp_gamma}"
+                        f"γ problem in {reac_id}: Real is {real_gamma}, NLP value is {nlp_gamma}"
                     )
                     print(
-                        f"dg: Real is {dg}, NLP value is {solution[DF_VAR_PREFIX + reac_id]}"
+                        f"ΔG': Real is {dg}, NLP value is {solution[DF_VAR_PREFIX + reac_id]}"
                     )
                     print("E", solution[get_reaction_enzyme_var_id(reac_id, reaction)])
                     print(
@@ -2067,8 +2556,8 @@ def get_unoptimized_reactions_in_nlp_solution(
         enzyme_conc = solution[get_reaction_enzyme_var_id(reac_id, reaction)]
         v_plus = enzyme_conc * reaction.enzyme_reaction_data.k_cat
 
-        nlp_flux = v_plus * nlp_gamma * nlp_kappa
-        real_flux = v_plus * real_gamma * real_kappa
+        nlp_flux = v_plus * nlp_gamma * nlp_kappa * nlp_alpha * nlp_iota
+        real_flux = v_plus * real_gamma * real_kappa * real_alpha * real_iota
         if has_problem and verbose:
             print(nlp_flux, real_flux, solution[reac_id])
 
@@ -2078,6 +2567,7 @@ def get_unoptimized_reactions_in_nlp_solution(
     return unoptimized_reactions
 
 
+@validate_call(validate_return=True)
 def have_all_unignored_km(
     reaction: Reaction, kinetic_ignored_metabolites: list[str]
 ) -> bool:
@@ -2120,6 +2610,7 @@ def have_all_unignored_km(
     return not (len(substrates_with_km) == 0 or len(products_with_km) == 0)
 
 
+@validate_call(validate_return=True)
 def is_any_error_term_active(correction_config: CorrectionConfig) -> bool:
     """Checks if any error term is active in the correction configuration.
 
@@ -2134,18 +2625,21 @@ def is_any_error_term_active(correction_config: CorrectionConfig) -> bool:
     Returns:
         True if at least one error term is active, False otherwise.
     """
-    return sum(
-        [
-            correction_config.add_flux_error_term,
-            correction_config.add_met_logconc_error_term,
-            correction_config.add_enzyme_conc_error_term,
-            correction_config.add_kcat_times_e_error_term,
-            correction_config.add_dG0_error_term,
-            correction_config.add_km_error_term,
-        ]
+    return bool(
+        sum(
+            [
+                correction_config.add_flux_error_term,
+                correction_config.add_met_logconc_error_term,
+                correction_config.add_enzyme_conc_error_term,
+                correction_config.add_kcat_times_e_error_term,
+                correction_config.add_dG0_error_term,
+                correction_config.add_km_error_term,
+            ]
+        )
     )
 
 
+@validate_call(validate_return=True)
 def is_objsense_maximization(objsense: int) -> bool:
     """Checks if the objective sense is maximization.
 
@@ -2159,9 +2653,9 @@ def is_objsense_maximization(objsense: int) -> bool:
     return objsense > 0
 
 
-def last_n_elements_equal(lst: list[Any], n: int) -> bool:
-    """
-    Check if the last n elements of a list are equal.
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True), validate_return=True)
+def last_n_elements_equal(lst: list[Any], n: int | float) -> bool:
+    """Check if the last n elements of a list are equal.
 
     Args:
         lst (list[Any]): The list to check.
@@ -2179,7 +2673,10 @@ def last_n_elements_equal(lst: list[Any], n: int) -> bool:
     return (n == 0) or (len(lst) >= n and all(x == lst[-n] for x in lst[-n:]))
 
 
-def make_kms_better_by_factor(cobrak_model: Model, reac_id: str, factor: float) -> None:
+@validate_call(validate_return=True)
+def make_kms_better_by_factor(
+    cobrak_model: Model, reac_id: str, factor: NonNegativeFloat
+) -> None:
     """Adjusts the Michaelis constants (Km) for substrates and products of a specified reaction in the metabolic model.
 
     - Substrate's Michaelis constants are divided by 'factor'.
@@ -2217,6 +2714,7 @@ def make_kms_better_by_factor(cobrak_model: Model, reac_id: str, factor: float) 
         reaction.enzyme_reaction_data.k_ms[product_id] *= factor
 
 
+@validate_call(validate_return=True)
 def parse_external_resources(path: str, brenda_version: str) -> None:
     """Parse and verify the presence of external resource files required for a COBRAk model.
 
@@ -2270,6 +2768,7 @@ def parse_external_resources(path: str, brenda_version: str) -> None:
         )
 
 
+@validate_call(validate_return=True)
 def print_model_parameter_statistics(cobrak_model: Model) -> None:
     """Prints statistics about reaction parameters (kcats and kms) in a COBRA-k model.
 
@@ -2337,6 +2836,7 @@ def print_model_parameter_statistics(cobrak_model: Model) -> None:
     print(len(cobrak_model.reactions))
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True), validate_return=True)
 def sort_dict_keys(dictionary: dict[str, T]) -> dict[str, T]:
     """Sorts all keys in a dictionary alphabetically.
 
@@ -2349,7 +2849,8 @@ def sort_dict_keys(dictionary: dict[str, T]) -> dict[str, T]:
     return dict(sorted(dictionary.items()))
 
 
-def split_list(lst: list[Any], n: int) -> list[list[Any]]:
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True), validate_return=True)
+def split_list(lst: list[Any], n: PositiveInt) -> list[list[Any]]:
     """Split a list into `n` nearly equal parts.
 
     This function divides a given list into `n` sublists, distributing the elements as evenly as possible.

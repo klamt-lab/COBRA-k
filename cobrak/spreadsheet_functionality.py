@@ -10,8 +10,10 @@ from openpyxl.formatting.rule import ColorScaleRule
 from openpyxl.styles import Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.worksheet import Worksheet
+from pydantic import ConfigDict, validate_call
 
 from .constants import (
+    ALPHA_VAR_PREFIX,
     DF_VAR_PREFIX,
     ENZYME_VAR_INFIX,
     ENZYME_VAR_PREFIX,
@@ -28,7 +30,7 @@ from .constants import (
 from .dataclasses import Enzyme, Metabolite, Model, Reaction
 from .utilities import (
     compare_multiple_results_to_best,
-    get_df_kappa_and_gamma_sorted_lists,
+    get_df_and_efficiency_factors_sorted_lists,
     get_full_enzyme_mw,
     get_fwd_rev_corrected_flux,
     get_metabolite_consumption_and_production,
@@ -105,6 +107,8 @@ class OptimizationDataset:
     """Shall gamma values be shown in the spreadsheet?"""
     with_iota: bool = False
     """Shall iota values (inhibition terms) be shown in the spreadsheet?"""
+    with_alpha: bool = False
+    """Shall alpha values (activation terms) be shown in the spreadsheet?"""
     with_kinetic_differences: bool = False
     """Shall differences between NLP fluxes and 'real' fluxes from kinetics be shown in the spreadsheet?"""
     with_error_corrections: bool = False
@@ -156,6 +160,7 @@ class VariabilityDataset:
 
 
 # "PRIVATE" FUNCTIONS SECTION #
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def _create_xlsx_from_datadicts(
     path: str,
     titles_and_data_dict: dict[
@@ -213,7 +218,11 @@ def _create_xlsx_from_datadicts(
         current_line = start_line
 
         # Fill in the data
-        for item_id in sorted(datadict.keys()):
+        if all(key.isdigit() for key in datadict):
+            sorted_item_ids = sorted(datadict.keys(), key=lambda x: int(x))  # noqa: PLW0108
+        else:
+            sorted_item_ids = sorted(datadict.keys())
+        for item_id in sorted_item_ids:
             datalist = datadict[item_id]
             current_column = 1
             for value in datalist:
@@ -241,11 +250,13 @@ def _create_xlsx_from_datadicts(
     wb.save(path)
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True), validate_return=True)
 def _get_empty_cell() -> SpreadsheetCell:
     """Returns spreadsheet cell with no content in full black"""
     return SpreadsheetCell(None, bg_color=BG_COLOR_BLACK, font=FONT_BLACK)
 
 
+@validate_call(validate_return=True)
 def _get_enzcomplex_reaction(
     cobrak_model: Model, enzcomplex_id: str
 ) -> tuple[str, Reaction]:
@@ -262,11 +273,13 @@ def _get_enzcomplex_reaction(
     return reac_id, cobrak_model.reactions[reac_id]
 
 
+@validate_call(validate_return=True)
 def _get_met_id_from_met_var_id(met_var_id: str) -> str:
     """Gives the (N/MI)LP metabolite concentration variable ID, derived from the metabolite ID"""
     return ("\b" + met_var_id).replace("\b" + LNCONC_VAR_PREFIX, "").replace("\b", "")
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def _get_optimization_bg_color(opt_value: float) -> PatternFill:
     """Determine the background color for a cell based on an optimization value.
 
@@ -281,6 +294,7 @@ def _get_optimization_bg_color(opt_value: float) -> PatternFill:
     return BG_COLOR_GREEN
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def _get_variability_bg_color(min_value: float, max_value: float) -> PatternFill:
     """Determine the background color for a cell based on variability values.
 
@@ -298,6 +312,7 @@ def _get_variability_bg_color(min_value: float, max_value: float) -> PatternFill
     return BG_COLOR_GREEN
 
 
+@validate_call(validate_return=True)
 def _na_str_or_value(
     value: str | float | int | bool | None,
 ) -> str | float | int | bool:
@@ -311,6 +326,7 @@ def _na_str_or_value(
     return value
 
 
+@validate_call(validate_return=True)
 def _num_to_sheet_letter(number: int) -> str:
     """Convert a given column number to its corresponding spreadsheet column letter.
 
@@ -333,6 +349,7 @@ def _num_to_sheet_letter(number: int) -> str:
     return column
 
 
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def _set_cell(
     sheet: Worksheet,
     line: int,
@@ -360,6 +377,7 @@ def _set_cell(
 
 
 # "PUBLIC" FUNCTIONS SECTION #
+@validate_call
 def create_cobrak_spreadsheet(
     path: str,
     cobrak_model: Model,
@@ -421,6 +439,37 @@ def create_cobrak_spreadsheet(
             continue
         all_enzcomplex_ids.append(get_reaction_enzyme_var_id(reac_id, reaction))
 
+    has_any_vplus = any(
+        opt_data.with_vplus for opt_data in optimization_datasets.values()
+    )
+    has_any_df = any(opt_data.with_vplus for opt_data in optimization_datasets.values())
+    has_any_kappa = any(
+        opt_data.with_kappa for opt_data in optimization_datasets.values()
+    )
+    has_any_gamma = any(
+        opt_data.with_gamma for opt_data in optimization_datasets.values()
+    )
+    has_any_iota = any(
+        opt_data.with_iota for opt_data in optimization_datasets.values()
+    )
+    has_any_alpha = any(
+        opt_data.with_alpha for opt_data in optimization_datasets.values()
+    )
+    has_any_kinetic_differences = any(
+        opt_data.with_kinetic_differences for opt_data in optimization_datasets.values()
+    )
+
+    kappa_gamma_iota_alpha_str_list = []
+    if has_any_kappa:
+        kappa_gamma_iota_alpha_str_list.append("κ")
+    if has_any_gamma:
+        kappa_gamma_iota_alpha_str_list.append("γ")
+    if has_any_iota:
+        kappa_gamma_iota_alpha_str_list.append("ι")
+    if has_any_alpha:
+        kappa_gamma_iota_alpha_str_list.append("α")
+    kappa_gamma_iota_alpha_str = "⋅".join(kappa_gamma_iota_alpha_str_list)
+
     # Index sheet
     index_titles: list[Title] = []
     index_cells: dict[str, list[str | float | int | bool | None | SpreadsheetCell]] = {}
@@ -468,6 +517,15 @@ def create_cobrak_spreadsheet(
         ],
     }
 
+    if has_any_kappa or has_any_gamma or has_any_iota or has_any_alpha:
+        index_cells |= {
+            _num_to_sheet_letter(sheet_line + 6): [
+                SpreadsheetCell(
+                    "F) Complexes: The (multi- or single-)enzyme complexes occurring in the model with protein pool fraction data",
+                ),
+            ],
+        }
+
     # Model settings sheet
     model_titles: list[Title] = []
     model_cells: dict[str, list[str | float | int | bool | None | SpreadsheetCell]] = {
@@ -511,7 +569,7 @@ def create_cobrak_spreadsheet(
 
     stats_titles: list[Title] = [Title("", WIDTH_DEFAULT)]
     stats_cells: dict[str, list[str | float | int | bool | None | SpreadsheetCell]] = {
-        "A": [
+        "0": [
             SpreadsheetCell(
                 "Objective value"
                 if objective_overwrite is None
@@ -519,205 +577,336 @@ def create_cobrak_spreadsheet(
                 font=FONT_BOLD,
             ),
         ],
-        "B": [
+        "1": [
             SpreadsheetCell("Solver status (see COBRAk documentation)", font=FONT_BOLD),
         ],
-        "C": [
+        "2": [
             SpreadsheetCell(
                 "Termination condition (see COBRAk documentaiton)", font=FONT_BOLD
             ),
         ],
-        "D": [
-            SpreadsheetCell("Used protein pool [g⋅gDW⁻¹]", font=FONT_BOLD),
-        ],
-        "E": [
-            # SpreadsheetCell("Min driving force [kJ⋅mol⁻¹]", font=FONT_BOLD),
-        ],
-        "F": [
-            # SpreadsheetCell("Max driving force [kJ⋅mol⁻¹]", font=FONT_BOLD),
-        ],
-        "G": [
-            # SpreadsheetCell("Mean driving force [kJ⋅mol⁻¹]", font=FONT_BOLD),
-        ],
-        "H": [
-            # SpreadsheetCell("Median driving force [kJ⋅mol⁻¹]", font=FONT_BOLD),
-        ],
-        "I": [
-            SpreadsheetCell("Min γ", font=FONT_BOLD),
-        ],
-        "J": [
-            SpreadsheetCell("Max γ", font=FONT_BOLD),
-        ],
-        "K": [
-            SpreadsheetCell("Mean γ", font=FONT_BOLD),
-        ],
-        "L": [
-            SpreadsheetCell("Median γ", font=FONT_BOLD),
-        ],
-        "M": [
-            SpreadsheetCell("Min κ", font=FONT_BOLD),
-        ],
-        "N": [
-            SpreadsheetCell("Max κ", font=FONT_BOLD),
-        ],
-        "O": [
-            SpreadsheetCell("Mean κ", font=FONT_BOLD),
-        ],
-        "P": [
-            SpreadsheetCell("Median κ", font=FONT_BOLD),
-        ],
-        "Q": [
-            SpreadsheetCell("Min κ⋅γ", font=FONT_BOLD),
-        ],
-        "R": [
-            SpreadsheetCell("Max κ⋅γ", font=FONT_BOLD),
-        ],
-        "S": [
-            SpreadsheetCell("Mean κ⋅γ", font=FONT_BOLD),
-        ],
-        "T": [
-            SpreadsheetCell("Median κ⋅γ", font=FONT_BOLD),
-        ],
-        "U": [
-            SpreadsheetCell("Min flux difference to best", font=FONT_BOLD),
-        ],
-        "V": [
-            SpreadsheetCell("Max flux difference to best", font=FONT_BOLD),
-        ],
-        "W": [
-            SpreadsheetCell("Sum of flux differences to best", font=FONT_BOLD),
-        ],
-        "X": [
-            SpreadsheetCell("Mean flux difference to best", font=FONT_BOLD),
-        ],
-        "Y": [
-            SpreadsheetCell("Median flux difference to best", font=FONT_BOLD),
-        ],
-        "Z": [
-            SpreadsheetCell("Obj. difference to best", font=FONT_BOLD),
-        ],
-        "Ä": [
-            SpreadsheetCell("Only in this to best", font=FONT_BOLD),
-        ],
-        "Ö": [
-            SpreadsheetCell("Only in best to this", font=FONT_BOLD),
-        ],
-        "Ü": [SpreadsheetCell('"Real" used protein pool', font=FONT_BOLD)],
     }
 
+    statline = 3
+    if has_any_vplus:
+        stats_cells |= {
+            f"{statline}": [
+                SpreadsheetCell("Used protein pool [g⋅gDW⁻¹]", font=FONT_BOLD),
+            ],
+        }
+        statline += 1
+
+    if has_any_df:
+        stats_cells |= {
+            f"{statline}": [
+                SpreadsheetCell("Min driving force [kJ⋅mol⁻¹]", font=FONT_BOLD),
+            ],
+            f"{statline + 1}": [
+                SpreadsheetCell("Max driving force [kJ⋅mol⁻¹]", font=FONT_BOLD),
+            ],
+            f"{statline + 2}": [
+                SpreadsheetCell("Mean driving force [kJ⋅mol⁻¹]", font=FONT_BOLD),
+            ],
+            f"{statline + 3}": [
+                SpreadsheetCell("Median driving force [kJ⋅mol⁻¹]", font=FONT_BOLD),
+            ],
+        }
+        statline += 4
+
+    if has_any_gamma:
+        stats_cells |= {
+            f"{statline}": [
+                SpreadsheetCell("Min γ", font=FONT_BOLD),
+            ],
+            f"{statline + 1}": [
+                SpreadsheetCell("Max γ", font=FONT_BOLD),
+            ],
+            f"{statline + 2}": [
+                SpreadsheetCell("Mean γ", font=FONT_BOLD),
+            ],
+            f"{statline + 3}": [
+                SpreadsheetCell("Median γ", font=FONT_BOLD),
+            ],
+        }
+        statline += 4
+
+    if has_any_kappa:
+        stats_cells |= {
+            f"{statline}": [
+                SpreadsheetCell("Min κ", font=FONT_BOLD),
+            ],
+            f"{statline + 1}": [
+                SpreadsheetCell("Max κ", font=FONT_BOLD),
+            ],
+            f"{statline + 2}": [
+                SpreadsheetCell("Mean κ", font=FONT_BOLD),
+            ],
+            f"{statline + 3}": [
+                SpreadsheetCell("Median κ", font=FONT_BOLD),
+            ],
+        }
+        statline += 4
+
+    if has_any_iota:
+        stats_cells |= {
+            f"{statline}": [
+                SpreadsheetCell("Min ι", font=FONT_BOLD),
+            ],
+            f"{statline + 1}": [
+                SpreadsheetCell("Max ι", font=FONT_BOLD),
+            ],
+            f"{statline + 2}": [
+                SpreadsheetCell("Mean ι", font=FONT_BOLD),
+            ],
+            f"{statline + 3}": [
+                SpreadsheetCell("Median ι", font=FONT_BOLD),
+            ],
+        }
+        statline += 4
+
+    if has_any_alpha:
+        stats_cells |= {
+            f"{statline}": [
+                SpreadsheetCell("Min α", font=FONT_BOLD),
+            ],
+            f"{statline + 1}": [
+                SpreadsheetCell("Max α", font=FONT_BOLD),
+            ],
+            f"{statline + 2}": [
+                SpreadsheetCell("Mean α", font=FONT_BOLD),
+            ],
+            f"{statline + 3}": [
+                SpreadsheetCell("Median α", font=FONT_BOLD),
+            ],
+        }
+        statline += 4
+
+    if has_any_kappa or has_any_gamma or has_any_alpha or has_any_iota:
+        stats_cells |= {
+            f"{statline}": [
+                SpreadsheetCell(f"Min {kappa_gamma_iota_alpha_str}", font=FONT_BOLD),
+            ],
+            f"{statline + 1}": [
+                SpreadsheetCell(f"Max {kappa_gamma_iota_alpha_str}", font=FONT_BOLD),
+            ],
+            f"{statline + 2}": [
+                SpreadsheetCell(f"Mean {kappa_gamma_iota_alpha_str}", font=FONT_BOLD),
+            ],
+            f"{statline + 3}": [
+                SpreadsheetCell(f"Median {kappa_gamma_iota_alpha_str}", font=FONT_BOLD),
+            ],
+        }
+        statline += 4
+
+    stats_cells |= {
+        f"{statline}": [
+            SpreadsheetCell("Min flux difference to best", font=FONT_BOLD),
+        ],
+        f"{statline + 1}": [
+            SpreadsheetCell("Max flux difference to best", font=FONT_BOLD),
+        ],
+        f"{statline + 2}": [
+            SpreadsheetCell("Sum of flux differences to best", font=FONT_BOLD),
+        ],
+        f"{statline + 3}": [
+            SpreadsheetCell("Mean flux difference to best", font=FONT_BOLD),
+        ],
+        f"{statline + 4}": [
+            SpreadsheetCell("Median flux difference to best", font=FONT_BOLD),
+        ],
+        f"{statline + 5}": [
+            SpreadsheetCell("Objective difference to best", font=FONT_BOLD),
+        ],
+        f"{statline + 6}": [
+            SpreadsheetCell(
+                "Only in this to best (regarding active reactions)", font=FONT_BOLD
+            ),
+        ],
+        f"{statline + 7}": [
+            SpreadsheetCell(
+                "Only in best to this (regarding active reactions)", font=FONT_BOLD
+            ),
+        ],
+    }
+    statline += 8
+
+    if has_any_kinetic_differences:
+        stats_cells |= {
+            f"{statline}": [
+                SpreadsheetCell("'Really' used protein pool [g⋅gDW⁻¹]", font=FONT_BOLD),
+            ]
+        }
+        statline += 1
+
     for extrai, extratitle in enumerate(extra_optstatistics_data.keys()):
-        stats_cells[f"ß{extrai}"] = [SpreadsheetCell(extratitle, font=FONT_BOLD)]
+        stats_cells[f"{statline + extrai}"] = [
+            SpreadsheetCell(extratitle, font=FONT_BOLD)
+        ]
 
     # Optimization data
-    current_dataset_i = 0
-    for opt_dataset_name, opt_dataset in optimization_datasets.items():
+    for current_dataset_i, (opt_dataset_name, opt_dataset) in enumerate(
+        optimization_datasets.items()
+    ):
+        statline = 0
         stats_titles.append(Title(opt_dataset_name, WIDTH_DEFAULT))
         if objective_overwrite is None:
-            stats_cells["A"].append(opt_dataset.data[OBJECTIVE_VAR_NAME])
+            stats_cells[f"{statline}"].append(opt_dataset.data[OBJECTIVE_VAR_NAME])
         else:
-            stats_cells["A"].append(opt_dataset.data[objective_overwrite])
-        stats_cells["B"].append(opt_dataset.data[SOLVER_STATUS_KEY])
-        stats_cells["C"].append(opt_dataset.data[TERMINATION_CONDITION_KEY])
-        if PROT_POOL_REAC_NAME in opt_dataset.data:
-            stats_cells["D"].append(opt_dataset.data[PROT_POOL_REAC_NAME])
-        else:
-            stats_cells["D"].append(_get_empty_cell())
-        """
-        if opt_dataset.with_df:
-            df_stats, _, _, _ = (
-                get_df_kappa_and_gamma_sorted_lists(
-                    cobrak_model,
-                    opt_dataset.data,
-                    min_var_value,
-                )
-            )
-            stats_cells["E"].append(min(df_stats.values()))
-            stats_cells["F"].append(max(df_stats.values()))
-            stats_cells["G"].append(mean(df_stats.values()))
-            stats_cells["H"].append(median(df_stats.values()))
-        else:
-            for line_letter in ("E", "F", "G", "H"):
-                stats_cells[line_letter].append(_get_empty_cell())
-        """
-        if opt_dataset.with_gamma:
-            _, _, gamma_stats, _ = get_df_kappa_and_gamma_sorted_lists(
-                cobrak_model,
-                opt_dataset.data,
-                min_var_value,
-            )
-            stats_cells["I"].append(min(gamma_stats.values()))
-            stats_cells["J"].append(max(gamma_stats.values()))
-            stats_cells["K"].append(mean(gamma_stats.values()))
-            stats_cells["L"].append(median(gamma_stats.values()))
-        else:
-            for line_letter in ("I", "J", "K", "L"):
-                stats_cells[line_letter].append(_get_empty_cell())
-        if opt_dataset.with_kappa:
-            _, kappa_stats, _, _ = get_df_kappa_and_gamma_sorted_lists(
-                cobrak_model,
-                opt_dataset.data,
-                min_var_value,
-            )
-            stats_cells["M"].append(min(kappa_stats.values()))
-            stats_cells["N"].append(max(kappa_stats.values()))
-            stats_cells["O"].append(mean(kappa_stats.values()))
-            stats_cells["P"].append(median(kappa_stats.values()))
-        else:
-            for line_letter in ("M", "N", "O", "P"):
-                stats_cells[line_letter].append(_get_empty_cell())
+            stats_cells[f"{statline}"].append(opt_dataset.data[objective_overwrite])
+        stats_cells[f"{statline + 1}"].append(opt_dataset.data[SOLVER_STATUS_KEY])
+        stats_cells[f"{statline + 2}"].append(
+            opt_dataset.data[TERMINATION_CONDITION_KEY]
+        )
+        statline += 3
 
-        if opt_dataset.with_kappa and opt_dataset.with_gamma:
-            _, _, _, kappa_times_gamma_stats = get_df_kappa_and_gamma_sorted_lists(
+        if PROT_POOL_REAC_NAME in opt_dataset.data:
+            stats_cells[f"{statline}"].append(opt_dataset.data[PROT_POOL_REAC_NAME])
+            statline += 1
+        elif has_any_vplus:
+            stats_cells[f"{statline}"].append(_get_empty_cell())
+            statline += 1
+
+        if opt_dataset.with_df:
+            df_stats, _, _, _ = get_df_and_efficiency_factors_sorted_lists(
                 cobrak_model,
                 opt_dataset.data,
                 min_var_value,
             )
-            kappa_times_gamma_stats_values = [
-                x[0] for x in kappa_times_gamma_stats.values()
-            ]
-            stats_cells["Q"].append(min(kappa_times_gamma_stats_values))
-            stats_cells["R"].append(max(kappa_times_gamma_stats_values))
-            stats_cells["S"].append(mean(kappa_times_gamma_stats_values))
-            stats_cells["T"].append(median(kappa_times_gamma_stats_values))
-        else:
-            for line_letter in ("Q", "R", "S", "T"):
+            stats_cells[f"{statline}"].append(min(df_stats.values()))
+            stats_cells[f"{statline + 1}"].append(max(df_stats.values()))
+            stats_cells[f"{statline + 2}"].append(mean(df_stats.values()))
+            stats_cells[f"{statline + 3}"].append(median(df_stats.values()))
+            statline += 4
+        elif has_any_df:
+            for line_letter in (f"{statline + j}" for j in range(4)):
                 stats_cells[line_letter].append(_get_empty_cell())
-        """
+            statline += 4
+
+        if opt_dataset.with_gamma:
+            _, _, gamma_stats, _, _, _ = get_df_and_efficiency_factors_sorted_lists(
+                cobrak_model,
+                opt_dataset.data,
+                min_var_value,
+            )
+            stats_cells[f"{statline}"].append(min(gamma_stats.values()))
+            stats_cells[f"{statline + 1}"].append(max(gamma_stats.values()))
+            stats_cells[f"{statline + 2}"].append(mean(gamma_stats.values()))
+            stats_cells[f"{statline + 3}"].append(median(gamma_stats.values()))
+            statline += 4
+        elif has_any_gamma:
+            for line_letter in (f"{statline + j}" for j in range(4)):
+                stats_cells[line_letter].append(_get_empty_cell())
+            statline += 4
+
+        if opt_dataset.with_kappa:
+            _, kappa_stats, _, _, _, _ = get_df_and_efficiency_factors_sorted_lists(
+                cobrak_model,
+                opt_dataset.data,
+                min_var_value,
+            )
+            stats_cells[f"{statline}"].append(min(kappa_stats.values()))
+            stats_cells[f"{statline + 1}"].append(max(kappa_stats.values()))
+            stats_cells[f"{statline + 2}"].append(mean(kappa_stats.values()))
+            stats_cells[f"{statline + 3}"].append(median(kappa_stats.values()))
+            statline += 4
+        elif has_any_kappa:
+            for line_letter in (f"{statline + j}" for j in range(4)):
+                stats_cells[line_letter].append(_get_empty_cell())
+            statline += 4
+
         if opt_dataset.with_iota:
             iota_values = [
                 opt_dataset.data[x]
                 for x in opt_dataset.data
                 if x.startswith(IOTA_VAR_PREFIX)
-                and (opt_dataset.data[x[len(IOTA_VAR_PREFIX):]] > min_var_value)
+                and (opt_dataset.data[x[len(IOTA_VAR_PREFIX) :]] > min_var_value)
             ]
-            stats_cells["Q"].append(min(iota_values))
-            stats_cells["R"].append(max(iota_values))
-            stats_cells["S"].append(mean(iota_values))
-            stats_cells["T"].append(median(iota_values))
-        else:
-            for line_letter in ("Q", "R", "S", "T"):
+            stats_cells[f"{statline}"].append(min(iota_values))
+            stats_cells[f"{statline + 1}"].append(max(iota_values))
+            stats_cells[f"{statline + 2}"].append(mean(iota_values))
+            stats_cells[f"{statline + 3}"].append(median(iota_values))
+            statline += 4
+        elif has_any_iota:
+            for line_letter in (f"{statline + j}" for j in range(4)):
                 stats_cells[line_letter].append(_get_empty_cell())
-        """
+            statline += 4
 
-        current_comparison_stat_line = 21
+        if opt_dataset.with_alpha:
+            alpha_values = [
+                opt_dataset.data[x]
+                for x in opt_dataset.data
+                if x.startswith(ALPHA_VAR_PREFIX)
+                and (opt_dataset.data[x[len(ALPHA_VAR_PREFIX) :]] > min_var_value)
+            ]
+            stats_cells[f"{statline}"].append(min(alpha_values))
+            stats_cells[f"{statline + 1}"].append(max(alpha_values))
+            stats_cells[f"{statline + 2}"].append(mean(alpha_values))
+            stats_cells[f"{statline + 3}"].append(median(alpha_values))
+            statline += 4
+        elif has_any_alpha:
+            for line_letter in (f"{statline + j}" for j in range(4)):
+                stats_cells[line_letter].append(_get_empty_cell())
+            statline += 4
+
+        if (
+            opt_dataset.with_kappa
+            or opt_dataset.with_gamma
+            or opt_dataset.with_alpha
+            or opt_dataset.with_iota
+        ):
+            _, _, _, _, _, multiplier_stats = (
+                get_df_and_efficiency_factors_sorted_lists(
+                    cobrak_model,
+                    opt_dataset.data,
+                    min_var_value,
+                )
+            )
+            efficiencies_product_stats_values = [
+                x[0] for x in multiplier_stats.values()
+            ]
+            stats_cells[f"{statline}"].append(min(efficiencies_product_stats_values))
+            stats_cells[f"{statline + 1}"].append(
+                max(efficiencies_product_stats_values)
+            )
+            stats_cells[f"{statline + 2}"].append(
+                mean(efficiencies_product_stats_values)
+            )
+            stats_cells[f"{statline + 3}"].append(
+                median(efficiencies_product_stats_values)
+            )
+            statline += 4
+        elif has_any_gamma and has_any_kappa:
+            for line_letter in (f"{statline + j}" for j in range(4)):
+                stats_cells[line_letter].append(_get_empty_cell())
+            statline += 4
+
         if current_dataset_i in comparisons:
             dataset_comparison_stats, dataset_unique_reacs = comparisons[
                 current_dataset_i
             ]
-            for comparison_value in dataset_comparison_stats.values():
-                stats_cells[_num_to_sheet_letter(current_comparison_stat_line)].append(
-                    comparison_value
-                )
-                current_comparison_stat_line += 1
-            stats_cells["Ä"].append(str(list(dataset_unique_reacs.values())[0]))
-            stats_cells["Ö"].append(str(list(dataset_unique_reacs.values())[1]))
+            tempstatline = statline
+            for j, comparison_value in enumerate(dataset_comparison_stats.values()):
+                stats_cells[f"{statline + j}"].append(comparison_value)
+                tempstatline = statline + j
+            statline = tempstatline + 1
+            stats_cells[f"{statline}"].append(
+                str(list(dataset_unique_reacs.values())[0])
+            )
+            stats_cells[f"{statline + 1}"].append(
+                str(list(dataset_unique_reacs.values())[1])
+            )
+            statline += 2
         else:
-            for line_letter in ("U", "V", "W", "X", "Y", "Z", "Ä", "Ö"):
+            for line_letter in (f"{statline + j}" for j in range(8)):
                 stats_cells[line_letter].append("(is best)")
+            statline += 8
 
         if opt_dataset.with_kinetic_differences:
             unoptimized_reactions = get_unoptimized_reactions_in_nlp_solution(
-                cobrak_model, opt_dataset.data
+                cobrak_model,
+                opt_dataset.data,
+                regard_iota=has_any_iota,
+                regard_alpha=has_any_alpha,
             )
             prot_pool_sum = 0.0
             for reac_id, reac_data in cobrak_model.reactions.items():
@@ -743,13 +932,14 @@ def create_cobrak_spreadsheet(
                 else:
                     prot_pool_sum += mw * enzyme_conc
 
-            stats_cells["Ü"].append(prot_pool_sum)
-        else:
-            stats_cells["Ü"].append(" ")
-        current_dataset_i += 1
+            stats_cells[f"{statline}"].append(prot_pool_sum)
+            statline += 1
+        elif has_any_kinetic_differences:
+            stats_cells[f"{statline}"].append(" ")
+            statline += 1
 
     for extrai, extravalues in enumerate(extra_optstatistics_data.values()):
-        stats_cells[f"ß{extrai}"].extend(
+        stats_cells[f"{statline + extrai}"].extend(
             [SpreadsheetCell(extravalue) for extravalue in extravalues]
         )
 
@@ -763,6 +953,7 @@ def create_cobrak_spreadsheet(
         Title("kms [M]", WIDTH_DEFAULT),
         Title("kis [M]", WIDTH_DEFAULT),
         Title("kas [M]", WIDTH_DEFAULT),
+        Title("Hill coefficients [-]", WIDTH_DEFAULT),
     ]
     reac_cells: dict[str, list[str | float | int | bool | None | SpreadsheetCell]] = {
         reac_id: [] for reac_id in all_reac_ids
@@ -784,12 +975,14 @@ def create_cobrak_spreadsheet(
                 k_ms = None
                 k_is = None
                 k_as = None
+                hills = None
             case _:
                 enzyme_id = str(enzyme_reaction_data.identifiers)
                 k_cat = enzyme_reaction_data.k_cat
                 k_ms = str(enzyme_reaction_data.k_ms)
                 k_is = str(enzyme_reaction_data.k_is)
                 k_as = str(enzyme_reaction_data.k_as)
+                hills = str(enzyme_reaction_data.hill_coefficients)
         # Enzyme ID
         reac_cells[reac_id].append(enzyme_id)
         # kcat
@@ -800,6 +993,8 @@ def create_cobrak_spreadsheet(
         reac_cells[reac_id].append(k_is)
         # kas
         reac_cells[reac_id].append(k_as)
+        # Hill coefficients
+        reac_cells[reac_id].append(hills)
 
     # Variability data
     for var_dataset_name, var_dataset in variability_datasets.items():
@@ -866,10 +1061,15 @@ def create_cobrak_spreadsheet(
             reac_titles.append(Title("γ [0,1]", WIDTH_DEFAULT))
         if opt_dataset.with_iota:
             reac_titles.append(Title("ι [0,1]", WIDTH_DEFAULT))
+        if opt_dataset.with_alpha:
+            reac_titles.append(Title("α [0,1]", WIDTH_DEFAULT))
         if opt_dataset.with_kinetic_differences:
             reac_titles.append(Title('"Real" flux', WIDTH_DEFAULT))
             unoptimized_reactions = get_unoptimized_reactions_in_nlp_solution(
-                cobrak_model, opt_dataset.data
+                cobrak_model,
+                opt_dataset.data,
+                regard_alpha=True,
+                regard_iota=True,
             )
         opt_reac_ids = set(all_reac_ids) & set(opt_dataset.data.keys())
         reacs_with_too_low_flux = []
@@ -935,6 +1135,15 @@ def create_cobrak_spreadsheet(
                 reac_cells[reac_id].append(
                     SpreadsheetCell(iota_value, bg_color=bg_color)
                 )
+            if opt_dataset.with_alpha:
+                alpha_var_id = ALPHA_VAR_PREFIX + reac_id
+                if alpha_var_id in opt_dataset.data:
+                    alpha_value = str(opt_dataset.data[alpha_var_id])
+                else:
+                    alpha_value = " "
+                reac_cells[reac_id].append(
+                    SpreadsheetCell(alpha_value, bg_color=bg_color)
+                )
             if opt_dataset.with_kinetic_differences:
                 if reac_id in unoptimized_reactions and (
                     round(
@@ -964,6 +1173,7 @@ def create_cobrak_spreadsheet(
                     opt_dataset.with_kappa,
                     opt_dataset.with_gamma,
                     opt_dataset.with_iota,
+                    opt_dataset.with_alpha,
                     opt_dataset.with_kinetic_differences,
                 ]
             )
@@ -1181,7 +1391,7 @@ def create_cobrak_spreadsheet(
     kgstats_titles: list[Title] = [Title("Rank", WIDTH_DEFAULT, is_metatitle=False)]
     kgstats_cells: dict[
         str, list[str | float | int | bool | None | SpreadsheetCell]
-    ] = {i: [i + 1] for i in range(len(cobrak_model.reactions))}
+    ] = {str(i): [i + 1] for i in range(len(cobrak_model.reactions))}
     for opt_dataset_name, opt_dataset in optimization_datasets.items():
         kgstats_titles.extend(
             (
@@ -1191,12 +1401,16 @@ def create_cobrak_spreadsheet(
                 Title("Reaction ID", WIDTH_DEFAULT),
                 Title("γ", WIDTH_DEFAULT),
                 Title("Reaction ID", WIDTH_DEFAULT),
-                Title("κ⋅γ", WIDTH_DEFAULT),
+                Title("ι", WIDTH_DEFAULT),
+                Title("Reaction ID", WIDTH_DEFAULT),
+                Title("α", WIDTH_DEFAULT),
+                Title("Reaction ID", WIDTH_DEFAULT),
+                Title(kappa_gamma_iota_alpha_str, WIDTH_DEFAULT),
             )
         )
 
-        _, kappa_stats, gamma_stats, kappa_times_gamma_stats = (
-            get_df_kappa_and_gamma_sorted_lists(
+        _, kappa_stats, gamma_stats, iota_stats, alpha_stats, multiplier_stats = (
+            get_df_and_efficiency_factors_sorted_lists(
                 cobrak_model,
                 opt_dataset.data,
                 min_var_value,
@@ -1204,34 +1418,56 @@ def create_cobrak_spreadsheet(
         )
         kappa_stats_titles = list(kappa_stats.keys())
         gamma_stats_titles = list(gamma_stats.keys())
-        kappa_times_gamma_stats_titles = list(kappa_times_gamma_stats.keys())
+        iota_stats_titles = list(iota_stats.keys())
+        alpha_stats_titles = list(alpha_stats.keys())
+        kappa_times_gamma_stats_titles = list(multiplier_stats.keys())
         for key, cell_list in kgstats_cells.items():
             # κ
-            if len(kappa_stats_titles) > key:
+            if len(kappa_stats_titles) > int(key):
                 cell_list.extend(
                     (
-                        kappa_stats_titles[key],
-                        kappa_stats[kappa_stats_titles[key]],
+                        kappa_stats_titles[int(key)],
+                        kappa_stats[kappa_stats_titles[int(key)]],
                     )
                 )
             else:
                 cell_list.extend((None, None))
             # γ
-            if len(gamma_stats_titles) > key:
+            if len(gamma_stats_titles) > int(key):
                 cell_list.extend(
                     (
-                        gamma_stats_titles[key],
-                        gamma_stats[gamma_stats_titles[key]],
+                        gamma_stats_titles[int(key)],
+                        gamma_stats[gamma_stats_titles[int(key)]],
                     )
                 )
             else:
                 cell_list.extend((None, None))
-            # κ⋅γ
-            if len(kappa_times_gamma_stats_titles) > key:
+            # ι
+            if len(iota_stats_titles) > int(key):
                 cell_list.extend(
                     (
-                        kappa_times_gamma_stats_titles[key],
-                        kappa_times_gamma_stats[kappa_times_gamma_stats_titles[key]][0],
+                        iota_stats_titles[int(key)],
+                        iota_stats[iota_stats_titles[int(key)]],
+                    )
+                )
+            else:
+                cell_list.extend((None, None))
+            # α
+            if len(alpha_stats_titles) > int(key):
+                cell_list.extend(
+                    (
+                        alpha_stats_titles[int(key)],
+                        alpha_stats[alpha_stats_titles[int(key)]],
+                    )
+                )
+            else:
+                cell_list.extend((None, None))
+            # κ⋅γ⋅ι⋅α
+            if len(kappa_times_gamma_stats_titles) > int(key):
+                cell_list.extend(
+                    (
+                        kappa_times_gamma_stats_titles[int(key)],
+                        multiplier_stats[kappa_times_gamma_stats_titles[int(key)]][0],
                     )
                 )
             else:
@@ -1251,8 +1487,11 @@ def create_cobrak_spreadsheet(
         "D) Metabolites": (met_titles, met_cells),
         "E) Enzymes": (enzyme_titles, enzyme_cells),
         "F) Complexes": (enzcomplex_titles, enzcomplex_cells),
-        "G) κ and γ statistics": (kgstats_titles, kgstats_cells),
     }
+    if has_any_gamma or has_any_kappa:
+        titles_and_data_dict |= {
+            "G) Efficiency factor statistics": (kgstats_titles, kgstats_cells),
+        }
 
     # Correction data (if given)
     correction_titles: list[Title] = [
@@ -1355,7 +1594,9 @@ def create_cobrak_spreadsheet(
         num_processed_datasets += 1
 
     if correction_cells != {}:
-        titles_and_data_dict["G) Corrections"] = (correction_titles, correction_cells)
+        titles_and_data_dict[
+            f"{'H' if has_any_alpha or has_any_iota or has_any_gamma or has_any_kappa else 'G'}) Corrections"
+        ] = (correction_titles, correction_cells)
 
     _create_xlsx_from_datadicts(
         path=path,

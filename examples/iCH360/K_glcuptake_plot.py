@@ -1,4 +1,4 @@
-import z_add_path  # noqa: F401
+import z_add_path  # noqa: D100, F401
 
 from cobrak.io import get_files, json_load, standardize_folder
 from cobrak.plotting import dual_axis_plot
