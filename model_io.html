@@ -1,0 +1,891 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="model_from_scratch.html">
+      
+      
+        <link rel="next" href="lps.html">
+      
+      
+      <link rel="icon" href="assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.17">
+    
+    
+      
+        <title>3. Load/Save models - COBRA-k</title>
+      
+    
+    
+      <link rel="stylesheet" href="assets/stylesheets/main.7e37652d.min.css">
+      
+        
+        <link rel="stylesheet" href="assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+        <script src="assets/external/unpkg.com/iframe-worker/shim.js"></script>
+      
+    
+    
+      
+    
+    
+      <link rel="stylesheet" href="assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="javascript/katex/katex.min.css">
+    
+      <link rel="stylesheet" href="css-extra.css">
+    
+    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#loadsave-models" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="index.html" title="COBRA-k" class="md-header__button md-logo" aria-label="COBRA-k" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            COBRA-k
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              3. Load/Save models
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m14.3 16-.7-2h-3.2l-.7 2H7.8L11 7h2l3.2 9zM20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12zm-9.15 3.96h2.3L12 9z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_2" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to system preference"  type="radio" name="__palette" id="__palette_2">
+    
+      <label class="md-header__button md-icon" title="Switch to system preference" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="index.html" title="COBRA-k" class="md-nav__button md-logo" aria-label="COBRA-k" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    COBRA-k
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Start
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="installation.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    1. Installation
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="model_from_scratch.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    2. Create model from scratch
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    3. Load/Save models
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="model_io.html" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    3. Load/Save models
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-json" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. JSON
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. JSON">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#save-model-as-json" class="md-nav__link">
+    <span class="md-ellipsis">
+      Save Model as JSON
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#load-model-as-json" class="md-nav__link">
+    <span class="md-ellipsis">
+      Load Model as JSON
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-annotated-sbml" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. (Annotated) SBML
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. (Annotated) SBML">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#save-as-annotated-sbml" class="md-nav__link">
+    <span class="md-ellipsis">
+      Save as annotated SBML
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#load-annotated-sbml" class="md-nav__link">
+    <span class="md-ellipsis">
+      Load (annotated) SBML
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="lps.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    4. Linear Programs & Pretty-Print
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="milps.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    5. Mixed-Integer Linear Programs
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="nlps.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    6. Nonlinear COBRA-k Programs
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="evolutionary.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    7. Evolutionary Optimization
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="construct_own.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    8. Construct Own Optimizations
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="add_data.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    9. Automatic data collection
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="parameter_corrections.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    10. Parameter corrections
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="utilities.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    11. More utilities
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="paper_reproduction.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    12. Paper result reproduction
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="api.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    API Reference
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-json" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. JSON
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. JSON">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#save-model-as-json" class="md-nav__link">
+    <span class="md-ellipsis">
+      Save Model as JSON
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#load-model-as-json" class="md-nav__link">
+    <span class="md-ellipsis">
+      Load Model as JSON
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-annotated-sbml" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. (Annotated) SBML
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. (Annotated) SBML">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#save-as-annotated-sbml" class="md-nav__link">
+    <span class="md-ellipsis">
+      Save as annotated SBML
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#load-annotated-sbml" class="md-nav__link">
+    <span class="md-ellipsis">
+      Load (annotated) SBML
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="loadsave-models">Load/Save Models</h1>
+<p>All functionality regarding loading and saving a Model instance or parts of it can be found in the <code>cobrak.io</code> submodule. For specific information on its functions, you can also see the <code>io</code> section in this documentation's "API reference" chapter.</p>
+<div class="admonition note">
+<p class="admonition-title">Pydantic validation</p>
+<p>As mentioned in the previous chapter, COBRA-k uses pydantic's <a href="https://github.com/pydantic/pydantic">[GitHub]</a> validation features for its dataclasses, including <code>Model</code>. If your model file (in whatever format) contains an invalid value (e.g., a negative turnover number <span class="arithmatex">\(k_cat\)</span> for a Reaction's enzyme reaction data), you'll get a <code>ValidationError</code>from pydantic. The error message shows more details about why the validation failed.</p>
+<p>If this happens, going through pydantic's validation error messages helps you to find these strange values in your model. Once fixed, you can then load the model into COBRA-k with more confidence in the integritiy of its data :-)</p>
+</div>
+<p>There are two formats, JSON and SBML, in which you can interchangeably load and save a COBRA-k model, both of which store it in an human readable way:</p>
+<h2 id="1-json">1. JSON</h2>
+<p>Any of COBRA-k's dataclasses (see previous chapter), including Model instances, can be stored and loaded as JSON <a href="https://en.wikipedia.org/wiki/JSON">[Wikipedia]</a> files. JSONs can be quickly saved and loaded tend to be easier to read and have a smaller file size than SBMLs. However, they are not interoperable with other program packages.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>While some other constraint-based modeling packages also provide JSON as input and output format, COBRA-k's JSON definition is incompatible with their definitions. To use an interoperable format that works with virtually all packages, use the SBML format (see below).</p>
+</div>
+<h3 id="save-model-as-json">Save Model as JSON</h3>
+<p>Use <code>json_write</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.io</span><span class="w"> </span><span class="kn">import</span> <span class="n">json_write</span>
+
+<span class="c1"># Assuming that we already have a cobrak_model variable :-)</span>
+<span class="n">json_write</span><span class="p">(</span>
+    <span class="n">path</span><span class="o">=</span><span class="s2">&quot;/wished/save/path/filename.json&quot;</span><span class="p">,</span>
+    <span class="n">cobrak_model</span><span class="o">=</span><span class="n">cobrak_model</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre></div>
+<h3 id="load-model-as-json">Load Model as JSON</h3>
+<p>Use <code>json_load</code> using <code>Model</code>as type argument:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.io</span><span class="w"> </span><span class="kn">import</span> <span class="n">json_load</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">Model</span>
+
+<span class="c1"># The &quot;: Model&quot; addition and import of the Model dataclass</span>
+<span class="c1"># are not neccessary, however, they help if you utilize</span>
+<span class="c1"># Python&#39;s typing functionality, which provides e.g.</span>
+<span class="c1"># automatic completion for model instances.</span>
+<span class="n">cobrak_model</span><span class="p">:</span> <span class="n">Model</span> <span class="o">=</span> <span class="n">json_load</span><span class="p">(</span>
+    <span class="n">path</span><span class="o">=</span><span class="s2">&quot;/path/to/json/model/filename.json&quot;</span><span class="p">,</span>
+    <span class="n">Model</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre></div>
+<p>The type argument of <code>json_load</code>is optional to load a JSON. Using this type, COBRA-k utilizes pydantic to automatically verify the correctness of the given JSON (i.e. that it matches the given type or dataclass). If you're unsure about your JSON's type (e.g. if it is not a COBRA-k dataclass), you can also just use the <code>Any</code>type from Python's <code>typing</code> package.</p>
+<h2 id="2-annotated-sbml">2. <strong>(Annotated) SBML</strong></h2>
+<p>The Systems Biology Markup Language <a href="https://doi.org/10.1093/bioinformatics/btg015">[Paper]</a> is a widely used format for storing metabolic models. COBRA-k can directly load such models and convert them to Model instances. However, as typical SBML files lack thermodynamic and kinetic extra information, this information has to be added later, as detailed in the next chapter about thermokinetic data retrieval.</p>
+<p>To overcome the limitation of lacking thermodynamic and kinetic data in SBML, COBRA-k stores this relevant information in extra annotation fields of the reactions, metabolites and genes (enzymes are interpreted as genes), making it an <em>annotated SBML</em>. COBRA-k can then load such an annotated SBML to create a Model with full thermodynamic and kinetic data again. Other program packages such as COBRApy <a href="https://doi.org/10.1186/1752-0509-7-74">[Paper]</a> can load the annotated SBML. However, they typically cannot directly use most of the extra thermodynamic and kinetic information. This means that only basic analyses (as the ones described in the "Linear Programs" chapter) can be conducted with the other program packages.</p>
+<h3 id="save-as-annotated-sbml">Save as annotated SBML</h3>
+<p>To save a Model instance as annotated SBML, use <code>save_cobrak_model_as_annotated_sbml_model</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.io</span><span class="w"> </span><span class="kn">import</span> <span class="n">save_cobrak_model_as_annotated_sbml_model</span>
+
+<span class="c1"># Assuming that we already have a cobrak_model variable :-)</span>
+<span class="n">save_cobrak_model_as_annotated_sbml_model</span><span class="p">(</span>
+    <span class="n">cobrak_model</span><span class="p">,</span>
+    <span class="n">filepath</span><span class="o">=</span><span class="s2">&quot;/wished/path/filename.xml&quot;</span><span class="p">,</span>
+    <span class="n">combine_base_reactions</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="c1"># Default is False</span>
+    <span class="n">add_enzyme_constraints</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="c1"># Default is False</span>
+<span class="p">)</span>
+</code></pre></div>
+<p>The <code>combine_base_reactions</code> argument controls whether split forward and reverse as well as split enzyme (for reactions which are catalyzed by multiple enzymes) reactions are to be merged in the SBML as a single reaction or not. This merging is then automatically reversed when loading an annotated SBML again (see following subchapter).</p>
+<p>The <code>add_enzyme_constraints</code> parameter controls whether or not the exported metabolic model shall include an expansion of the stoichiometric matrix (see chapter about Linear Programs) with enzyme constraints akin to the method GECKO (<a href="https://doi.org/10.15252/msb.20167411">Paper</a>). If True, pseudo-metabolites representing enzymes (if given, with their respective enzyme concentration bounds) and pseudo-reactions representing the protein pool and the delivery of these enzymes are added to the model, and enzymatically catalyzed reactions must consume the new pseudo-metabolites. For more information, read GECKO's paper. This expansion allows other program packages, including COBRApy, to directly use the enzyme constraints defined by the Model instance.</p>
+<p>When loading such an annotated XML again with COBRA-k, the enzyme constraints are automatically detected and the "normal" COBRA-k form of enzyme constraints is used again (as detailed in the chapter about Linear Programs).</p>
+<h3 id="load-annotated-sbml">Load (annotated) SBML</h3>
+<p>Loading an (annotated) SBML as a Model is simple:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.io</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_annotated_sbml_model_as_cobrak_model</span>
+
+<span class="n">cobrak_model</span> <span class="o">=</span> <span class="n">load_annotated_sbml_model_as_cobrak_model</span><span class="p">(</span>
+    <span class="s2">&quot;/path/to/sbml/filename.xml&quot;</span>
+<span class="p">)</span>
+</code></pre></div>
+<p>Keep in mind that only with COBRA-k annotations, COBRA-k can successfully directly read the thermodynamic and kinetic data of the model. Otherwise, t has to be included later to the Model instance. Options to do so are detailed in the next chapter. Without COBRA-k annotations in the SBML, a standard metabolite concentration range of <span class="arithmatex">\(10^{-6}\)</span> up to 0.02 M is assumed. Also, the protein pool is set to 1_000 g⋅gDW⁻¹, essentially deactivating any possible enzyme constraints.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": ".", "features": ["content.code.copy"], "search": "assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="assets/javascripts/bundle.92b07e13.min.js"></script>
+      
+        <script src="javascript/katex/katex.min.js"></script>
+      
+        <script src="javascript/katex/contrib/auto-render.min.js"></script>
+      
+        <script src="javascript/init_katex.js"></script>
+      
+        <script src="assets/external/unpkg.com/mermaid@11/dist/mermaid.min.js"></script>
+      
+    
+  </body>
+</html>

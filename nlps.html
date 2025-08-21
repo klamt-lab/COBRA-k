@@ -1,0 +1,1194 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="milps.html">
+      
+      
+        <link rel="next" href="evolutionary.html">
+      
+      
+      <link rel="icon" href="assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.17">
+    
+    
+      
+        <title>6. Nonlinear COBRA-k Programs - COBRA-k</title>
+      
+    
+    
+      <link rel="stylesheet" href="assets/stylesheets/main.7e37652d.min.css">
+      
+        
+        <link rel="stylesheet" href="assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+        <script src="assets/external/unpkg.com/iframe-worker/shim.js"></script>
+      
+    
+    
+      
+    
+    
+      <link rel="stylesheet" href="assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="javascript/katex/katex.min.css">
+    
+      <link rel="stylesheet" href="css-extra.css">
+    
+    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#nonlinear-cobra-k-programs" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="index.html" title="COBRA-k" class="md-header__button md-logo" aria-label="COBRA-k" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            COBRA-k
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              6. Nonlinear COBRA-k Programs
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m14.3 16-.7-2h-3.2l-.7 2H7.8L11 7h2l3.2 9zM20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12zm-9.15 3.96h2.3L12 9z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_2" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to system preference"  type="radio" name="__palette" id="__palette_2">
+    
+      <label class="md-header__button md-icon" title="Switch to system preference" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="index.html" title="COBRA-k" class="md-nav__button md-logo" aria-label="COBRA-k" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    COBRA-k
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Start
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="installation.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    1. Installation
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="model_from_scratch.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    2. Create model from scratch
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="model_io.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    3. Load/Save models
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="lps.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    4. Linear Programs & Pretty-Print
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="milps.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    5. Mixed-Integer Linear Programs
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    6. Nonlinear COBRA-k Programs
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="nlps.html" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    6. Nonlinear COBRA-k Programs
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#introduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      Introduction
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Introduction">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#reversible-michaelis-menten-kinetics" class="md-nav__link">
+    <span class="md-ellipsis">
+      Reversible Michaelis-Menten kinetics
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mixed-integer-nonlinear-programming" class="md-nav__link">
+    <span class="md-ellipsis">
+      (Mixed-integer) Nonlinear Programming
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#nonlinear-kinetic-constraints" class="md-nav__link">
+    <span class="md-ellipsis">
+      Nonlinear kinetic constraints
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Nonlinear kinetic constraints">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#optional-concentration-sum-constraints" class="md-nav__link">
+    <span class="md-ellipsis">
+      Optional concentration sum constraints
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#preparatory-variability-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      Preparatory Variability Analysis
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#global-minlp-generally-slow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Global MINLP (generally slow)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#local-nlp-fast-but-restricted" class="md-nav__link">
+    <span class="md-ellipsis">
+      Local NLP (fast, but restricted)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Local NLP (fast, but restricted)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#extra-non-linear-flux-constraints" class="md-nav__link">
+    <span class="md-ellipsis">
+      Extra non-linear flux constraints
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#extra-linear-watches" class="md-nav__link">
+    <span class="md-ellipsis">
+      Extra linear watches
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="evolutionary.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    7. Evolutionary Optimization
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="construct_own.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    8. Construct Own Optimizations
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="add_data.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    9. Automatic data collection
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="parameter_corrections.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    10. Parameter corrections
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="utilities.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    11. More utilities
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="paper_reproduction.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    12. Paper result reproduction
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="api.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    API Reference
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#introduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      Introduction
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Introduction">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#reversible-michaelis-menten-kinetics" class="md-nav__link">
+    <span class="md-ellipsis">
+      Reversible Michaelis-Menten kinetics
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mixed-integer-nonlinear-programming" class="md-nav__link">
+    <span class="md-ellipsis">
+      (Mixed-integer) Nonlinear Programming
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#nonlinear-kinetic-constraints" class="md-nav__link">
+    <span class="md-ellipsis">
+      Nonlinear kinetic constraints
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Nonlinear kinetic constraints">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#optional-concentration-sum-constraints" class="md-nav__link">
+    <span class="md-ellipsis">
+      Optional concentration sum constraints
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#preparatory-variability-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      Preparatory Variability Analysis
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#global-minlp-generally-slow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Global MINLP (generally slow)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#local-nlp-fast-but-restricted" class="md-nav__link">
+    <span class="md-ellipsis">
+      Local NLP (fast, but restricted)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Local NLP (fast, but restricted)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#extra-non-linear-flux-constraints" class="md-nav__link">
+    <span class="md-ellipsis">
+      Extra non-linear flux constraints
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#extra-linear-watches" class="md-nav__link">
+    <span class="md-ellipsis">
+      Extra linear watches
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="nonlinear-cobra-k-programs">Nonlinear COBRA-k programs</h1>
+<details class="abstract">
+<summary>Quickstart code</summary>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.example_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">toy_model</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.lps</span><span class="w"> </span><span class="kn">import</span> <span class="n">perform_lp_variability_analysis</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.printing</span><span class="w"> </span><span class="kn">import</span> <span class="n">print_optimization_result</span><span class="p">,</span> <span class="n">print_variability_result</span>
+<span class="c1"># Import MINLP functionality in our *NLP* package</span>
+<span class="c1"># The &quot;reversible&quot; means that driving forces can become negative, but</span>
+<span class="c1"># reactions still have to be split as irreversible ones (v_i&gt;=0)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.nlps</span><span class="w"> </span><span class="kn">import</span> <span class="n">perform_nlp_reversible_optimization</span>
+<span class="c1"># Import NLP functionality in our NLP package</span>
+<span class="c1"># The &quot;irreversible&quot; means that driving forces can*not* become negative</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.nlps</span><span class="w"> </span><span class="kn">import</span> <span class="n">perform_nlp_irreversible_optimization_with_active_reacs_only</span>
+
+<span class="c1">#%</span>
+<span class="c1"># Run preparatory variability analysis</span>
+<span class="n">variability_dict</span> <span class="o">=</span> <span class="n">perform_lp_variability_analysis</span><span class="p">(</span>
+    <span class="n">toy_model</span><span class="p">,</span>
+    <span class="n">with_enzyme_constraints</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">with_thermodynamic_constraints</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="c1"># Pretty-print variability result</span>
+<span class="n">print_variability_result</span><span class="p">(</span><span class="n">toy_model</span><span class="p">,</span> <span class="n">variability_dict</span><span class="p">)</span>
+
+<span class="c1">#%</span>
+<span class="c1"># Run MINLP (by default, with the SCIP solver)</span>
+<span class="n">minlp_result</span> <span class="o">=</span> <span class="n">perform_nlp_reversible_optimization</span><span class="p">(</span>
+    <span class="n">cobrak_model</span><span class="o">=</span><span class="n">toy_model</span><span class="p">,</span>
+    <span class="n">objective_target</span><span class="o">=</span><span class="s2">&quot;ATP_Consumption&quot;</span><span class="p">,</span> <span class="c1"># Let&#39;s maximize ATP production</span>
+    <span class="n">objective_sense</span><span class="o">=+</span><span class="mi">1</span><span class="p">,</span>
+    <span class="c1"># Set the variable bounds from our preparatory variability analysis</span>
+    <span class="n">variability_dict</span><span class="o">=</span><span class="n">variability_dict</span><span class="p">,</span>
+    <span class="c1"># We use the saturation term constraint (otherwise, κ is set to 1 for all reactions);</span>
+    <span class="c1"># default is True anyway</span>
+    <span class="n">with_kappa</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="c1"># We use the thermodynamic term constraint (otherwise, γ is set to 1 for all reactions);</span>
+    <span class="c1"># default is True anyway</span>
+    <span class="n">with_gamma</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="c1"># Pretty-print MINLP result</span>
+<span class="n">print_optimization_result</span><span class="p">(</span><span class="n">toy_model</span><span class="p">,</span> <span class="n">minlp_result</span><span class="p">)</span>
+
+<span class="c1">#%</span>
+<span class="c1"># Run (local and fast) NLP (by default, with the IPOPT solver)</span>
+<span class="n">nlp_result</span> <span class="o">=</span> <span class="n">perform_nlp_irreversible_optimization_with_active_reacs_only</span><span class="p">(</span>
+    <span class="n">toy_model</span><span class="p">,</span>
+    <span class="n">objective_target</span><span class="o">=</span><span class="s2">&quot;ATP_Consumption&quot;</span><span class="p">,</span>
+    <span class="n">objective_sense</span><span class="o">=+</span><span class="mi">1</span><span class="p">,</span>
+    <span class="c1"># Set the suitable set of thermodynamically active reactions</span>
+    <span class="n">optimization_dict</span><span class="o">=</span><span class="n">minlp_result</span><span class="p">,</span>
+    <span class="c1"># Set the variable bounds from our preparatory variability analysis</span>
+    <span class="n">variability_dict</span><span class="o">=</span><span class="n">variability_dict</span><span class="p">,</span>
+    <span class="c1"># We use the saturation term constraint (otherwise, κ is set to 1 for all reactions);</span>
+    <span class="c1"># default is True anyway</span>
+    <span class="n">with_kappa</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="c1"># We use the thermodynamic term constraint (otherwise, γ is set to 1 for all reactions);</span>
+    <span class="c1"># default is True anyway</span>
+    <span class="n">with_gamma</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">print_optimization_result</span><span class="p">(</span><span class="n">toy_model</span><span class="p">,</span> <span class="n">nlp_result</span><span class="p">)</span>
+</code></pre></div>
+</details>
+<h2 id="introduction">Introduction</h2>
+<h3 id="reversible-michaelis-menten-kinetics">Reversible Michaelis-Menten kinetics</h3>
+<p>In the last chapters, we looked at Linear and Mixed-Integer Linear Optimization problems. As explained, these optimization problems are able to include stoichiometric, enzyme-pool and thermodynamic constraints. But they are not able to capture full reaction kinetics. One form of reaction kinetics is the reversible Michaelis-Menten kinetics, which is <a href="https://doi.org/10.1016/j.febslet.2013.07.028">[Paper]</a>:</p>
+<div class="arithmatex">\[ v_i = V^{+}_i ⋅ κ_i ⋅ γ_i \]</div>
+<p><span class="arithmatex">\(v_i\)</span> is, again, the reaction <span class="arithmatex">\(i\)</span>'s flux. $V^{+}_i stands for the enzyme-dependent maximal flux that we already know from the basic enzyme constraints:</p>
+<div class="arithmatex">\[ V^{+}_i = E_i ⋅ k_{cat} \]</div>
+<p><span class="arithmatex">\(κ_i\)</span> is the saturation term - a unitless value that lies in <span class="arithmatex">\([0,1]\)</span> - which is dependent on the enzyme's Michaelis-Menten constants (<span class="arithmatex">\(K_M\)</span>) and is:</p>
+<div class="arithmatex">\[ κ_i = {{\bar{s}_i} \over {1 + \bar{s}_i + \bar{p}_i}} \]</div>
+<p><span class="arithmatex">\({\bar{s}_i}\)</span> a <span class="arithmatex">\(K_M\)</span>-dependent product of the concentrations of the reaction's <em>substrates</em>:</p>
+<div class="arithmatex">\[ {\bar{s}_i} = \prod_{j \in 𝖲_i} (c_j ⋅ K_{M,j,i}) ^ {|N_{i,j}|}\]</div>
+<p><span class="arithmatex">\(K_{M,j,i}\)</span> is the Michaelis-Menten constant of this substrate for this reaction, and <span class="arithmatex">\(𝖲_i\)</span> is the set of all indices of reaction <span class="arithmatex">\(i\)</span>'s substrates. <span class="arithmatex">\(c_s\)</span> is the concentration of substrate <span class="arithmatex">\(j\)</span> and <span class="arithmatex">\(|N_{i,j}|\)</span> the absolute stoichiometry of the metabolite.</p>
+<p>Analogously, <span class="arithmatex">\({\bar{p}_i}\)</span> a value affected by the reaction's <em>products</em>:</p>
+<div class="arithmatex">\[ {\bar{p}_j} = \prod_{k \in 𝖯_i} (c_k ⋅ K_{M,k,i}) ^ {N_{i,k}}\]</div>
+<p>where <span class="arithmatex">\(k\)</span> is the index of the product, taken from the set of reaction product indices <span class="arithmatex">\(𝖯_i\)</span>.</p>
+<p>The last part of the reversible Michaelis-Menten kinetics, <span class="arithmatex">\(γ_i\)</span>, is the thermodynamic term. It is also a unitless value in <span class="arithmatex">\((-∞,1]\)</span>:</p>
+<div class="arithmatex">\[ γ_i = ( 1 - e^{-f_i / (R ⋅ T)} ) \]</div>
+<p>As explained in the previous chapter, R is the Gas constant, T the temperature and <span class="arithmatex">\(f_i\)</span> the reaction's driving force.</p>
+<p>In conclusion, <span class="arithmatex">\(V^{+}_i\)</span> determines the maximally possible reaction flux. Both <span class="arithmatex">\(κ_i\)</span> and <span class="arithmatex">\(γ_i\)</span> can only restrict this maximally possible flux. This is because <span class="arithmatex">\(κ_i\)</span> and <span class="arithmatex">\(γ_i\)</span> can only lie in <span class="arithmatex">\([0,1]\)</span> and <span class="arithmatex">\((-∞,1]\)</span>, respectively. Thereby, if we only allow positive driving forces (<span class="arithmatex">\(f_i&gt;0\)</span>), <span class="arithmatex">\(γ_i\)</span> is even restricted to <span class="arithmatex">\((0,1]\)</span>. Also, both <span class="arithmatex">\(κ_i\)</span> and <span class="arithmatex">\(γ_i\)</span> follow the general idea of reaction kinetics: The higher the product concentrations, the lower the reaction's flux. Conversely, the higher the substrate concentrations, the higher the flux.</p>
+<h3 id="mixed-integer-nonlinear-programming">(Mixed-integer) Nonlinear Programming</h3>
+<div class="admonition minlp and nlp">
+<p class="admonition-title">Minlp</p>
+</div>
+<h2 id="nonlinear-kinetic-constraints">Nonlinear kinetic constraints</h2>
+<p>Now that we know the formulas of the Michaelis-Menten kinetics, we want to efficiently integrate them in our framework of constriant-based modeling. From CBM, we are at least still using:</p>
+<ul>
+<li>the steady-state constraints (see LP chapter)</li>
+<li>extra linear constraints (see LP chapter)</li>
+<li>the logarithmic concentrations and their bounds (see MILP chapter)</li>
+<li>the reaction driving forces <span class="arithmatex">\(f_i\)</span> (see MILP chapter)</li>
+</ul>
+<p>For our further CBM integration, "efficently integrating the kinetic formulas" means that we relax the kinetic formulas as much as possible. This means that we do not treat them as equality but as <em>in</em>equality:</p>
+<div class="arithmatex">\[ v_i ≤ V^{+}_i ⋅ κ_i ⋅ γ_i \]</div>
+<p>Now, <span class="arithmatex">\(v_i\)</span> is allowed to become lower than what would be expected from the kinetics. However, we are also still using the central protein pool constrained introduced in the LP chapter:</p>
+<div class="arithmatex">\[ ∑_i W_i ⋅ E_i ≤ Ω \]</div>
+<p>This means that, in a typical optimziation, the enzymes are still going to be used as efficiently as possible. I.e., typically, the lowest needed amount of enzymes is found, such that our inequality often becomes an equality :-) Conversely, in cases where this does not hold, the enzyme usage is not the major constraint for our optimization anyway.</p>
+<p>Following our relaxation scheme, we also relax the maximally possible flux <span class="arithmatex">\(V^{+}_i\)</span> as inequality:</p>
+<div class="arithmatex">\[ V^{+}_i ≤ E_i ⋅ k_{cat} \]</div>
+<p>$ κ_i $ is also now an inequality and made dependent on our <em>logarithmic</em> concentrations as follows:</p>
+<div class="arithmatex">\[ κ_i &lt;= {e^{\tilde{s}_i} \over {( 1+e^{\tilde{s}_i}+e^{\tilde{p}_i} )}} \]</div>
+<p>where <span class="arithmatex">\(\tilde{s}_i\)</span> and <span class="arithmatex">\(\tilde{p}_i\)</span> are the logarithmic variants of <span class="arithmatex">\(\bar{s}_i\)</span> and <span class="arithmatex">\(\bar{p}_i\)</span> (see above) and are using our logarithmic concentration vector <span class="arithmatex">\(\mathbf{\tilde{x}}\)</span> (see previous chapter):</p>
+<div class="arithmatex">\[ \tilde{s}_i = \ln ( \bar{s} ) = \sum_{j ∈ 𝖲_i} ( |N_{j,i}| ⋅ x̃_j ) - \sum_{j ∈ 𝖲_i} ( |N_{j,i}| ⋅  \ln K_{M,j,i} ) \]</div>
+<div class="arithmatex">\[ \tilde{p}_i ≥ \ln ( \bar{p} ) = \sum_{k ∈ 𝖯_i} ( N_{k,i} ⋅ x̃ ) - \sum_{k ∈ 𝖯_i} ( N_{k,i} ⋅  \ln K_{M,k,i} ) \]</div>
+<p>Note that <span class="arithmatex">\(\tilde{p}\)</span> is even further relaxed, as lower <span class="arithmatex">\(\tilde{p}\)</span> could only restrict a reaction flux even further (see formula for <span class="arithmatex">\(κ_i\)</span>).</p>
+<div class="arithmatex">\[ γ_i ≤ (1-e^{f_i / (R ⋅ T)})\]</div>
+<p>whereby we also relax <span class="arithmatex">\(f_i\)</span>, again in a direction which could only lower the flux, as (using the definitions from the previous chapter)</p>
+<div class="arithmatex">\[ f_i ≤ -(Δ_r G^{´°}_i + R ⋅ T ⋅ \mathbf{N_{⋅,i}} ⋅ \mathbf{x̃}) \]</div>
+<p>And that's it :D With these additional constraints, on top of our mentioned constrained-based constrained that we introduced in earlier chapters, we could now run constraint-based analyses with full reaction kinetics :-)</p>
+<h3 id="optional-concentration-sum-constraints">Optional concentration sum constraints</h3>
+<p>COBRA-k also provides the possibility to introduce <em>concentration sum constraints</em>. They are only activated if a Model's <code>max_conc_sum</code> member variable is smaller than the default value <code>float("inf")</code>. The concentration sum constraint is simply</p>
+<div class="arithmatex">\[ Φ ≤ \sum{e^(x̃_j)} \]</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>We don't need any of the linear approximation tricks used for MILPs (see last chapter) here :-)</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Adding concentration sum constraints can cause a heavy load on a non-linear solver. Hence, if you are expereiencing very slow solving times, they might be caused by this constraint if you have set <code>max_conc_sum</code> to a value lower than its default <code>float("inf")</code>.</p>
+</div>
+<h2 id="preparatory-variability-analysis">Preparatory Variability Analysis</h2>
+<p>One major problem with our non-linear constraints is that certain values may become very large or very small. In particular, <span class="arithmatex">\(e^{\tilde{s}_i}\)</span>, <span class="arithmatex">\(e^{\tilde{p}_i}\)</span> may become way too large and <span class="arithmatex">\(γ_i\)</span> way too small if <span class="arithmatex">\(f_i\)</span> is too negative. This would lead to solver errors, making optimization impossible.</p>
+<p>Luckily, we still use our pre-set logarithmic concentration bounds (see previous chapter) which typically restrict all our values to solver-friendly sizes. Hence, running a MILP-based ecTFVA (see previous chapter) for all linear values in our problem, namely the...</p>
+<ul>
+<li>reaction fluxes <span class="arithmatex">\(\mathbf{v}\)</span></li>
+<li>enzyme concentrations <span class="arithmatex">\(\mathbf{E}\)</span></li>
+<li>logarithmic concentrations <span class="arithmatex">\(\mathbf{\tilde{x}}\)</span></li>
+<li>driving forces <span class="arithmatex">\(\mathbf{f}\)</span></li>
+<li>logarithmic saturation values <span class="arithmatex">\(\mathbf{\tilde{s}}\)</span> and <span class="arithmatex">\(\mathbf{\tilde{p}}\)</span></li>
+</ul>
+<p>...solves our problem with too high and too low values. Mathematically, the ecTFVA-based preparatory variability analysis can be written as</p>
+<div class="arithmatex">\[ \operatorname*{\mathbf{min}}_{\mathbf{v, E, x̃, f, z, \tilde{p}, \tilde{s}, κ, γ}, B}  \mathbf{β_i, β ∈ \{ \mathbf{v}, \mathbf{E}, \mathbf{\tilde{x}}, \mathbf{f}, \mathbf{\tilde{s}}, \mathbf{\tilde{p}} \}} \\ s.t. \space CBM \space \&amp; \space thermodynamic \space \&amp; \space saturation \space term \space  constraints \]</div>
+<p>and</p>
+<div class="arithmatex">\[ \operatorname*{\mathbf{max}}_{\mathbf{v, E, x̃, f, z, \tilde{p}, \tilde{s}, κ, γ}, B}  \mathbf{β_i, β ∈ \{ \mathbf{v}, \mathbf{E}, \mathbf{\tilde{x}}, \mathbf{f}, \mathbf{\tilde{s}}, \mathbf{\tilde{p}} \}} \\ s.t. \space CBM \space \&amp; \space thermodynamic \space \&amp; \space saturation \space term \space  constraints \]</div>
+<p>In COBRA-k, we can run (and let us pretty-print) such a preparatory variability analysis analogously as how we did it in the previous chapter:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Import our known toy model (see LP chapter) and methods</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.example_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">toy_model</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.lps</span><span class="w"> </span><span class="kn">import</span> <span class="n">perform_lp_variability_analysis</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.printing</span><span class="w"> </span><span class="kn">import</span> <span class="n">print_variability_result</span>
+
+<span class="c1"># Run preparatory variability analysis</span>
+<span class="n">variability_dict</span> <span class="o">=</span> <span class="n">perform_lp_variability_analysis</span><span class="p">(</span>
+    <span class="n">toy_model</span><span class="p">,</span>
+    <span class="n">with_enzyme_constraints</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">with_thermodynamic_constraints</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="c1"># Pretty-print variability result</span>
+<span class="n">print_variability_result</span><span class="p">(</span><span class="n">toy_model</span><span class="p">,</span> <span class="n">variability_dict</span><span class="p">)</span>
+</code></pre></div>
+<h2 id="global-minlp-generally-slow">Global MINLP (generally slow)</h2>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>While this MINLP can lead to great global result, it is typically <em>way</em> too slow and not suitable even for mid-scale metabolic models with more than a dozen reactions, even with the relaxations introduced above. For alternatives, see the next subchapter as well as the evolutionary optimization in the next chapter.</p>
+<p>Also, due to the non-linearity of our new constraints, only solvers which are capable of handling such constraints in pyomo can be used. E.g., CPLEX and Gurobi (at least older Gurobi versions) cannot be used with non-linear optimizations.</p>
+</div>
+<p>To <em>globally</em> optimize on a full metabolic model using our non-linear constraint, we can use COBRA-k's MINLP functionality. It is defined as</p>
+<div class="arithmatex">\[ \operatorname*{\mathbf{min}}_{\mathbf{v, E, x̃, f, z, \tilde{p}, \tilde{s}, κ, γ}, B}  \mathbf{g^\top} \\ s.t. \space CBM \space \&amp; \space thermodynamic \space \&amp; \space nonlinear \space  constraints \]</div>
+<p>and lets us globally optimize any value introduced in our linear, mixed-integer and non-linear constraints.</p>
+<p>In COBRA-k, we can run a MINLP on toy model (which is small enough for it to run) as follows, whereby COBRA-k's <code>nlps</code> subpackage is used:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Import toy model and pretty-print function and (ecT)FVA function</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.example_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">toy_model</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.printing</span><span class="w"> </span><span class="kn">import</span> <span class="n">print_optimization_result</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.lps</span><span class="w"> </span><span class="kn">import</span> <span class="n">perform_lp_variability_analysis</span>
+<span class="c1"># Import MINLP functionality in our *NLP* package</span>
+<span class="c1"># The &quot;reversible&quot; means that driving forces can become negative, but</span>
+<span class="c1"># reactions still have to be split as irreversible ones (v_i&gt;=0)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.nlps</span><span class="w"> </span><span class="kn">import</span> <span class="n">perform_nlp_reversible_optimization</span>
+
+<span class="c1"># Run preparatory variability analysis</span>
+<span class="n">variability_dict</span> <span class="o">=</span> <span class="n">perform_lp_variability_analysis</span><span class="p">(</span>
+    <span class="n">toy_model</span><span class="p">,</span>
+    <span class="n">with_enzyme_constraints</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">with_thermodynamic_constraints</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Run MINLP (by default, with the SCIP solver)</span>
+<span class="n">minlp_result</span> <span class="o">=</span> <span class="n">perform_nlp_reversible_optimization</span><span class="p">(</span>
+    <span class="n">cobrak_model</span><span class="o">=</span><span class="n">toy_model</span><span class="p">,</span>
+    <span class="n">objective_target</span><span class="o">=</span><span class="s2">&quot;ATP_Consumption&quot;</span><span class="p">,</span> <span class="c1"># Let&#39;s maximize ATP production</span>
+    <span class="n">objective_sense</span><span class="o">=+</span><span class="mi">1</span><span class="p">,</span>
+    <span class="c1"># Set the variable bounds from our preparatory variability analysis</span>
+    <span class="n">variability_dict</span><span class="o">=</span><span class="n">variability_dict</span><span class="p">,</span>
+    <span class="c1"># We use the saturation term constraint (otherwise, κ is set to 1 for all reactions);</span>
+    <span class="c1"># default is True anyway</span>
+    <span class="n">with_kappa</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="c1"># We use the thermodynamic term constraint (otherwise, γ is set to 1 for all reactions);</span>
+    <span class="c1"># default is True anyway</span>
+    <span class="n">with_gamma</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="c1"># Pretty-print MINLP result</span>
+<span class="n">print_optimization_result</span><span class="p">(</span><span class="n">toy_model</span><span class="p">,</span> <span class="n">minlp_result</span><span class="p">)</span>
+</code></pre></div>
+<div class="admonition info">
+<p class="admonition-title">Info</p>
+<p>Just like all other optimization functions, <code>perform_nlp_reversible_optimization</code> has many other optional arguments, including the possibility to use other solvers, solver and pyomo solve funtion options. For more information, see this documentation's "API reference".</p>
+</div>
+<h2 id="local-nlp-fast-but-restricted">Local NLP (fast, but restricted)</h2>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The NLP shown here is fast, but <em>only</em> suitable if you are working with a selected metabolic set of reactions that can be thermodynamically feasible at the same time (not a full model). But this NLP is the basis of the evolutionary algorithm, which is shown in the next chapter and lets you quasi-globally optimize a full metabolic model with non-linear constraints.</p>
+</div>
+<p>As the MINLP can be very slow, COBRA-k also provides a fast NLP that works on a single set of reactions that can be thermodynamically feasible at the same time. I.e., the following constraint holds:</p>
+<div class="arithmatex">\[ f_i ≥ f^{min} \]</div>
+<p>whereby <span class="arithmatex">\(f^{min}\)</span> has to be positive. This means that no full model can be used, as it typically includes (e.g. reverse direction) reactions with a negative driving force. But once you have a suitable set of reactions, you can quickly solve the following NLP (now without any binary variables, in contrast to the MINLP):</p>
+<div class="arithmatex">\[ \operatorname*{\mathbf{min}}_{\mathbf{v, E, x̃, f, \tilde{p}, \tilde{s}, κ, γ}, B}  \mathbf{g^\top} \\ s.t. \space CBM \space \&amp; \space nonlinear \space constraints \]</div>
+<p>In COBRA-k, you can find a suitable set of thermodynamically feasible reactions with an ecTFBA first, and <em>then</em> calculate the NLP:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Import toy model and pretty-print function and pathway-using ecTFBA</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.example_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">toy_model</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.printing</span><span class="w"> </span><span class="kn">import</span> <span class="n">print_optimization_result</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.lps</span><span class="w"> </span><span class="kn">import</span> <span class="n">perform_lp_optimization</span><span class="p">,</span> <span class="n">perform_lp_variability_analysis</span>
+<span class="c1"># Import NLP functionality in our NLP package</span>
+<span class="c1"># The &quot;irreversible&quot; means that driving forces can*not* become negative</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.nlps</span><span class="w"> </span><span class="kn">import</span> <span class="n">perform_nlp_irreversible_optimization_with_active_reacs_only</span>
+
+<span class="c1"># Run preparatory variability analysis for our NLP</span>
+<span class="n">variability_dict</span> <span class="o">=</span> <span class="n">perform_lp_variability_analysis</span><span class="p">(</span>
+    <span class="n">toy_model</span><span class="p">,</span>
+    <span class="n">with_enzyme_constraints</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">with_thermodynamic_constraints</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Find suitable set of thermodynamically active reactions</span>
+<span class="n">ectfba_result</span> <span class="o">=</span> <span class="n">perform_lp_optimization</span><span class="p">(</span>
+    <span class="n">cobrak_model</span><span class="o">=</span><span class="n">toy_model</span><span class="p">,</span>
+    <span class="n">objective_target</span><span class="o">=</span><span class="s2">&quot;ATP_Consumption&quot;</span><span class="p">,</span>
+    <span class="n">objective_sense</span><span class="o">=+</span><span class="mi">1</span><span class="p">,</span>
+    <span class="c1"># Set enzyme constraints as they are also used in the NLP</span>
+    <span class="n">with_enzyme_constraints</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="c1"># This following setting is important to find thermodynamically active reactions</span>
+    <span class="n">with_thermodynamic_constraints</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Run (local and fast) NLP (by default, with the IPOPT solver)</span>
+<span class="n">nlp_result</span> <span class="o">=</span> <span class="n">perform_nlp_irreversible_optimization_with_active_reacs_only</span><span class="p">(</span>
+    <span class="n">toy_model</span><span class="p">,</span>
+    <span class="n">objective_target</span><span class="o">=</span><span class="s2">&quot;ATP_Consumption&quot;</span><span class="p">,</span>
+    <span class="n">objective_sense</span><span class="o">=+</span><span class="mi">1</span><span class="p">,</span>
+    <span class="c1"># Set the suitable set of thermodynamically active reactions</span>
+    <span class="n">optimization_dict</span><span class="o">=</span><span class="n">ectfba_result</span><span class="p">,</span>
+    <span class="c1"># Set the variable bounds from our preparatory variability analysis</span>
+    <span class="n">variability_dict</span><span class="o">=</span><span class="n">variability_dict</span><span class="p">,</span>
+    <span class="c1"># We use the saturation term constraint (otherwise, κ is set to 1 for all reactions);</span>
+    <span class="c1"># default is True anyway</span>
+    <span class="n">with_kappa</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="c1"># We use the thermodynamic term constraint (otherwise, γ is set to 1 for all reactions);</span>
+    <span class="c1"># default is True anyway</span>
+    <span class="n">with_gamma</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">print_optimization_result</span><span class="p">(</span><span class="n">toy_model</span><span class="p">,</span> <span class="n">nlp_result</span><span class="p">)</span>
+</code></pre></div>
+<p>Again, <code>perform_nlp_reversible_optimization</code> has many further optional arguments that you can find in this documentation's "API reference" chapter. By default, COBRA-k uses the non-linear solver IPOPT for NLPs.</p>
+<h3 id="extra-non-linear-flux-constraints">Extra non-linear flux constraints</h3>
+<p>Optionally, you can also introduce extra <em>non-</em>linear constraints (corresponding to the <code>ExtraNonlinearConstraint</code> dataclass, used in <code>Model</code>) that set constrained relationships between variables. Currently, the non-linear functions "powerX" (i.e. take the X-th power of a value), "log" and "exp" are usable. "same" is the option if you do not want a function application (i.e. it's a multiplication with 1). See COBRA-k's API documentation for more. As an example, let's set a (nonsense) non-linear constraint that restricts the flux of reaction EX_P to the doubled exponential value of the concentration of C:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># ...using the code imports from above</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.constants</span><span class="w"> </span><span class="kn">import</span> <span class="n">LNCONC_VAR_PREFIX</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExtraNonlinearConstraint</span>
+
+<span class="c1"># Let&#39;s define v_EX_P &lt;= 2 * exp(x_C)</span>
+<span class="n">toy_model</span><span class="o">.</span><span class="n">extra_nonlinear_constraints</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">ExtraNonlinearConstraint</span><span class="p">(</span>
+        <span class="n">stoichiometries</span><span class="o">=</span><span class="p">{</span>
+            <span class="s2">&quot;EX_P&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="s2">&quot;same&quot;</span><span class="p">),</span>  <span class="c1"># first the stoichiometry, second the function application</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">LNCONC_VAR_PREFIX</span><span class="si">}</span><span class="s2">C&quot;</span><span class="p">:</span> <span class="p">(</span><span class="o">-</span><span class="mf">2.0</span><span class="p">,</span> <span class="s2">&quot;exp&quot;</span><span class="p">),</span>
+        <span class="p">},</span>
+        <span class="n">upper_value</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+    <span class="p">)</span>
+<span class="p">]</span>
+</code></pre></div>
+<h3 id="extra-linear-watches">Extra linear watches</h3>
+<p>Optionally, you can also introduce extra linear <em>watch variables</em> (corresponding to the <code>ExtraNonlinearWatch</code> dataclass, used in <code>Model</code>) that add a variable with a fixed non-linear relationships to single fluxes. See COBRA-k's API documentation for more. Currently, the non-linear functions "powerX" (i.e. take the X-th power of a value), "log" and "exp" are usable. See COBRA-k's API documentation for more. Here's an example where we set a watch to the logarithm of the flux of EX_S:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># ...using the code imports from above</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExtraNonlinearWatch</span>
+
+<span class="c1"># Let&#39;s define v_EX_P &lt;= 2 * exp(x_C)</span>
+<span class="n">toy_model</span><span class="o">.</span><span class="n">extra_nonlinear_watches</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;log_EX_S&quot;</span><span class="p">:</span> <span class="n">ExtraNonlinearWatch</span><span class="p">(</span>
+        <span class="n">stoichiometries</span><span class="o">=</span><span class="p">{</span>
+            <span class="s2">&quot;EX_S&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="s2">&quot;log&quot;</span><span class="p">),</span>
+        <span class="p">},</span>
+    <span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>...now, we have a variable <code>log_EX_S</code> that is also added to result dictionaries after LP or NLP optimizations.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": ".", "features": ["content.code.copy"], "search": "assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="assets/javascripts/bundle.92b07e13.min.js"></script>
+      
+        <script src="javascript/katex/katex.min.js"></script>
+      
+        <script src="javascript/katex/contrib/auto-render.min.js"></script>
+      
+        <script src="javascript/init_katex.js"></script>
+      
+        <script src="assets/external/unpkg.com/mermaid@11/dist/mermaid.min.js"></script>
+      
+    
+  </body>
+</html>

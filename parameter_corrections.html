@@ -1,0 +1,1307 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="add_data.html">
+      
+      
+        <link rel="next" href="utilities.html">
+      
+      
+      <link rel="icon" href="assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.17">
+    
+    
+      
+        <title>10. Parameter corrections - COBRA-k</title>
+      
+    
+    
+      <link rel="stylesheet" href="assets/stylesheets/main.7e37652d.min.css">
+      
+        
+        <link rel="stylesheet" href="assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+        <script src="assets/external/unpkg.com/iframe-worker/shim.js"></script>
+      
+    
+    
+      
+    
+    
+      <link rel="stylesheet" href="assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="javascript/katex/katex.min.css">
+    
+      <link rel="stylesheet" href="css-extra.css">
+    
+    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#parameter-corrections" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="index.html" title="COBRA-k" class="md-header__button md-logo" aria-label="COBRA-k" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            COBRA-k
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              10. Parameter corrections
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m14.3 16-.7-2h-3.2l-.7 2H7.8L11 7h2l3.2 9zM20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12zm-9.15 3.96h2.3L12 9z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_2" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to system preference"  type="radio" name="__palette" id="__palette_2">
+    
+      <label class="md-header__button md-icon" title="Switch to system preference" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="index.html" title="COBRA-k" class="md-nav__button md-logo" aria-label="COBRA-k" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    COBRA-k
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Start
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="installation.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    1. Installation
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="model_from_scratch.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    2. Create model from scratch
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="model_io.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    3. Load/Save models
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="lps.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    4. Linear Programs & Pretty-Print
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="milps.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    5. Mixed-Integer Linear Programs
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="nlps.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    6. Nonlinear COBRA-k Programs
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="evolutionary.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    7. Evolutionary Optimization
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="construct_own.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    8. Construct Own Optimizations
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="add_data.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    9. Automatic data collection
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    10. Parameter corrections
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="parameter_corrections.html" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    10. Parameter corrections
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#introduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      Introduction
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#formulation-of-minimal-correction-calculation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Formulation of minimal correction calculation
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Formulation of minimal correction calculation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#general-sum-of-all-correction-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      General sum of all correction types
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#flux-scenario-correction" class="md-nav__link">
+    <span class="md-ellipsis">
+      Flux scenario correction
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#logarithmic-concentration-scenario-correction" class="md-nav__link">
+    <span class="md-ellipsis">
+      Logarithmic concentration scenario correction
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#k_cate-correction" class="md-nav__link">
+    <span class="md-ellipsis">
+      \(k_{cat}⋅[E]\) correction
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#g-correction" class="md-nav__link">
+    <span class="md-ellipsis">
+      \(ΔG'°\) correction
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#logarithmic-k_m-correction" class="md-nav__link">
+    <span class="md-ellipsis">
+      Logarithmic \(k_M\) correction
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Logarithmic \(k_M\) correction">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#optional-weights" class="md-nav__link">
+    <span class="md-ellipsis">
+      Optional Weights
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#optional-quadratic-sum" class="md-nav__link">
+    <span class="md-ellipsis">
+      Optional Quadratic Sum
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-correctionconfig-dataclass" class="md-nav__link">
+    <span class="md-ellipsis">
+      The CorrectionConfig dataclass
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage-examples-in-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage examples in code
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Usage examples in code">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-flux-and-concentration-scenario-correction-in-a-milp" class="md-nav__link">
+    <span class="md-ellipsis">
+      A flux and concentration scenario correction in a MILP
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a-k_cate-g-and-k_m-correction-in-an-nlp-and-application-of-correction-on-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      A \(k_{cat}⋅[E]\), \(ΔG'°\) and \(k_M\) correction in an NLP, and application of correction on model
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="utilities.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    11. More utilities
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="paper_reproduction.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    12. Paper result reproduction
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="api.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    API Reference
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#introduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      Introduction
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#formulation-of-minimal-correction-calculation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Formulation of minimal correction calculation
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Formulation of minimal correction calculation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#general-sum-of-all-correction-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      General sum of all correction types
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#flux-scenario-correction" class="md-nav__link">
+    <span class="md-ellipsis">
+      Flux scenario correction
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#logarithmic-concentration-scenario-correction" class="md-nav__link">
+    <span class="md-ellipsis">
+      Logarithmic concentration scenario correction
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#k_cate-correction" class="md-nav__link">
+    <span class="md-ellipsis">
+      \(k_{cat}⋅[E]\) correction
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#g-correction" class="md-nav__link">
+    <span class="md-ellipsis">
+      \(ΔG'°\) correction
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#logarithmic-k_m-correction" class="md-nav__link">
+    <span class="md-ellipsis">
+      Logarithmic \(k_M\) correction
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Logarithmic \(k_M\) correction">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#optional-weights" class="md-nav__link">
+    <span class="md-ellipsis">
+      Optional Weights
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#optional-quadratic-sum" class="md-nav__link">
+    <span class="md-ellipsis">
+      Optional Quadratic Sum
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-correctionconfig-dataclass" class="md-nav__link">
+    <span class="md-ellipsis">
+      The CorrectionConfig dataclass
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage-examples-in-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage examples in code
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Usage examples in code">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-flux-and-concentration-scenario-correction-in-a-milp" class="md-nav__link">
+    <span class="md-ellipsis">
+      A flux and concentration scenario correction in a MILP
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a-k_cate-g-and-k_m-correction-in-an-nlp-and-application-of-correction-on-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      A \(k_{cat}⋅[E]\), \(ΔG'°\) and \(k_M\) correction in an NLP, and application of correction on model
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="parameter-corrections">Parameter corrections</h1>
+<details class="abstract">
+<summary>Quickstart code</summary>
+<div class="highlight"><pre><span></span><code><span class="c1"># Import relevant classes and functions</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.lps</span><span class="w"> </span><span class="kn">import</span> <span class="n">perform_lp_optimization</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.example_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">toy_model</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">CorrectionConfig</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.constants</span><span class="w"> </span><span class="kn">import</span> <span class="n">LNCONC_VAR_PREFIX</span><span class="p">,</span> <span class="n">ERROR_SUM_VAR_ID</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.printing</span><span class="w"> </span><span class="kn">import</span> <span class="n">print_dict</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">math</span><span class="w"> </span><span class="kn">import</span> <span class="n">log</span>
+
+<span class="c1">#</span>
+<span class="n">flux_and_concentration_error_scenario</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;Overflow&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.4</span><span class="p">),</span>  <span class="c1"># Overflow reaction flux between 1 and 1.4</span>
+    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">LNCONC_VAR_PREFIX</span><span class="si">}</span><span class="s2">M&quot;</span><span class="p">:</span> <span class="p">(</span><span class="n">log</span><span class="p">(</span><span class="mf">0.2</span><span class="p">),</span> <span class="n">log</span><span class="p">(</span><span class="mf">0.2</span><span class="p">)),</span>  <span class="c1"># M concentration fixed at .2 molar</span>
+    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">LNCONC_VAR_PREFIX</span><span class="si">}</span><span class="s2">D&quot;</span><span class="p">:</span> <span class="p">(</span><span class="n">log</span><span class="p">(</span><span class="mf">0.23</span><span class="p">),</span> <span class="n">log</span><span class="p">(</span><span class="mf">0.25</span><span class="p">)),</span>  <span class="c1"># D concentration betwewen .23 and .25 molar</span>
+<span class="p">}</span>
+
+<span class="c1"># With a CorrectionConfig as optional further argument,</span>
+<span class="c1"># all explained extra variables for parameter corrections</span>
+<span class="c1"># are added to our model automatically :D</span>
+<span class="c1"># Now, we can just minimize the sum of correction errors.</span>
+<span class="n">correction_result_1</span> <span class="o">=</span> <span class="n">perform_lp_optimization</span><span class="p">(</span>
+    <span class="n">cobrak_model</span><span class="o">=</span><span class="n">toy_model</span><span class="p">,</span>
+    <span class="n">objective_target</span><span class="o">=</span><span class="n">ERROR_SUM_VAR_ID</span><span class="p">,</span>
+    <span class="n">objective_sense</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">with_thermodynamic_constraints</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">correction_config</span><span class="o">=</span><span class="n">CorrectionConfig</span><span class="p">(</span>
+        <span class="n">error_scenario</span><span class="o">=</span><span class="n">flux_and_concentration_error_scenario</span><span class="p">,</span>
+        <span class="n">add_flux_error_term</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">add_met_logconc_error_term</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">),</span>
+<span class="p">)</span>
+
+<span class="n">print_dict</span><span class="p">(</span><span class="n">correction_result_1</span><span class="p">)</span>
+
+<span class="c1">#% k_cat*[E] correction</span>
+<span class="c1"># Import relevant classes and functions</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.lps</span><span class="w"> </span><span class="kn">import</span> <span class="n">perform_lp_optimization</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.example_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">toy_model</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">CorrectionConfig</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.constants</span><span class="w"> </span><span class="kn">import</span> <span class="n">LNCONC_VAR_PREFIX</span><span class="p">,</span> <span class="n">ERROR_SUM_VAR_ID</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.printing</span><span class="w"> </span><span class="kn">import</span> <span class="n">print_dict</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.utilities</span><span class="w"> </span><span class="kn">import</span> <span class="n">apply_error_correction_on_model</span>
+
+<span class="c1">#</span>
+<span class="n">flux_and_concentration_error_scenario</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;Glycolysis&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">40.0</span><span class="p">,</span> <span class="mf">45.0</span><span class="p">),</span>
+<span class="p">}</span>
+
+<span class="c1"># Again, minimize the correction error variable sum</span>
+<span class="n">correction_result_2</span> <span class="o">=</span> <span class="n">perform_lp_optimization</span><span class="p">(</span>
+    <span class="n">cobrak_model</span><span class="o">=</span><span class="n">toy_model</span><span class="p">,</span>
+    <span class="n">objective_target</span><span class="o">=</span><span class="n">ERROR_SUM_VAR_ID</span><span class="p">,</span>
+    <span class="n">objective_sense</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">with_thermodynamic_constraints</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">with_enzyme_constraints</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">correction_config</span><span class="o">=</span><span class="n">CorrectionConfig</span><span class="p">(</span>
+        <span class="n">error_scenario</span><span class="o">=</span><span class="n">flux_and_concentration_error_scenario</span><span class="p">,</span>
+        <span class="n">add_kcat_times_e_error_term</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">add_dG0_error_term</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">add_km_error_term</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">),</span>
+<span class="p">)</span>
+
+<span class="n">print_dict</span><span class="p">(</span><span class="n">correction_result_2</span><span class="p">)</span>
+
+<span class="c1"># Now, we apply the correction (i.e. set the corrected</span>
+<span class="c1"># parameter values to our model, overwriting the old parameter values)</span>
+<span class="n">corrected_cobrak_model</span> <span class="o">=</span> <span class="n">apply_error_correction_on_model</span><span class="p">(</span>
+    <span class="n">cobrak_model</span><span class="o">=</span><span class="n">toy_model</span><span class="p">,</span>
+    <span class="n">correction_result</span><span class="o">=</span><span class="n">correction_result_2</span><span class="p">,</span>
+    <span class="n">min_abs_error_value</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span>
+    <span class="n">min_rel_error_value</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span>
+    <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre></div>
+</details>
+<h2 id="introduction">Introduction</h2>
+<p>Often, when you just created a COBRA-k model, you'll find out that known <em>in vivo</em> flux/concentration/etc. measurements do not work with your model.
+In other words, with your model, the given <em>in vivo</em> flux/concentration/etc. scenario is infeasible :-(</p>
+<p>This infeasibility can be caused by too restrictive parameters in your model. It is also possible that the measurements were perfomed with an error so that their resulting values need to be corrected. In other words, the following possibilities may have caused a scenario infeasibility:</p>
+<ol>
+<li>[If reaction fluxes caused the infeasibility] The measurement fluxes contain an error and need to be corrected</li>
+<li>[If metabolite concentrations caused it] The measurement concentrations contain an error and need to be corrected</li>
+<li>[If a measured flux cannot be reached] One or more <span class="arithmatex">\(k_{cat}\)</span> values in your model is too low.</li>
+<li>[If a measured flux appears to be thermodynamically impossible] One or more <span class="arithmatex">\(ΔG'°\)</span> values in your model is too high, making thermodynamic term(s) <span class="arithmatex">\(γ\)</span> too low.</li>
+<li>[If a measured flux appears to be impossible with regards to its associated saturation terms] One or more <span class="arithmatex">\(k_M\)</span> values in your model is either too low (for product-associated <span class="arithmatex">\(k_M\)</span>) or too high (for substrate-associated <span class="arithmatex">\(k_M\)</span>), making saturation term(s) <span class="arithmatex">\(κ\)</span> too low.</li>
+</ol>
+<p>COBRA-k contains a rational way to tackle these infeasibilities and provides functions to find out the <em>lowest needed</em> measurement and/or parameter corrections to make a scenario feasible :-)</p>
+<h2 id="formulation-of-minimal-correction-calculation">Formulation of minimal correction calculation</h2>
+<h3 id="general-sum-of-all-correction-types">General sum of all correction types</h3>
+<div class="admonition info">
+<p class="admonition-title">Info</p>
+<p>The mentioned minimal correction calculation works with LPs (see LP chapter), MILPs (see MILP chapter), NLPs (see NLP chapter) and the evolutionary optimization (see evolution chapter). Therefore, we concentrate on the addition of variables to all these problems and the addition of the minimal correction objective.</p>
+</div>
+<p>As mentioned, we want to <em>minimize</em> the needed correction(s) to make a scenario feasible with our model. So in general, we have the following objective:</p>
+<div class="arithmatex">\[
+\operatorname*{\mathbf{min}} \ \sum{corr^{fluxes} + corr^{concentrations} + corr^{k_{cat}⋅[E]}} + corr^{Δ_r G^{´°}} + corr^{k_M}  \\
+s.t. \space LP, \space MILP, \space NLP \space or \space evolution \space constraints
+\]</div>
+<p>where <span class="arithmatex">\(corr^X\)</span> stands for a given correction error sum type. You can freely select whether you want every or just some of the correction types. If you ignore a correction type, its correction sum will be simply set to 0. Each of the correction types is explained in the following paragraphs:</p>
+<h3 id="flux-scenario-correction">Flux scenario correction</h3>
+<p>If we have given reaction flux measurements <span class="arithmatex">\(\mathbf{v^{measured,min}}\)</span> and <span class="arithmatex">\(\mathbf{v^{measured,max}}\)</span> (i.e. lower and higher measured values, as e.g. resulting from a standard deviation), we can formulate our correction <span class="arithmatex">\(corr^{fluxes}\)</span> as follows for any reaction <span class="arithmatex">\(i\)</span> that was measured and is included in <span class="arithmatex">\(\mathbf{v^{measured}}\)</span>:</p>
+<p>$corr^{fluxes} = \sum_i {corr^{fluxes,+}_i + corr^{fluxes,-}_i} $</p>
+<p>So, for each measured reaction <span class="arithmatex">\(i\)</span>, we have an adding correction variable corr^{fluxes,+}_i and a subtracting variable corr^{fluxes,-}_i. In our optimization problem, they are introduced with the following constraints:</p>
+<p><span class="arithmatex">\(v_i ≥ v^{measured,min}_i - corr^{fluxes,-}_i\)</span>
+<span class="arithmatex">\(v_i ≤ v^{measured,max}_i + corr^{fluxes,+}_i\)</span></p>
+<p>This way, <span class="arithmatex">\(v_i\)</span> is now able to be corrected such that the measured flux range can be reached :-)</p>
+<h3 id="logarithmic-concentration-scenario-correction">Logarithmic concentration scenario correction</h3>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This correction is very similar to the one with fluxes (see above)</p>
+</div>
+<p>If we have given logarithmic concentration measurements <span class="arithmatex">\(\mathbf{\tilde{x}^{measured}}\)</span>, we can formulate our correction <span class="arithmatex">\(corr^{concentrations}\)</span> as follows for any metabolite <span class="arithmatex">\(j\)</span> that was measured and is included in <span class="arithmatex">\(\mathbf{\tilde{x}^{measured}}\)</span>:</p>
+<p>$corr^{concentrations} = \sum_i {corr^{concentrations,+}_i + corr^{concentrations,-}_i} $</p>
+<p>So, for each measured metabolite <span class="arithmatex">\(j\)</span>, we have an adding correction variable corr^{concentrations,+}_i and a subtracting variable corr^{concentrations,-}_i. In our optimization problem, they are introduced with the following constraints:</p>
+<p><span class="arithmatex">\(\tilde{x}_j ≤ \tilde{x}^{measured,min}_i - corr^{concentrations,-}_i\)</span>
+<span class="arithmatex">\(\tilde{x}_j ≥ \tilde{x}^{measured,max}_i + corr^{concentrations,+}_i - corr^{concentrations,-}_i\)</span></p>
+<p>This way, <span class="arithmatex">\(\tilde{x}_j\)</span> is now able to be corrected such that the measured concentrations can be reached :-)</p>
+<h3 id="k_cate-correction"><span class="arithmatex">\(k_{cat}⋅[E]\)</span> correction</h3>
+<p>E.g. if we have a given scenario with reaction fluxes and we see that our model cannot reach these reaction fluxes (i.e. our model's reachable fluxes are too low), it
+might be a good idea to run a <span class="arithmatex">\(V^+\)</span> (i.e. maximal possible flux) correction. In other words, we try to make <span class="arithmatex">\(k_{cat}⋅[E]\)</span> so high that the fluxes can be reached.
+To do so, we modify our reaction flux terms as follows:</p>
+<ul>
+<li>In LPs with enzyme constraints (see LP chapter):</li>
+</ul>
+<p>$ v_i ≤ E_i ⋅ k_{cat,i} $</p>
+<p>becomes</p>
+<p>$ v_i ≤ E_i ⋅ k_{cat,i}^+ + corr^{k_{cat}⋅[E]}_i $</p>
+<ul>
+<li>In NLPs with enzyme constraints (see NLP chapter):</li>
+</ul>
+<p>$ v_i ≤ V^{+}_i ⋅ κ_i ⋅ γ_i $</p>
+<p>becomes</p>
+<p>$ v_i ≤ (V^{+}<em>i + corr^{k</em>{cat}⋅[E]}) ⋅ κ_i ⋅ γ_i $</p>
+<p>Hence, the full sum of <span class="arithmatex">\(k_{cat}⋅[E]\)</span> corrections is:</p>
+<p>$corr^{k_{cat}⋅[E]} = \sum_i {corr^{k_{cat}⋅[E]}_i} $</p>
+<div class="admonition note">
+<p class="admonition-title">Why do we correct <span class="arithmatex">\(k_{cat}⋅[E]\)</span> and not just the <span class="arithmatex">\(k_{cat}\)</span>?</p>
+<p>If we would correct the <span class="arithmatex">\(k_{cat}\)</span> only, any <span class="arithmatex">\(k_{cat,i}\)</span> would essentially become a variable. Thus, e.g., the LP term $v_i ≤ E_i ⋅ k_{cat}^+ $ would become <span class="arithmatex">\(v_i ≤ E_i ⋅ k_{cat} ⋅ corr^{maximal_flux}\)</span>, which would be non-linear and computationally typically too expensive. Using <span class="arithmatex">\(k_{cat}⋅[E]\)</span> omits this problem in LPs (see above).</p>
+</div>
+<h3 id="g-correction"><span class="arithmatex">\(ΔG'°\)</span> correction</h3>
+<p>Another possibility why a scenario isn't reached by a model are too strict thermodynamic constraints. I.e. in MILPs (see MILP chapter) and NLPs, the <span class="arithmatex">\(ΔG'°\)</span> of a reaction
+might be <em>too high</em> making a scenario either thermodynamically infeasible (in MILPs and NLPs) or lowering the thermodynamic term <span class="arithmatex">\(γ_i\)</span> (in NLPs) too much. To be able to correct this, we modify our thermodynamic terms as follows:</p>
+<ul>
+<li>In MILPs and NLPs with thermodynamic constraints (see MILP and NLP chapter):</li>
+</ul>
+<p>$ f_i = -(Δ_r G^{´°}<em>i + R ⋅ T ⋅ \mathbf{N</em>{⋅,i}} ⋅ \mathbf{x̃}) $ becomes $ f_i = -(Δ_r G^{´°}<em>i + R ⋅ T ⋅ \mathbf{N</em>{⋅,i}} ⋅ \mathbf{x̃} - corr^{Δ_r G^{´°}}_i) $</p>
+<p>Hence, the full sum of <span class="arithmatex">\(Δ_r G^{´°}\)</span> corrections is:</p>
+<p>$corr^{Δ_r G^{´°}} = \sum_i {corr^{Δ_r G^{´°}}_i} $</p>
+<h3 id="logarithmic-k_m-correction">Logarithmic <span class="arithmatex">\(k_M\)</span> correction</h3>
+<p>Furthermore, it is possible to correct the <span class="arithmatex">\(k_M\)</span> (Michaelis-Menten constant) value of reactions to reach a scenario. This is only relevant if you have an NLP
+and saturation terms (<span class="arithmatex">\(κ_i\)</span>) are restricting your reactions. In these NLPs (see NLP chapter), the corrections are included as follows:</p>
+<ul>
+<li>If a metabolite is a substrate (i.e. if a <em>lower</em> <span class="arithmatex">\(k_M\)</span> could raise <span class="arithmatex">\(κ_i\)</span>):</li>
+</ul>
+<p>$ \tilde{s}<em>i = \ln ( \bar{s} ) = \sum</em>{j ∈ 𝖲_i} ( |N_{j,i}| ⋅ x̃<em>j ) - \sum</em>{j ∈ 𝖲_i} ( |N_{j,i}| ⋅  \ln K_{M,j,i} ) $</p>
+<p>becomes</p>
+<p>$ \tilde{s}<em>i = \ln ( \bar{s} ) = \sum</em>{j ∈ 𝖲_i} ( |N_{j,i}| ⋅ x̃<em>j ) - \sum</em>{j ∈ 𝖲_i} ( |N_{j,i}| ⋅  \ln K_{M,j,i} - corr^{k_{M,j,i}} ) $</p>
+<ul>
+<li>If a metabolite is a product (i.e. where a <em>higher</em> <span class="arithmatex">\(k_M\)</span> could raise <span class="arithmatex">\(κ_i\)</span>):</li>
+</ul>
+<p>$ \tilde{p}<em>i ≥ \ln ( \bar{p} ) = \sum</em>{k ∈ 𝖯_i} ( N_{k,i} ⋅ x̃ ) - \sum_{k ∈ 𝖯_i} ( N_{k,i} ⋅  \ln K_{M,k,i} ) $</p>
+<p>becomes</p>
+<p>$ \tilde{s}<em>i = \ln ( \bar{s} ) = \sum</em>{j ∈ 𝖲_i} ( |N_{j,i}| ⋅ x̃<em>j ) - \sum</em>{j ∈ 𝖲_i} ( |N_{j,i}| ⋅  \ln K_{M,j,i} + corr^{k_{M,j,i}} ) $</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>All these <span class="arithmatex">\(k_M\)</span> corrections work in the logarithmic space. To get the "real" correction, you have to apply the exponential function on the respective correction value.</p>
+</div>
+<p>Hence, the full sum of <span class="arithmatex">\(k_M\)</span> corrections is:</p>
+<p>$corr^{k_M} = \sum_{j,i} {k_{M,j,i}} $</p>
+<h4 id="optional-weights">Optional Weights</h4>
+<p>Up to now in our formulations, all <span class="arithmatex">\(corr\)</span> variables got the same weight, i.e. they are all multiplied with 1.
+But often, we want to use other weights, especially when mixing different types of corrections, with corrections that modify parameters in different orders of magnitude.
+Therefore, COBRA-k optionally allows one to set weights according to the following procedure, whereby <span class="arithmatex">\(n\)</span> is a user-defined percentile:</p>
+<ul>
+<li>For reaction fluxes and logarithmic concentrations: The absolute value of the given lower scenario bound</li>
+<li>For <span class="arithmatex">\(k_{cat}⋅[E]\)</span> corrections: The <span class="arithmatex">\(n\)</span>th percentile of all possible maximal <span class="arithmatex">\(k_{cat}⋅[E]\)</span> values in the model, i.e. of all <span class="arithmatex">\(Ω/W_i\)</span> values.</li>
+<li>For <span class="arithmatex">\(Δ_r G^{´°}_i\)</span> corrections: The <span class="arithmatex">\(n\)</span>th percentile of all absolute Δ_r G^{´°}_i in the model</li>
+<li>For <span class="arithmatex">\(k_M\)</span> corrections: The <span class="arithmatex">\(n\)</span>th percentile of all <span class="arithmatex">\(K_{m,i}\)</span> in the model</li>
+</ul>
+<h4 id="optional-quadratic-sum">Optional Quadratic Sum</h4>
+<p>As an alternative to the linear correction value sum (see above), one can also use a quadratic sum. Such a sum automatically penalizes larger absolute changes and prefers (potentially more) smaller changes. This changes our linear objective function into a quadratic one. E.g., the sum of flux corrections becomes:</p>
+<p>$corr^{fluxes} = \sum_i {(corr^{fluxes,+}_i)^2 + (corr^{fluxes,-}_i)^2} $</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Using a quadratic instead of a linear objective function makes the correction optmization much more computationally complex.</p>
+</div>
+<h2 id="the-correctionconfig-dataclass">The CorrectionConfig dataclass</h2>
+<p>Now, in COBRA-k, we can define a corrections scenario and the corrections options using the <code>CorrectionConfig</code> dataclass. It is defined as follows in COBRA-k's <code>dataclass</code> module:</p>
+<div class="highlight"><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">CorrectionConfig</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Stores the configuration for corrections in a model (see parameter corrections chapter in documentation).&quot;&quot;&quot;</span>
+
+    <span class="n">error_scenario</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A dictionary where keys are error scenarios and values are tuples representing the lower and upper bounds of the error. Defaults to {}.&quot;&quot;&quot;</span>
+    <span class="n">add_flux_error_term</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Indicates whether to add flux error terms. Defaults to False.&quot;&quot;&quot;</span>
+    <span class="n">add_met_logconc_error_term</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Indicates whether to add metabolite log concentration error terms. Defaults to False.&quot;&quot;&quot;</span>
+    <span class="n">add_enzyme_conc_error_term</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Indicates whether to add enzyme concentration error terms. Defaults to False.&quot;&quot;&quot;</span>
+    <span class="n">add_kcat_times_e_error_term</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Indicates whether to add k_cat ⋅ [E] error terms. Defaults to False.&quot;&quot;&quot;</span>
+    <span class="n">kcat_times_e_error_cutoff</span><span class="p">:</span> <span class="n">PositiveFloat</span> <span class="o">=</span> <span class="mf">1.0</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The cutoff value for the k_cat ⋅ [E] error term. Defaults to 1.0.&quot;&quot;&quot;</span>
+    <span class="n">max_rel_kcat_times_e_correction</span><span class="p">:</span> <span class="n">PositiveFloat</span> <span class="o">=</span> <span class="n">QUASI_INF</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Maximal relative correction for the k_cat ⋅ [E] error error term. Defaults to QUASI_INF.&quot;&quot;&quot;</span>
+    <span class="n">add_dG0_error_term</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Indicates whether to add ΔG&#39;° error terms. Defaults to False.&quot;&quot;&quot;</span>
+    <span class="n">dG0_error_cutoff</span><span class="p">:</span> <span class="n">PositiveFloat</span> <span class="o">=</span> <span class="mf">1.0</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The cutoff value for the ΔG&#39;° error terms. Defaults to 1.0.&quot;&quot;&quot;</span>
+    <span class="n">max_abs_dG0_correction</span><span class="p">:</span> <span class="n">PositiveFloat</span> <span class="o">=</span> <span class="n">QUASI_INF</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Maximal absolute correction for the dG0 error term. Defaults to QUASI_INF.&quot;&quot;&quot;</span>
+    <span class="n">add_km_error_term</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Indicates whether to add a km error term. Defaults to False.&quot;&quot;&quot;</span>
+    <span class="n">km_error_cutoff</span><span class="p">:</span> <span class="n">PositiveFloat</span> <span class="o">=</span> <span class="mf">1.0</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Cutoff value for the κ error term. Defaults to 1.0.&quot;&quot;&quot;</span>
+    <span class="n">max_rel_km_correction</span><span class="p">:</span> <span class="n">PositiveFloat</span> <span class="o">=</span> <span class="mf">0.999</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Maximal relative correction for the κ error term. Defaults to 0.999.&quot;&quot;&quot;</span>
+    <span class="n">error_sum_as_qp</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Indicates whether to use a quadratic programming approach for the error sum. Defaults to False.&quot;&quot;&quot;</span>
+    <span class="n">add_error_sum_term</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Whether to add an error sum term. Defaults to True.&quot;&quot;&quot;</span>
+    <span class="n">use_weights</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Indicates whether to use weights for the corrections (otherwise, the weight is 1.0). Defaults to False.&quot;&quot;&quot;</span>
+    <span class="n">weight_percentile</span><span class="p">:</span> <span class="n">NonNegativeInt</span> <span class="o">=</span> <span class="mi">90</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Percentile to use for weight calculation. Defaults to 90.&quot;&quot;&quot;</span>
+    <span class="n">extra_weights</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Dictionary to store extra weights for specific corrections. Defaults to {}.&quot;&quot;&quot;</span>
+    <span class="n">var_lb_ub_application</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;exp&quot;</span><span class="p">,</span> <span class="s2">&quot;log&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The application method for variable lower and upper bounds. Either &#39;&#39; (x=x), &#39;exp&#39; or &#39;log&#39;. Defaults to &#39;&#39;.&quot;&quot;&quot;</span>
+</code></pre></div>
+<p>While many of the member variables are self-explanatory in the context of the previous sub-chapters, some member variables still need to looked at in more detail:</p>
+<ul>
+<li><code>error_scenario: dict[str, tuple[float, float]]</code>: This member variable describes the scenario for which you run the correction. E.g., if you have a scenario where the flux of a reaction A is measured to be between 1 and 2, <code>error_scenario</code>would be set to <code>{"A": (1, 2)}</code>.</li>
+<li><code>max_rel_(...): float</code> and <code>max_abs_(...): float</code>variables: With these member variables, you can restrict the maximally possible relative (for <span class="arithmatex">\(k_{cat}⋅[E]\)</span> and <span class="arithmatex">\(k_M\)</span>) or  absolute (for <span class="arithmatex">\(Δ_r G^{´°}\)</span>) maximal correction for a parameter.</li>
+<li><code>var_lb_ub_application: Literal["", "exp", "log"]</code>: Sometimes, you may have e.g. concentration data in non-logarithmic form. Then, if you set this member variable to <code>"log"</code>, we can directly use this data for a concentration <code>error_scenario</code>. Conversely, with<code>"exp"</code>, you could apply the exponential function on a measurement with logarithmic values. Keep in mind that this application is applied on <em>all</em> measurements, regardless of whether they represent concentrations or something else.</li>
+</ul>
+<h2 id="usage-examples-in-code">Usage examples in code</h2>
+<p>Now, after all this theory and the dataclass explanation, let's see some toy model parameter corrections in COBRA-k :-)</p>
+<div class="admonition info">
+<p class="admonition-title">Info</p>
+<p>The given examples are just two of many possible combinations (or non-combinations, if you just want a single type of corrections) of parameter corrections. Feel free to use the combination or single correction type that suits your problem best.</p>
+</div>
+<h3 id="a-flux-and-concentration-scenario-correction-in-a-milp">A flux and concentration scenario correction in a MILP</h3>
+<p>Here, we try to find the minimal changes needed to the flux and concentration scenario
+so that it becomes feasible. I.e. no model parameters are changes.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Import relevant classes and functions</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.lps</span><span class="w"> </span><span class="kn">import</span> <span class="n">perform_lp_optimization</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.example_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">toy_model</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">CorrectionConfig</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.constants</span><span class="w"> </span><span class="kn">import</span> <span class="n">LNCONC_VAR_PREFIX</span><span class="p">,</span> <span class="n">ERROR_SUM_VAR_ID</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.printing</span><span class="w"> </span><span class="kn">import</span> <span class="n">print_dict</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">math</span><span class="w"> </span><span class="kn">import</span> <span class="n">log</span>
+
+<span class="c1">#</span>
+<span class="n">flux_and_concentration_error_scenario</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;Overflow&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.4</span><span class="p">),</span>  <span class="c1"># Overflow reaction flux between 1 and 1.4</span>
+    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">LNCONC_VAR_PREFIX</span><span class="si">}</span><span class="s2">M&quot;</span><span class="p">:</span> <span class="p">(</span><span class="n">log</span><span class="p">(</span><span class="mf">0.2</span><span class="p">),</span> <span class="n">log</span><span class="p">(</span><span class="mf">0.2</span><span class="p">)),</span>  <span class="c1"># M concentration fixed at .2 molar</span>
+    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">LNCONC_VAR_PREFIX</span><span class="si">}</span><span class="s2">D&quot;</span><span class="p">:</span> <span class="p">(</span><span class="n">log</span><span class="p">(</span><span class="mf">0.23</span><span class="p">),</span> <span class="n">log</span><span class="p">(</span><span class="mf">0.25</span><span class="p">)),</span>  <span class="c1"># D concentration betwewen .23 and .25 molar</span>
+<span class="p">}</span>
+
+<span class="c1"># With a CorrectionConfig as optional further argument,</span>
+<span class="c1"># all explained extra variables for parameter corrections</span>
+<span class="c1"># are added to our model automatically :D</span>
+<span class="c1"># Now, we can just minimize the sum of correction errors.</span>
+<span class="n">correction_result_1</span> <span class="o">=</span> <span class="n">perform_lp_optimization</span><span class="p">(</span>
+    <span class="n">cobrak_model</span><span class="o">=</span><span class="n">toy_model</span><span class="p">,</span>
+    <span class="n">objective_target</span><span class="o">=</span><span class="n">ERROR_SUM_VAR_ID</span><span class="p">,</span>
+    <span class="n">objective_sense</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">with_thermodynamic_constraints</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">correction_config</span><span class="o">=</span><span class="n">CorrectionConfig</span><span class="p">(</span>
+        <span class="n">error_scenario</span><span class="o">=</span><span class="n">flux_and_concentration_error_scenario</span><span class="p">,</span>
+        <span class="n">add_flux_error_term</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">add_met_logconc_error_term</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">),</span>
+<span class="p">)</span>
+
+<span class="n">print_dict</span><span class="p">(</span><span class="n">correction_result_1</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="a-k_cate-g-and-k_m-correction-in-an-nlp-and-application-of-correction-on-model">A <span class="arithmatex">\(k_{cat}⋅[E]\)</span>, <span class="arithmatex">\(ΔG'°\)</span> and <span class="arithmatex">\(k_M\)</span> correction in an NLP, and application of correction on model</h3>
+<p>Here, we try to find the minimal changes needed to the model's <span class="arithmatex">\(k_{cat}⋅[E]\)</span>, <span class="arithmatex">\(ΔG'°\)</span> and <span class="arithmatex">\(k_M\)</span>
+such that the given scenario (a gigh Glycolysis flux) can be reached. We then apply (i.e. set the corrected parameters)
+using <code>apply_error_correction_on_model</code>from COBRA-k's <code>utilities</code> submodule.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Import relevant classes and functions</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.lps</span><span class="w"> </span><span class="kn">import</span> <span class="n">perform_lp_optimization</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.example_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">toy_model</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">CorrectionConfig</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.constants</span><span class="w"> </span><span class="kn">import</span> <span class="n">LNCONC_VAR_PREFIX</span><span class="p">,</span> <span class="n">ERROR_SUM_VAR_ID</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.printing</span><span class="w"> </span><span class="kn">import</span> <span class="n">print_dict</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.utilities</span><span class="w"> </span><span class="kn">import</span> <span class="n">apply_error_correction_on_model</span>
+
+<span class="c1">#</span>
+<span class="n">flux_and_concentration_error_scenario</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;Glycolysis&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">40.0</span><span class="p">,</span> <span class="mf">45.0</span><span class="p">),</span>
+<span class="p">}</span>
+
+<span class="c1"># Again, minimize the correction error variable sum</span>
+<span class="n">correction_result_2</span> <span class="o">=</span> <span class="n">perform_lp_optimization</span><span class="p">(</span>
+    <span class="n">cobrak_model</span><span class="o">=</span><span class="n">toy_model</span><span class="p">,</span>
+    <span class="n">objective_target</span><span class="o">=</span><span class="n">ERROR_SUM_VAR_ID</span><span class="p">,</span>
+    <span class="n">objective_sense</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">with_thermodynamic_constraints</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">with_enzyme_constraints</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">correction_config</span><span class="o">=</span><span class="n">CorrectionConfig</span><span class="p">(</span>
+        <span class="n">error_scenario</span><span class="o">=</span><span class="n">flux_and_concentration_error_scenario</span><span class="p">,</span>
+        <span class="n">add_kcat_times_e_error_term</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">add_dG0_error_term</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">add_km_error_term</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">),</span>
+<span class="p">)</span>
+
+<span class="n">print_dict</span><span class="p">(</span><span class="n">correction_result_2</span><span class="p">)</span>
+
+<span class="c1"># Now, we apply the correction (i.e. set the corrected</span>
+<span class="c1"># parameter values to our model, overwriting the old parameter values)</span>
+<span class="n">corrected_cobrak_model</span> <span class="o">=</span> <span class="n">apply_error_correction_on_model</span><span class="p">(</span>
+    <span class="n">cobrak_model</span><span class="o">=</span><span class="n">toy_model</span><span class="p">,</span>
+    <span class="n">correction_result</span><span class="o">=</span><span class="n">correction_result_2</span><span class="p">,</span>
+    <span class="n">min_abs_error_value</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span>
+    <span class="n">min_rel_error_value</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span>
+    <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre></div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": ".", "features": ["content.code.copy"], "search": "assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="assets/javascripts/bundle.92b07e13.min.js"></script>
+      
+        <script src="javascript/katex/katex.min.js"></script>
+      
+        <script src="javascript/katex/contrib/auto-render.min.js"></script>
+      
+        <script src="javascript/init_katex.js"></script>
+      
+        <script src="assets/external/unpkg.com/mermaid@11/dist/mermaid.min.js"></script>
+      
+    
+  </body>
+</html>

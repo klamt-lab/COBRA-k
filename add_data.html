@@ -1,0 +1,845 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="construct_own.html">
+      
+      
+        <link rel="next" href="parameter_corrections.html">
+      
+      
+      <link rel="icon" href="assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.17">
+    
+    
+      
+        <title>9. Automatic data collection - COBRA-k</title>
+      
+    
+    
+      <link rel="stylesheet" href="assets/stylesheets/main.7e37652d.min.css">
+      
+        
+        <link rel="stylesheet" href="assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+        <script src="assets/external/unpkg.com/iframe-worker/shim.js"></script>
+      
+    
+    
+      
+    
+    
+      <link rel="stylesheet" href="assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="javascript/katex/katex.min.css">
+    
+      <link rel="stylesheet" href="css-extra.css">
+    
+    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#automatically-add-kinetic-and-thermodynamic-data" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="index.html" title="COBRA-k" class="md-header__button md-logo" aria-label="COBRA-k" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            COBRA-k
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              9. Automatic data collection
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m14.3 16-.7-2h-3.2l-.7 2H7.8L11 7h2l3.2 9zM20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12zm-9.15 3.96h2.3L12 9z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_2" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to system preference"  type="radio" name="__palette" id="__palette_2">
+    
+      <label class="md-header__button md-icon" title="Switch to system preference" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="index.html" title="COBRA-k" class="md-nav__button md-logo" aria-label="COBRA-k" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    COBRA-k
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Start
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="installation.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    1. Installation
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="model_from_scratch.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    2. Create model from scratch
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="model_io.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    3. Load/Save models
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="lps.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    4. Linear Programs & Pretty-Print
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="milps.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    5. Mixed-Integer Linear Programs
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="nlps.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    6. Nonlinear COBRA-k Programs
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="evolutionary.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    7. Evolutionary Optimization
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="construct_own.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    8. Construct Own Optimizations
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    9. Automatic data collection
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="add_data.html" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    9. Automatic data collection
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#automatic-way" class="md-nav__link">
+    <span class="md-ellipsis">
+      Automatic way
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#manual-and-semi-automatic-way" class="md-nav__link">
+    <span class="md-ellipsis">
+      Manual and semi-automatic way
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="parameter_corrections.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    10. Parameter corrections
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="utilities.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    11. More utilities
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="paper_reproduction.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    12. Paper result reproduction
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="api.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    API Reference
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#automatic-way" class="md-nav__link">
+    <span class="md-ellipsis">
+      Automatic way
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#manual-and-semi-automatic-way" class="md-nav__link">
+    <span class="md-ellipsis">
+      Manual and semi-automatic way
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="automatically-add-kinetic-and-thermodynamic-data">Automatically add kinetic and thermodynamic data</h1>
+<p>If you want to perform COBRA-k's thermodynamic and/or enzyme kinetic ("thermokinetic") analyses, you need appropriate data. When loading an existing model (see previous chapter) or create a new Model instance from scratch (see second to last chapter), such data is often missing or at least not directly included in the model instance. To collect such data, COBRA-k provides two major ways, a fully automated one and one where you can add data manually thanks to its <code>model_instantiation</code> submodule:</p>
+<h2 id="automatic-way">Automatic way</h2>
+<p>The automatic way of adding thermokinetic data to a newly loaded SBML file uses the function <code>get_cobrak_model_with_kinetic_data_from_sbml_model_alone</code>. Regarding the SBML model, it needs the following identifier usage for reections and metabolites:</p>
+<ul>
+<li>for the reactions: An EC number annotation using the annotation key "ec-code"</li>
+<li>for the metabolites: BiGG IDs as identifiers</li>
+</ul>
+<p>Furthermore, some extra non-optional settings have to be provided, whereby the latino-greek organism name is very important.</p>
+<p>In addition, the following databases have to be downloaded manually beforehand:</p>
+<ul>
+<li>The BRENDA .json.tar.gz from <a href="https://www.brenda-enzymes.org/download.php">https://www.brenda-enzymes.org/download.php</a></li>
+<li>The BiGG metabolites txt from <a href="http://bigg.ucsd.edu/data_access">http://bigg.ucsd.edu/data_access</a></li>
+<li>taxdmp.zip from <a href="https://ftp.ncbi.nih.gov/pub/taxonomy/">https://ftp.ncbi.nih.gov/pub/taxonomy/</a></li>
+</ul>
+<p>SABIO-RK and UniProt data are downloaded automatically into a file in the given folder of the function (see below). Keep in mind that this download may take several dozens of minutes! Once the database is downloaded, it is cached, and no new download is triggered.</p>
+<p>Using all this information the automatic procedure collects the following information and adds it to the Model:</p>
+<ul>
+<li><span class="arithmatex">\(k_{cat}\)</span>, <span class="arithmatex">\(K_M\)</span> and <span class="arithmatex">\(K_I\)</span> data: From SABIO-RK and BRENDA</li>
+<li>Hill coefficients: From SABIO-RK</li>
+<li>Molecular enzyme weights: From UniProt</li>
+<li>Taxonomic distances (used to collect taxonomically nearer enzyme kinetic data): From NCBI TAXONOMY</li>
+<li><span class="arithmatex">\(Δ_r G^{'°}\)</span>: Using the eQuilibrator API</li>
+</ul>
+<p>Here's a usage example:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.model_instantiation</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_cobrak_model_with_kinetic_data_from_sbml_model_alone</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">ParameterRange</span>
+
+<span class="n">cobrak_model</span> <span class="o">=</span> <span class="n">get_cobrak_model_with_kinetic_data_from_sbml_model_alone</span><span class="p">(</span>
+    <span class="n">sbml_model_path</span><span class="o">=</span><span class="s2">&quot;/path/to/sbml.xml&quot;</span><span class="p">,</span>
+    <span class="n">path_to_external_resources</span><span class="o">=</span><span class="s2">&quot;/path/where/the/manually/downloaded/datafiles/are&quot;</span><span class="p">,</span>
+    <span class="n">folder_of_sabio_database</span><span class="p">:</span> <span class="s2">&quot;/path/where/the/sabiork/database/shall/be/downloaded&quot;</span><span class="p">,</span>
+    <span class="n">brenda_version</span><span class="o">=</span><span class="s2">&quot;$CURRENT_BRENDA_VERSION&quot;</span><span class="p">,</span> <span class="c1"># E.g. 2023_1</span>
+    <span class="n">prefer_brenda</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="c1"># Whether or not BRENDA k_cat or k_M, ... values shall be used if SABIO-RK data is available</span>
+    <span class="n">base_species</span><span class="o">=</span><span class="s2">&quot;$MODEL_SPECIES&quot;</span><span class="p">,</span> <span class="c1"># E.g. Escherichia coli</span>
+    <span class="n">max_prot_pool</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">conc_ranges</span><span class="o">=</span><span class="p">{</span>
+        <span class="c1"># E.g., for all metabolites without a given identifier,</span>
+        <span class="c1"># we can use the key &quot;DEFAULT&quot;:</span>
+        <span class="s2">&quot;DEFAULT&quot;</span><span class="p">:</span> <span class="n">ParameterRange</span><span class="p">(</span><span class="mf">1e-6</span><span class="p">,</span> <span class="mf">0.02</span><span class="p">),</span>
+        <span class="c1"># (...)</span>
+    <span class="p">},</span>
+    <span class="n">inner_to_outer_compartments</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;INNERMOST_COMPARTMENT&quot;</span><span class="p">,</span> <span class="s2">&quot;NEXT_TO_INNERMOST_&quot;</span><span class="p">,</span> <span class="p">],</span> <span class="c1"># E.g., [&quot;c&quot;, &quot;p&quot;, &quot;e&quot;], used for dG0 calculation</span>
+    <span class="n">phs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;c&quot;</span><span class="p">:</span> <span class="mf">7.0</span><span class="p">,</span> <span class="p">}</span> <span class="c1"># dict[str, float], shows ph of each compartment in the model, used for dG0 calculation</span>
+    <span class="n">pmgs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;c&quot;</span><span class="p">:</span> <span class="mf">2.5</span><span class="p">,</span> <span class="p">}</span> <span class="c1"># dict[str, float], shows pMg of each compartment in the model, used for dG0 calculation</span>
+    <span class="n">ionic_strenghts</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;c&quot;</span><span class="p">:</span> <span class="mi">250</span><span class="p">,</span> <span class="p">},</span> <span class="c1"># dict[str, float], shows ionic strength in mM of each compartment in the model, used for dG0 calculation</span>
+    <span class="n">potential_differences</span><span class="o">=</span><span class="p">{(</span><span class="s2">&quot;c&quot;</span><span class="p">,</span> <span class="s2">&quot;p&quot;</span><span class="p">):</span> <span class="mf">0.15</span><span class="p">,</span> <span class="p">},</span> <span class="c1"># dict[tuple[str, str], float], shows potential difference from first to second given compartment in mV, used for dG0 calculation</span>
+    <span class="n">kinetic_ignored_enzymes</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;IDS&quot;</span><span class="p">,</span> <span class="s2">&quot;OF&quot;</span><span class="p">,</span> <span class="s2">&quot;IGNORED&quot;</span><span class="p">,</span> <span class="s2">&quot;ENZYMES&quot;</span><span class="p">,</span> <span class="p">],</span> <span class="c1"># Enzymes for which no kinetic shall be found</span>
+    <span class="n">custom_kms_and_kcats</span><span class="o">=</span><span class="p">{},</span> <span class="c1"># Can be dict[str, EnzymeReactionData | None] if you want to overwrite some kms or kcats</span>
+    <span class="n">kinetic_ignored_metabolites</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;IDS&quot;</span><span class="p">,</span> <span class="s2">&quot;OF&quot;</span><span class="p">,</span> <span class="s2">&quot;IGNORED&quot;</span><span class="p">,</span> <span class="s2">&quot;METABOLITES&quot;</span><span class="p">,],</span> <span class="c1"># IDs of metabolites for which no enzyme kinetic value (e.g., K_M) shall be found</span>
+    <span class="n">do_model_fullsplit</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="c1"># Explained below</span>
+    <span class="n">do_delete_enzymatically_suboptimal_reactions</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="c1"># Explained below</span>
+    <span class="n">ignore_dG0_uncertainty</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="c1"># Whether or not eQuilibrator-calculated dG0 uncertainties shall be simply set to 0</span>
+    <span class="n">enzyme_conc_ranges</span><span class="o">=</span><span class="p">{},</span> <span class="c1"># Is dict[str, ParameterRange | None]</span>
+    <span class="n">dG0_exclusion_prefixes</span><span class="o">=</span><span class="p">[],</span> <span class="c1"># Prefixes (first parts of IDs) for which no dG0 shall be set, a common one would be &quot;EX_&quot;; is list[str]</span>
+    <span class="n">dG0_exclusion_inner_parts</span><span class="o">=</span><span class="p">[],</span> <span class="c1"># Infixes (inner parts of IDs) for which no dG0 shall be set, is list[str]</span>
+    <span class="n">extra_flux_constraints</span><span class="o">=</span><span class="p">[],</span> <span class="c1"># list[ExtraFluxConstraint]</span>
+    <span class="n">extra_conc_ratios</span><span class="o">=</span><span class="p">[],</span> <span class="c1"># Is list[ExtraConcRatios]</span>
+    <span class="n">data_cache_folder</span><span class="o">=</span><span class="s2">&quot;/path/to/folder/for/uniprot/cache&quot;</span><span class="p">,</span>
+    <span class="n">R</span><span class="o">=</span><span class="err">$</span><span class="n">GAS_CONSTANT</span><span class="p">,</span> <span class="c1"># Default is STANDARD_R</span>
+    <span class="n">T</span><span class="o">=</span><span class="err">$</span><span class="n">TEMPERATURE</span><span class="p">,</span> <span class="c1"># Default is STANDARD_T</span>
+    <span class="n">add_hill_coefficients</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>  <span class="c1"># Default is True, if False, no Hill coefficeints are loaded</span>
+<span class="p">)</span>
+</code></pre></div>
+<p>Two of the arguments have the following non-obvious meanings:</p>
+<ul>
+<li><code>do_model_fullsplit</code>: This means that each reaction is going to be split i) for forward &amp; reverse directions and ii) for each enzyme (complex) catalyzing it. E.g., a reversible reaction
+<code>R1: A → B</code> catalyzed by the enzyme <span class="arithmatex">\(E_1\)</span> and the enzyme complex <span class="arithmatex">\(E_{2,sub1} \space and \space E_{2,sub2}\)</span> is going to be split into the four reactions <code>R1_ENZ_E1_FWD: A → B$,  $R1_ENZ_E2SUB1_AND_E2SUB2_FWD: A → B</code> and <code>R1_ENZ_E1_REV: B → A</code>,  <code>R1_ENZ_E2SUB1_AND_E2SUB2_REV: B → A</code>. This fullsplit is neccessary in order to perform thermodynamic and enzymatic calculations later on.</li>
+<li><code>do_delete_enzymatically_suboptimal_reactions</code>: Akin to the enzyme constraint method sMOMENT [!], all (fullsplit) variants of a reaction which do not have the lowest <span class="arithmatex">\(k_{cat}/MW\)</span> ratio (i.e., which have higher enzyme costs à flux) are <em>deleted</em>. Keep in mind that, while this can drastically reduce a model's size, this also means that any <span class="arithmatex">\(K_M\)</span>, <span class="arithmatex">\(K_I\)</span> etc. variants of reactions are not considered.</li>
+</ul>
+<h2 id="manual-and-semi-automatic-way">Manual and semi-automatic way</h2>
+<p>If you want to automatically create only a select amount of data, look up COBRA-k's submodules
+<code>equilibrator_functionality</code> (for <span class="arithmatex">\(Δ_r G^{'°}\)</span>), <code>uniprot_functionality</code> (for molecular enzyme weights),
+<code>sabio_rk_functionality</code> (for enzyme kinetic data from SABIO-RK), <code>brenda_functionality</code> (for enzyme kinetic
+data from BRENDA) and <code>ncbi_taxonomy_functionality</code> (for taxonomy distance data). Their functions are also described in this documentation's API reference.</p>
+<p>Finally, if you already have some data and want to add it to an SBML file Model generation, you can use <code>get_cobrak_model_from_sbml_and_thermokinetic_data</code> as follows:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.model_instantiation</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_cobrak_model_from_sbml_and_thermokinetic_data</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">EnzymeReactionData</span><span class="p">,</span> <span class="n">ParameterRange</span>
+
+<span class="n">cobrak_model</span> <span class="o">=</span> <span class="n">get_cobrak_model_from_sbml_and_thermokinetic_data</span><span class="p">(</span>
+    <span class="n">sbml_path</span><span class="o">=</span><span class="s2">&quot;path/to/sbml.xml&quot;</span><span class="p">,</span>
+    <span class="n">extra_flux_constraints</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">ExtraFluxConstraint</span><span class="p">],</span>
+    <span class="n">dG0s</span><span class="o">=</span><span class="p">{</span> <span class="c1"># Is dict[str, float], unit is kJ/mol</span>
+        <span class="s2">&quot;$REAC_ID&quot;</span><span class="p">:</span> <span class="n">dG0_of_reaction</span><span class="p">,</span>
+        <span class="c1"># (...)</span>
+    <span class="p">},</span>
+    <span class="n">dG0_uncertainties</span><span class="o">=</span><span class="p">{</span> <span class="c1"># Is dict[str, float], unit is kJ/mol</span>
+        <span class="s2">&quot;$REAC_ID&quot;</span><span class="p">:</span> <span class="n">dG0_of_reaction</span><span class="p">,</span>
+        <span class="c1"># (...)</span>
+    <span class="p">},</span>
+    <span class="n">conc_ranges</span><span class="o">=</span><span class="p">{</span> <span class="c1"># Is dict[str, ParameterRange], these are the concentrations in M</span>
+        <span class="s2">&quot;$MET_ID&quot;</span><span class="p">:</span> <span class="n">ParameterRange</span><span class="p">(</span><span class="n">minimum</span><span class="o">=</span><span class="n">min_conc_of_met</span><span class="p">,</span> <span class="n">maximum</span><span class="o">=</span><span class="n">max_conc_of_met</span><span class="p">),</span>
+        <span class="c1"># (...)</span>
+    <span class="p">},</span>
+    <span class="n">extra_conc_ratios</span><span class="o">=</span><span class="p">[],</span> <span class="c1"># Is a list[ExtraConcRatios]</span>
+    <span class="n">enzyme_molecular_weights</span><span class="o">=</span><span class="p">{</span> <span class="c1"># Is dict[str, float], MW in g/mmol</span>
+        <span class="s2">&quot;$ENZYME_ID&quot;</span><span class="p">:</span> <span class="n">molecular_weight</span><span class="p">,</span>
+        <span class="c1"># (...)</span>
+    <span class="p">},</span>
+    <span class="n">enzyme_reaction_data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">EnzymeReactionData</span> <span class="o">|</span> <span class="kc">None</span><span class="p">],</span>  <span class="c1"># Contains k_cats, k_ms, k_is, k_as and Hill coefficients</span>
+    <span class="n">max_prot_pool</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="c1"># In g/gDW</span>
+    <span class="n">kinetic_ignored_metabolites</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;h2_c&quot;</span><span class="p">,</span> <span class="s2">&quot;h2_p&quot;</span><span class="p">,],</span> <span class="c1"># Is list[str]</span>
+    <span class="n">enzyme_conc_ranges</span> <span class="o">=</span> <span class="p">{</span> <span class="c1"># Is dict[str, ParameterRange | None]</span>
+        <span class="s2">&quot;$ENZYME_ID&quot;</span><span class="p">:</span> <span class="n">ParameterRange</span><span class="p">(</span><span class="n">minimum</span><span class="o">=</span><span class="n">min_enzyme_conc</span><span class="p">,</span> <span class="n">maximum</span><span class="o">=</span><span class="n">max_enzyme_conc</span><span class="p">),</span>
+        <span class="c1"># (...)</span>
+    <span class="p">},</span>
+    <span class="n">do_model_fullsplit</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># Explained below</span>
+    <span class="n">do_delete_enzymatically_suboptimal_reactions</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="c1"># Explained below</span>
+    <span class="n">R</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">STANDARD_R</span><span class="p">,</span> <span class="c1"># Standard gas constant</span>
+    <span class="n">T</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">STANDARD_T</span><span class="p">,</span> <span class="c1"># Standard temperature</span>
+<span class="p">)</span>
+</code></pre></div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>For a real-life example of a semi-automated way of collecting enzymatic data, look into the file <a href="https://github.com/klamt-lab/COBRA-k/blob/main/examples/iCH360/B_prepare_external_data_for_cobrak.py">"examples/iCH360/B_prepare_external_data_for_cobrak.py" in COBRA-k's "examples/iCH360" repository subfolder</a>. It also contains separate calls to the BRENDA and SABIO-RK functionalities.</p>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": ".", "features": ["content.code.copy"], "search": "assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="assets/javascripts/bundle.92b07e13.min.js"></script>
+      
+        <script src="javascript/katex/katex.min.js"></script>
+      
+        <script src="javascript/katex/contrib/auto-render.min.js"></script>
+      
+        <script src="javascript/init_katex.js"></script>
+      
+        <script src="assets/external/unpkg.com/mermaid@11/dist/mermaid.min.js"></script>
+      
+    
+  </body>
+</html>

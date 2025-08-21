@@ -1,0 +1,1701 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="model_io.html">
+      
+      
+        <link rel="next" href="milps.html">
+      
+      
+      <link rel="icon" href="assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.17">
+    
+    
+      
+        <title>4. Linear Programs & Pretty-Print - COBRA-k</title>
+      
+    
+    
+      <link rel="stylesheet" href="assets/stylesheets/main.7e37652d.min.css">
+      
+        
+        <link rel="stylesheet" href="assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+        <script src="assets/external/unpkg.com/iframe-worker/shim.js"></script>
+      
+    
+    
+      
+    
+    
+      <link rel="stylesheet" href="assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="javascript/katex/katex.min.css">
+    
+      <link rel="stylesheet" href="css-extra.css">
+    
+    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#linear-programs" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="index.html" title="COBRA-k" class="md-header__button md-logo" aria-label="COBRA-k" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            COBRA-k
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              4. Linear Programs & Pretty-Print
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m14.3 16-.7-2h-3.2l-.7 2H7.8L11 7h2l3.2 9zM20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12zm-9.15 3.96h2.3L12 9z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_2" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to system preference"  type="radio" name="__palette" id="__palette_2">
+    
+      <label class="md-header__button md-icon" title="Switch to system preference" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="index.html" title="COBRA-k" class="md-nav__button md-logo" aria-label="COBRA-k" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    COBRA-k
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Start
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="installation.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    1. Installation
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="model_from_scratch.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    2. Create model from scratch
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="model_io.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    3. Load/Save models
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    4. Linear Programs & Pretty-Print
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="lps.html" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    4. Linear Programs & Pretty-Print
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#introduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      Introduction
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-stoichiometric-matrix-mathbfn" class="md-nav__link">
+    <span class="md-ellipsis">
+      The stoichiometric matrix \(\mathbf{N}\)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#constrained-based-modeling-cbm" class="md-nav__link">
+    <span class="md-ellipsis">
+      Constrained-based modeling (CBM)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Constrained-based modeling (CBM)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-steady-state-constraint" class="md-nav__link">
+    <span class="md-ellipsis">
+      The steady state constraint
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#minimal-and-maximal-reaction-fluxes" class="md-nav__link">
+    <span class="md-ellipsis">
+      Minimal and maximal reaction fluxes
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#extra-linear-flux-constraints" class="md-nav__link">
+    <span class="md-ellipsis">
+      Extra linear flux constraints
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#extra-linear-watches" class="md-nav__link">
+    <span class="md-ellipsis">
+      Extra linear watches
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#flux-balance-analysis-fba-and-pretty-printing-results-in-console" class="md-nav__link">
+    <span class="md-ellipsis">
+      Flux Balance Analysis (FBA) and pretty-printing results in console
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#parsimonious-flux-balance-analysis-pfba" class="md-nav__link">
+    <span class="md-ellipsis">
+      Parsimonious Flux Balance Analysis (pFBA)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#flux-variability-analysis-fva" class="md-nav__link">
+    <span class="md-ellipsis">
+      Flux Variability Analysis (FVA)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#analyses-with-enzyme-constraints-ecfba-ecfva" class="md-nav__link">
+    <span class="md-ellipsis">
+      Analyses with Enzyme Constraints: ecFBA &amp; ecFVA
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pretty-printing-optimization-andor-variability-results-as-an-xlsx-spreadsheet" class="md-nav__link">
+    <span class="md-ellipsis">
+      Pretty-printing optimization and/or variability results as an XLSX spreadsheet
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#exportimport-optimization-or-variability-result-as-json-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      Export/Import optimization or variability result as JSON file
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#export-optimization-or-variability-result-as-cnapy-scenario" class="md-nav__link">
+    <span class="md-ellipsis">
+      Export optimization or variability result as CNApy scenario
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#changing-and-setting-solvers-with-the-dataclass-solver" class="md-nav__link">
+    <span class="md-ellipsis">
+      Changing and setting solvers with the dataclass Solver
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="milps.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    5. Mixed-Integer Linear Programs
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="nlps.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    6. Nonlinear COBRA-k Programs
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="evolutionary.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    7. Evolutionary Optimization
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="construct_own.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    8. Construct Own Optimizations
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="add_data.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    9. Automatic data collection
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="parameter_corrections.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    10. Parameter corrections
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="utilities.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    11. More utilities
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="paper_reproduction.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    12. Paper result reproduction
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="api.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    API Reference
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#introduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      Introduction
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-stoichiometric-matrix-mathbfn" class="md-nav__link">
+    <span class="md-ellipsis">
+      The stoichiometric matrix \(\mathbf{N}\)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#constrained-based-modeling-cbm" class="md-nav__link">
+    <span class="md-ellipsis">
+      Constrained-based modeling (CBM)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Constrained-based modeling (CBM)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-steady-state-constraint" class="md-nav__link">
+    <span class="md-ellipsis">
+      The steady state constraint
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#minimal-and-maximal-reaction-fluxes" class="md-nav__link">
+    <span class="md-ellipsis">
+      Minimal and maximal reaction fluxes
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#extra-linear-flux-constraints" class="md-nav__link">
+    <span class="md-ellipsis">
+      Extra linear flux constraints
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#extra-linear-watches" class="md-nav__link">
+    <span class="md-ellipsis">
+      Extra linear watches
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#flux-balance-analysis-fba-and-pretty-printing-results-in-console" class="md-nav__link">
+    <span class="md-ellipsis">
+      Flux Balance Analysis (FBA) and pretty-printing results in console
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#parsimonious-flux-balance-analysis-pfba" class="md-nav__link">
+    <span class="md-ellipsis">
+      Parsimonious Flux Balance Analysis (pFBA)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#flux-variability-analysis-fva" class="md-nav__link">
+    <span class="md-ellipsis">
+      Flux Variability Analysis (FVA)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#analyses-with-enzyme-constraints-ecfba-ecfva" class="md-nav__link">
+    <span class="md-ellipsis">
+      Analyses with Enzyme Constraints: ecFBA &amp; ecFVA
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pretty-printing-optimization-andor-variability-results-as-an-xlsx-spreadsheet" class="md-nav__link">
+    <span class="md-ellipsis">
+      Pretty-printing optimization and/or variability results as an XLSX spreadsheet
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#exportimport-optimization-or-variability-result-as-json-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      Export/Import optimization or variability result as JSON file
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#export-optimization-or-variability-result-as-cnapy-scenario" class="md-nav__link">
+    <span class="md-ellipsis">
+      Export optimization or variability result as CNApy scenario
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#changing-and-setting-solvers-with-the-dataclass-solver" class="md-nav__link">
+    <span class="md-ellipsis">
+      Changing and setting solvers with the dataclass Solver
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="linear-programs">Linear Programs</h1>
+<details class="abstract">
+<summary>Quickstart code</summary>
+<div class="highlight"><pre><span></span><code><span class="c1">#%</span>
+<span class="c1"># Print stoichiometric matrix</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.example_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">toy_model</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.utilities</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_stoichiometric_matrix</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">get_stoichiometric_matrix</span><span class="p">(</span><span class="n">toy_model</span><span class="p">))</span>
+
+<span class="c1">#%</span>
+<span class="c1"># Perform Flux Balance Analysis with simple objective</span>
+<span class="c1"># Load the general Linear Program optimization function of COBRA-k</span>
+<span class="c1"># which can be found in COBRA-k&#39;s submodule &#39;lps&#39;</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.lps</span><span class="w"> </span><span class="kn">import</span> <span class="n">perform_lp_optimization</span>
+<span class="c1"># Load some pretty-print functions (can be found in submodule &#39;printing&#39;)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.printing</span><span class="w"> </span><span class="kn">import</span> <span class="n">print_dict</span><span class="p">,</span> <span class="n">print_optimization_result</span>
+
+<span class="c1"># Maximize the flux of Glycolysis using the CBM constraints</span>
+<span class="n">fba_result</span> <span class="o">=</span> <span class="n">perform_lp_optimization</span><span class="p">(</span>
+    <span class="n">toy_model</span><span class="p">,</span>
+    <span class="s2">&quot;Glycolysis&quot;</span><span class="p">,</span>
+    <span class="o">+</span><span class="mi">1</span><span class="p">,</span>
+<span class="p">)</span> <span class="c1"># fba_result is a dict[str, float]</span>
+
+<span class="c1"># Pretty print result as dictionary</span>
+<span class="n">print_dict</span><span class="p">(</span><span class="n">fba_result</span><span class="p">)</span>
+
+<span class="c1"># Pretty print the result as (nicer-looking :-) tables</span>
+<span class="n">print_optimization_result</span><span class="p">(</span><span class="n">toy_model</span><span class="p">,</span> <span class="n">fba_result</span><span class="p">)</span>
+
+<span class="c1">#%</span>
+<span class="c1"># Load the name of the variable that holds the objective name</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.constants</span><span class="w"> </span><span class="kn">import</span> <span class="n">OBJECTIVE_VAR_NAME</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">fba_result</span><span class="p">[</span><span class="n">OBJECTIVE_VAR_NAME</span><span class="p">])</span>
+
+<span class="c1">#%</span>
+<span class="c1"># Perform FBA with more complex objective</span>
+<span class="n">perform_lp_optimization</span><span class="p">(</span>
+    <span class="n">toy_model</span><span class="p">,</span>
+    <span class="p">{</span><span class="s2">&quot;Glycolysis&quot;</span><span class="p">:</span> <span class="o">-</span><span class="mf">1.5</span><span class="p">,</span> <span class="s2">&quot;Overflow&quot;</span><span class="p">:</span> <span class="mf">2.0</span><span class="p">},</span> <span class="c1"># No str anymore</span>
+    <span class="o">+</span><span class="mi">1</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1">#%</span>
+<span class="c1"># Perform pFBA</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.constants</span><span class="w"> </span><span class="kn">import</span> <span class="n">FLUX_SUM_VAR_ID</span>
+<span class="c1"># We perform a pFBA on our Glycolysis optimization example</span>
+<span class="c1"># 1) We set the objective value as minimum</span>
+<span class="n">toy_model</span><span class="o">.</span><span class="n">reactions</span><span class="p">[</span><span class="s2">&quot;Glycolysis&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">min_flux</span> <span class="o">=</span> <span class="n">fba_result</span><span class="p">[</span><span class="s2">&quot;Glycolysis&quot;</span><span class="p">]</span>
+
+<span class="c1"># 2) Now, the flux sum minimization</span>
+<span class="n">pfba_result</span> <span class="o">=</span> <span class="n">perform_lp_optimization</span><span class="p">(</span>
+    <span class="n">toy_model</span><span class="p">,</span>
+    <span class="n">FLUX_SUM_VAR_ID</span><span class="p">,</span>
+    <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">with_flux_sum_var</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="c1"># Again, pfba_result is a dict[str, float]</span>
+
+<span class="c1"># Let&#39;s print our pFBA result</span>
+<span class="n">print_optimization_result</span><span class="p">(</span><span class="n">toy_model</span><span class="p">,</span> <span class="n">pfba_result</span><span class="p">)</span>
+
+<span class="c1"># Reset model for the next calculations</span>
+<span class="n">toy_model</span><span class="o">.</span><span class="n">reactions</span><span class="p">[</span><span class="s2">&quot;Glycolysis&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">min_flux</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+<span class="c1">#%</span>
+<span class="c1"># Perform Flux Variability Analysis</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.lps</span><span class="w"> </span><span class="kn">import</span> <span class="n">perform_lp_variability_analysis</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.printing</span><span class="w"> </span><span class="kn">import</span> <span class="n">print_variability_result</span>
+<span class="c1"># Perform general FVA (we did not set the previous objective value as minimum)</span>
+<span class="n">var_result</span> <span class="o">=</span> <span class="n">perform_lp_variability_analysis</span><span class="p">(</span>
+    <span class="n">toy_model</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Pretty print result as tables</span>
+<span class="n">print_variability_result</span><span class="p">(</span><span class="n">toy_model</span><span class="p">,</span> <span class="n">var_result</span><span class="p">)</span>
+
+<span class="c1"># Print a minimal value</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">var_result</span><span class="p">[</span><span class="s2">&quot;Overflow&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+
+<span class="c1">#%</span>
+<span class="c1"># Perform enzyme-constrained ecFBA</span>
+<span class="n">ecfba_result</span> <span class="o">=</span> <span class="n">perform_lp_optimization</span><span class="p">(</span>
+    <span class="n">toy_model</span><span class="p">,</span>
+    <span class="p">{</span><span class="s2">&quot;Glycolysis&quot;</span><span class="p">:</span> <span class="o">+</span><span class="mf">1.0</span><span class="p">},</span>  <span class="c1"># No str anymore</span>
+    <span class="o">+</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">with_enzyme_constraints</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>  <span class="c1"># Activate linear enzyme constraints</span>
+<span class="p">)</span>
+
+<span class="c1"># Pretty-print result, now also with actual enzyme usage :-)</span>
+<span class="n">print_optimization_result</span><span class="p">(</span><span class="n">toy_model</span><span class="p">,</span> <span class="n">ecfba_result</span><span class="p">)</span>
+
+<span class="c1">#%</span>
+<span class="c1"># Perform general enzyme-constrained ecFVA</span>
+<span class="n">var_result</span> <span class="o">=</span> <span class="n">perform_lp_variability_analysis</span><span class="p">(</span>
+    <span class="n">toy_model</span>
+<span class="p">)</span>
+
+<span class="c1"># Pretty print result as tables - again, now with enzyme usages :-)</span>
+<span class="n">print_variability_result</span><span class="p">(</span><span class="n">toy_model</span><span class="p">,</span> <span class="n">var_result</span><span class="p">)</span>
+
+<span class="c1">#%</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.utilities</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_reaction_enzyme_var_id</span>
+<span class="c1"># Get an enzyme variable name</span>
+<span class="n">enzyme_name_of_glycolysis</span> <span class="o">=</span> <span class="n">get_reaction_enzyme_var_id</span><span class="p">(</span><span class="s2">&quot;Glycolysis&quot;</span><span class="p">,</span> <span class="n">toy_model</span><span class="o">.</span><span class="n">reactions</span><span class="p">[</span><span class="s2">&quot;Glycolysis&quot;</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">enzyme_name_of_glycolysis</span><span class="p">)</span>
+
+<span class="c1">#%</span>
+<span class="c1"># Create XLSX spreadsheet with variability and optimization results</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.spreadsheet_functionality</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">OptimizationDataset</span><span class="p">,</span> <span class="c1"># Here, we set the optimization result and its wished shown data</span>
+    <span class="n">VariabilityDataset</span><span class="p">,</span> <span class="c1"># Here, we set the variability result and its wished shown data</span>
+    <span class="n">create_cobrak_spreadsheet</span><span class="p">,</span> <span class="c1"># The function to generate the XLSX</span>
+<span class="p">)</span>
+
+<span class="c1"># We&#39;re going to create an XLSX with the following three results:</span>
+<span class="c1"># 1. General FVA</span>
+<span class="n">var_result</span> <span class="o">=</span> <span class="n">perform_lp_variability_analysis</span><span class="p">(</span>
+    <span class="n">toy_model</span>
+<span class="p">)</span>
+<span class="c1"># 2. ATP optimization</span>
+<span class="n">max_atp_result</span> <span class="o">=</span> <span class="n">perform_lp_optimization</span><span class="p">(</span>
+    <span class="n">toy_model</span><span class="p">,</span>
+    <span class="s2">&quot;ATP_Consumption&quot;</span><span class="p">,</span>
+    <span class="o">+</span><span class="mi">1</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="c1"># 2. Overflow optimization</span>
+<span class="n">max_overflow_result</span> <span class="o">=</span> <span class="n">perform_lp_optimization</span><span class="p">(</span>
+    <span class="n">toy_model</span><span class="p">,</span>
+    <span class="s2">&quot;Overflow&quot;</span><span class="p">,</span>
+    <span class="o">+</span><span class="mi">1</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Now let&#39;s wrap the variability result into a</span>
+<span class="c1"># create_cobrak_spreadsheet()-compatible format 🎁</span>
+<span class="c1"># The keys are the dataset titles in the spreadsheet</span>
+<span class="n">variability_datasets</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">VariabilityDataset</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;FVA result&quot;</span><span class="p">:</span> <span class="n">VariabilityDataset</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">var_result</span><span class="p">,</span> <span class="c1"># Obligatory argument</span>
+        <span class="n">with_df</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="c1"># Optional, default False; Do we show driving forces (see MILP chapter)?</span>
+    <span class="p">)</span>
+<span class="p">}</span> <span class="c1"># This is a list as we could add multiple variability results</span>
+
+<span class="c1"># Now let&#39;s wrap the optimization results into a</span>
+<span class="c1"># create_cobrak_spreadsheet()-compatible format 🎁</span>
+<span class="c1"># The keys are the dataset titles in the spreadsheet</span>
+<span class="n">optimization_datasets</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">OptimizationDataset</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;Max ATP&quot;</span><span class="p">:</span> <span class="n">OptimizationDataset</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">max_atp_result</span><span class="p">,</span> <span class="c1"># Obligatory argument</span>
+        <span class="n">with_df</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="c1"># Optional, default False; Do we show driving forces (see MILP chapter)?</span>
+        <span class="n">with_vplus</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="c1"># Optional, default False; Do we show V+ (see enzyme constraints)?</span>
+        <span class="n">with_kappa</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="c1"># Optional, default False; Do we show kappa values (see NLP chapter)?</span>
+        <span class="n">with_gamma</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="c1"># Optional, default False; Do we show gamma values (see NLP chapter)?</span>
+        <span class="n">with_kinetic_differences</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="c1"># Optional, default False; Do we show NLP approximation differences (see corrections chapter)?</span>
+        <span class="n">with_error_corrections</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>  <span class="c1"># Optional, default False; Do we show corrections (see corrections chapter)?</span>
+    <span class="p">),</span>
+    <span class="s2">&quot;Max Overflow&quot;</span><span class="p">:</span> <span class="n">OptimizationDataset</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">max_overflow_result</span><span class="p">,</span>
+    <span class="p">),</span>
+<span class="p">}</span>
+
+<span class="c1"># Create XLSX spreadsheet (for this example, to not pollute your</span>
+<span class="c1"># file system, as temporary file)</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.io</span><span class="w"> </span><span class="kn">import</span> <span class="n">json_write</span>
+<span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">NamedTemporaryFile</span><span class="p">(</span><span class="n">suffix</span><span class="o">=</span><span class="s1">&#39;.xlsx&#39;</span><span class="p">,</span> <span class="n">delete</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="k">as</span> <span class="n">temp</span><span class="p">:</span>
+    <span class="n">json_write</span><span class="p">(</span><span class="n">temp</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">fba_result</span><span class="p">)</span>
+    <span class="n">create_cobrak_spreadsheet</span><span class="p">(</span>
+        <span class="n">temp</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+        <span class="n">toy_model</span><span class="p">,</span>
+        <span class="n">variability_datasets</span><span class="p">,</span>
+        <span class="n">optimization_datasets</span><span class="p">,</span>
+    <span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Spreadsheet created! You can now load it in your favorite spreadsheet viewer at </span><span class="si">{</span><span class="n">temp</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+
+<span class="c1">#%</span>
+<span class="c1"># Store optimization result as JSON (you can do the same for variability results)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.io</span><span class="w"> </span><span class="kn">import</span> <span class="n">json_load</span><span class="p">,</span> <span class="n">json_write</span>
+
+<span class="c1"># Perform FBA</span>
+<span class="n">fba_result</span> <span class="o">=</span> <span class="n">perform_lp_optimization</span><span class="p">(</span>
+    <span class="n">toy_model</span><span class="p">,</span>
+    <span class="p">{</span><span class="s2">&quot;Glycolysis&quot;</span><span class="p">:</span> <span class="o">+</span><span class="mf">1.0</span><span class="p">},</span>  <span class="c1"># No str anymore</span>
+    <span class="o">+</span><span class="mi">1</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Store ecFBA result as JSON (for this example, to not pollute your</span>
+<span class="c1"># file system, as temporary file)</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
+<span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">NamedTemporaryFile</span><span class="p">(</span><span class="n">suffix</span><span class="o">=</span><span class="s1">&#39;.json&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">temp</span><span class="p">:</span>
+    <span class="n">json_write</span><span class="p">(</span><span class="n">temp</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">fba_result</span><span class="p">)</span>
+
+    <span class="c1"># Load the ecFBA result again</span>
+    <span class="n">loaded_fba_result</span> <span class="o">=</span> <span class="n">json_load</span><span class="p">(</span><span class="n">temp</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+
+    <span class="c1"># Print one flux value of the ecFBA result</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">loaded_fba_result</span><span class="p">[</span><span class="s2">&quot;Glycolysis&quot;</span><span class="p">])</span>
+
+<span class="c1">#%</span>
+<span class="c1"># Export optimization result as CNApy scenario file</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.utilities</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_cnapy_scenario_out_of_optimization_dict</span>
+
+<span class="c1"># Perform FBA</span>
+<span class="n">fba_result</span> <span class="o">=</span> <span class="n">perform_lp_optimization</span><span class="p">(</span>
+    <span class="n">toy_model</span><span class="p">,</span>
+    <span class="p">{</span><span class="s2">&quot;Glycolysis&quot;</span><span class="p">:</span> <span class="o">+</span><span class="mf">1.0</span><span class="p">},</span>  <span class="c1"># No str anymore</span>
+    <span class="o">+</span><span class="mi">1</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Store ecFBA result as CNApy scenario (for this example, to not pollute your</span>
+<span class="c1"># file system, as temporary file)</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
+<span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">NamedTemporaryFile</span><span class="p">(</span><span class="n">suffix</span><span class="o">=</span><span class="s2">&quot;.scen&quot;</span><span class="p">,</span> <span class="n">delete</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="k">as</span> <span class="n">temp</span><span class="p">:</span>
+    <span class="n">create_cnapy_scenario_out_of_optimization_dict</span><span class="p">(</span>
+        <span class="n">path</span><span class="o">=</span><span class="n">temp</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+        <span class="n">cobrak_model</span><span class="o">=</span><span class="n">toy_model</span><span class="p">,</span>
+        <span class="n">optimization_dict</span><span class="o">=</span><span class="n">fba_result</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Print one flux value of the ecFBA result</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;The .scen file is in:&quot;</span><span class="p">,</span> <span class="n">temp</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;and can now be loaded in CNApy&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Use the CNApy default model &#39;cobrak_toymodel.cna&#39; for a succesful visualization of the result&quot;</span><span class="p">)</span>
+
+<span class="c1">#%</span>
+<span class="c1"># Run optimization with different solver</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">Solver</span>
+
+<span class="n">ipopt</span> <span class="o">=</span> <span class="n">Solver</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;ipopt&quot;</span><span class="p">,</span> <span class="c1"># This must be the same name as given in pyomo</span>
+    <span class="n">solver_options</span><span class="o">=</span><span class="p">{</span> <span class="c1"># Options for the called solver itself</span>
+        <span class="s2">&quot;max_iter&quot;</span><span class="p">:</span> <span class="mi">100_000</span><span class="p">,</span>
+        <span class="c1"># Note that these options are solver-specific, i.e. they</span>
+        <span class="c1"># typically won&#39;t work for other solvers</span>
+    <span class="p">},</span>
+    <span class="n">solver_attrs</span><span class="o">=</span><span class="p">{</span>
+        <span class="c1"># These would be attributes to the pyomo solver object itself</span>
+        <span class="c1"># e.g., for the solver SCIP, we may set</span>
+        <span class="c1"># &quot;_version_timeout&quot;: 180 to prevent a fast timeout of pyomo&#39;s</span>
+        <span class="c1"># SCIP call</span>
+    <span class="p">},</span>
+    <span class="n">solve_extra_options</span><span class="o">=</span><span class="p">{</span>
+        <span class="c1"># These would be extra argument&#39;s to pyomo&#39;s solve function</span>
+        <span class="c1"># Consult pyomo&#39;s documentation on the possible arguments</span>
+    <span class="p">},</span>
+<span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Now we solve with the solver IPOPT :D&quot;</span><span class="p">)</span>
+<span class="n">perform_lp_optimization</span><span class="p">(</span>
+    <span class="n">toy_model</span><span class="p">,</span>
+    <span class="s2">&quot;ATP_Consumption&quot;</span><span class="p">,</span>
+    <span class="o">+</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">solver</span><span class="o">=</span><span class="n">ipopt</span><span class="p">,</span>
+    <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="c1"># Show explicitly the IPOPT output</span>
+<span class="p">)</span>
+</code></pre></div>
+</details>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>As explained in the Installation chapter, you might have to install the quite capable mixed-integer (non-)linear open-source solver <a href="https://scipopt.org/">SCIP</a> on your system to run the examples of this documentation. That's because, although the COBRA-k package installs the SCIP Python package, SCIP itself might be missing on some systems.</p>
+<p>If SCIP is not available on your system, you may try to use the pre-installed HiGHS solver by (i) adding <code>from cobrak.dataclasses import HIGHS</code> as first line in all your scripts and then, in all optimization functions (such as <code>perform_lp_optimization</code>), using the argument <code>solver=HIGHS</code>.</p>
+<p>If HiGHS also does not work, try installing and using the free and open-source solver <a href="https://www.gnu.org/software/glpk/">GLPK</a> by (i) adding <code>from cobrak.dataclasses import Solver</code> as first line in all your scripts and then, in all optimization functions (such as <code>perform_lp_optimization</code>), using the argument <code>solver=Solver(name="glpk")</code>.</p>
+</div>
+<h2 id="introduction">Introduction</h2>
+<p>COBRA-k's analyses are all based on the framework of "<strong>C</strong>onstraint-<strong>B</strong>ased <strong>R</strong>econstruction and <strong>A</strong>nalysis" <a href="https://doi.org/10.1038/nrg3643">[Review]</a>, enriched with <strong>k</strong>inetics <a href=""></a> - in short COBRA-k. We performed the Constraint-Based <em>Reconstruction</em> by creating our small toy model. Some constraints that we set were minimal and maximal fluxes and concentrations. And now, we perform some Constraint-Based <em>Analysis</em> :D</p>
+<p>In this chapter, we concentrate on Constraint-Based Analyses based on Linear Programming or LP <a href="https://doi.org/10.1515/9781400884179">[Paper]</a><a href="https://en.wikipedia.org/wiki/Linear_programming">[Wikipedia]</a>, also called Linear Optimization.</p>
+<details class="info">
+<summary>Excursion: Linear Programming (LP)</summary>
+<p>While we often want to find <em>one</em> solution for a single or a system of linear equations, in LP, we want to find an <em>optimal</em> solution. E.g. instead of finding one possible value for a variable <span class="arithmatex">\(x\)</span>, we would want to find the <em>maximal</em> or <em>minimal</em> possible value of <span class="arithmatex">\(x\)</span> given the linear equations/constraints.</p>
+<p>A general form of a maximizing Linear Program can be written as follows:</p>
+<div class="arithmatex">\[
+\operatorname*{\mathbf{maximize}}_{\mathbf{x}} \ \mathbf{g}ᵀ  \\
+subject \ to \ the \ constraints \\
+\mathbf{A} ⋅ \mathbf{x} ≤ \mathbf{b} \\
+x^{min}_i &lt; x_i &lt; x^{max}_i
+\]</div>
+<p><span class="arithmatex">\(\mathbf{x}\)</span> of length <span class="arithmatex">\(n\)</span> is our vector of variables that we may change in our LP (as indicated by being shown below the operation <span class="arithmatex">\(maximize\)</span>). <span class="arithmatex">\(\mathbf{g}\)</span> also of length <span class="arithmatex">\(n\)</span> is our linear <em>objective function</em> that we want to maximize. For each element <span class="arithmatex">\(x_i\)</span> of <span class="arithmatex">\(\mathbf{x}\)</span>, it assigns a numeric weight. The first set of constraints restricts <span class="arithmatex">\(\mathbf{x}\)</span> to linear constraints given by the matrix <span class="arithmatex">\(\mathbf{A}\)</span> of size <span class="arithmatex">\(n×m\)</span>, where <span class="arithmatex">\(m\)</span> is the number of single constraints. Note that, e.g. by using negative weights, we may also formulate strict equations (<span class="arithmatex">\(=\)</span>) and greater-equal (≥) constraints. The second set of constraints restricts <span class="arithmatex">\(\mathbf{x}\)</span> to given minimal and maximal values.</p>
+<p>Such a linear program can now be solved using efficient algorithms such as Simplex <a href="https://cir.nii.ac.jp/crid/1571980075507143680">[Paper]</a><a href="https://en.wikipedia.org/wiki/Simplex_algorithm">[Wikipedia]</a>.</p>
+</details>
+<h2 id="the-stoichiometric-matrix-mathbfn">The stoichiometric matrix <span class="arithmatex">\(\mathbf{N}\)</span></h2>
+<p>To use COBRA-k's optimization methods with our metabolic model, we have to convert the model and  to a mathematic form. One central form to do so it the <em>stoichiometric matrix</em> which we call <span class="arithmatex">\(\mathbf{N}\)</span>:</p>
+<ul>
+<li><span class="arithmatex">\(\mathbf{N}\)</span> has as many columns as metabolites in the model, and as many rows as reactions in the model. Calling the metabolite number <span class="arithmatex">\(m\)</span> and the reaction number <span class="arithmatex">\(n\)</span>, <span class="arithmatex">\(\mathbf{N}\)</span> can be said of being of size <span class="arithmatex">\(m 𝐱 n\)</span>.</li>
+<li>Each single element <span class="arithmatex">\(N_{i,j}\)</span>, i.e. any single number in the matrix in a given column <span class="arithmatex">\(i\)</span> and row <span class="arithmatex">\(j\)</span>, represents the stoichiometry of the <span class="arithmatex">\(i\)</span>-th metabolite in the <span class="arithmatex">\(j\)</span>-th reaction.</li>
+<li>Any metabolite that is consumed in a reaction (any substrate) has a <em>negative</em> stoichiometry. Any metabolite that is produced in a reaction (any product) has a <em>positive</em> stoichiometry.</li>
+</ul>
+<p>Let's visualize this for our toy model!</p>
+<p><img src="img/toymodel.jpg" alt="Toymodel visualization" class="img-border img-half"></p>
+<p>As a table, its stoichiometries would look as follows:
+$$
+$$</p>
+<div class="arithmatex">\[
+ \begin{array}{c|ccc} &amp; A &amp; B &amp; C &amp; D &amp; ATP \\ \hline EX_A &amp; +1 &amp; 0 &amp; 0 &amp; 0 &amp; 0  \\ EX_C &amp; 0 &amp; 0 &amp; -1 &amp; 0 &amp; 0 \\ EX_D &amp; 0 &amp; 0 &amp; 0 &amp; -1 &amp; 0 \\ EX_{ATP} &amp; 0 &amp; 0 &amp; 0 &amp; 0 &amp; -1 \\ Glycolysis &amp; -1 &amp; +1 &amp; 0 &amp; 0 &amp; 0 \\ Respiration &amp; 0 &amp; -1 &amp; +1 &amp; 0 &amp; 0 \\ Overflow &amp; 0 &amp; 0 &amp; -1 &amp; +1 &amp; 0 \end{array}
+\]</div>
+<p>The stoichiometric matrix <span class="arithmatex">\(\mathbf{N}\)</span> of our toy model is therefore (just remove the column and row headings in your mind):</p>
+<div class="arithmatex">\[
+\mathbf{N} = \left[ \begin{array}{ccc} +1 &amp; 0 &amp; 0 &amp; 0 &amp; 0 \\ 0 &amp; 0 &amp; -1 &amp; 0 &amp; 0 \\ 0 &amp; 0 &amp; 0 &amp; -1 &amp; 0 \\ 0 &amp; 0 &amp; 0 &amp; 0 &amp; -1 \\ -1 &amp; +1 &amp; 0 &amp; 0 &amp; 0 \\ 0 &amp; -1 &amp; +1 &amp; 0 &amp; 0 \\ 0 &amp; 0 &amp; -1 &amp; +1 &amp; 0 \\ \end{array} \right]
+\]</div>
+<p>You can also show a model's stoichiometric matrix using COBRA-k:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.example_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">toy_model</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.utilities</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_stoichiometric_matrix</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">get_stoichiometric_matrix</span><span class="p">(</span><span class="n">toy_model</span><span class="p">))</span>
+</code></pre></div>
+<h2 id="constrained-based-modeling-cbm">Constrained-based modeling (CBM)</h2>
+<p>Now that we have the stoichiometric matrix <span class="arithmatex">\(\mathbf{N}\)</span>, we can construct the three major constraints of Constraint-based modeling (CBM):</p>
+<h3 id="the-steady-state-constraint">The steady state constraint</h3>
+<p>$ \mathbf{N} ⋅ \mathbf{v} = 0 $</p>
+<p>This very important constraint is the major assumption of all COBRA(-k) methods: That <strong>as much of any metabolite is consumed as it is produced - i.e. all metabolite concentrations remain constant</strong>.</p>
+<p><span class="arithmatex">\(\mathbf{v}\)</span> is the <em>reaction flux vector</em> - it consists of variables <span class="arithmatex">\(v_i\)</span> and has as many variables as there are reactions. In other words, it represents the flux of each reaction - and in LP methods, this is the only non-constant vector that we can modify in the optimization process.</p>
+<h3 id="minimal-and-maximal-reaction-fluxes">Minimal and maximal reaction fluxes</h3>
+<p>$ lb_i ≤ v_i ≤ ub_i $</p>
+<p>These constraints allow us to restrict the fluxes in our flux vector <span class="arithmatex">\(\mathbf{v}\)</span>. These bounds correspond to the <code>min_flux</code> and <code>max_flux</code> member variables of COBRA-k's dataclass <code>Reaction</code>. If <span class="arithmatex">\(lb_i&gt;=0\)</span>, then the reaction is <em>irreversible</em> and can only run</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>All analyses with enzymatic and/or thermodynamic constraint require all reactions to be irreversible. If you happen to have a reaction that is reversible (<code>min_flux &lt; 0</code>), you can simply split it into two irreversible reactions (a forward and a backward reaction).</p>
+</div>
+<h3 id="extra-linear-flux-constraints">Extra linear flux constraints</h3>
+<p>Optionally, you can also introduce extra linear constraints (corresponding to the <code>ExtraLinearConstraint</code> dataclass, used in <code>Model</code>) that set constrained relationships between variables, such as single fluxes:</p>
+<div class="arithmatex">\[ \mathbf{A} ⋅ \mathbf{v} ≤ \mathbf{b} \]</div>
+<p><span class="arithmatex">\(\mathbf{A}\)</span> is a matrix that has as many columns as extra constraints and as many rows as reactions. Every element <span class="arithmatex">\(A_{i,j}\)</span> of <span class="arithmatex">\(\mathbf{A}\)</span> represents a weight - a value that is multiplied with a flux - in the <span class="arithmatex">\(i\)</span>-th extra constraint for the <span class="arithmatex">\(j\)</span>-th reaction.</p>
+<p>A common example for a flux extra constraint is making the flux of two reactions identical, or setting a minimal yield for a substrate-to-product ratio.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>While, in CBM, only extra constraints between fluxes are possible, they can also be set for and between concentrations, driving fluxes and so on.</p>
+</div>
+<h3 id="extra-linear-watches">Extra linear watches</h3>
+<p>Optionally, you can also introduce extra linear <em>watch variables</em> (corresponding to the <code>ExtraLinearWatch</code> dataclass, used in <code>Model</code>) that add a variable with a fixed relationships to single fluxes. E.g., if you want a variable that represents the sum of the exchange reactions EX_A, EX_C and EX_P in our toy model, you could set a linear watch. Just like linear flux constraints (explained above), linear watches represent a weighted sum of other variable values Here's an example where we set a watch to the  doubled of the flux of EX_S:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExtraLinearWatch</span>
+
+<span class="c1"># Let&#39;s define v_EX_P &lt;= 2 * exp(x_C)</span>
+<span class="n">toy_model</span><span class="o">.</span><span class="n">extra_linear_watches</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;two_times_EX_S&quot;</span><span class="p">:</span> <span class="n">ExtraLinearWatch</span><span class="p">(</span>
+        <span class="n">stoichiometries</span><span class="o">=</span><span class="p">{</span>
+            <span class="s2">&quot;EX_S&quot;</span><span class="p">:</span> <span class="mf">2.0</span><span class="p">,</span>
+        <span class="p">},</span>
+    <span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>...now, we have a variable <code>two_times_EX_S</code> that is also added to results after LP (or NLP) optimizations.</p>
+<div class="admonition info">
+<p class="admonition-title">Info</p>
+<p>Watches are added to the model in the order given through the directory. I.e.,
+if you would define a watch after <code>two_times_EX_S</code> in this example, this watch could use <code>two_times_EX_S</code>
+as a variable, too :-) Also, constraints can be defined on watches.</p>
+</div>
+<h2 id="flux-balance-analysis-fba-and-pretty-printing-results-in-console">Flux Balance Analysis (FBA) and pretty-printing results in console</h2>
+<p>An FBA <a href="https://doi.org/10.1042/bst0121093">[Paper]</a><a href="https://doi.org/10.1038/nbt.1614">[Review]</a> - without enzymatic or thermodynamic constraints - is a linear program with the CBM constraints (from the paragraph above) and an objective where reaction flux(es) are optimized. In a general form, it looks as follows:</p>
+<div class="arithmatex">\[ \operatorname*{\mathbf{max}}_{\mathbf{v}} \mathbf{g^\top} \\ s.t. \space CBM \space constraints \]</div>
+<p><span class="arithmatex">\(\mathbf{g}\)</span> is the <em>objective function vector</em> of length <span class="arithmatex">\(n\)</span>, i.e. it has as many entries as there are reactions. An entry <span class="arithmatex">\(g_i\)</span> stands for the weight (a number) of reaction <span class="arithmatex">\(i\)</span> in our objective function. E.g., if we want to maximize the flux of reaction "Glycolysis" in our toy model, we would set <span class="arithmatex">\(g_{Glycolysis}\)</span> to <span class="arithmatex">\(1\)</span> and all other entries in <span class="arithmatex">\(\mathbf{g}\)</span> to <span class="arithmatex">\(0\)</span>.</p>
+<p>In COBRA-k, we don't have the hassle of finding the index <span class="arithmatex">\(i\)</span> of a reaction. E.g., a Flux Balance Analysis where we maximize the Flux of reaction Glycolysis looks as follows in code:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Load our toy model from the previous chapter, conveniently, it is shipped with COBRA-k :-)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.example_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">toy_model</span>
+<span class="c1"># Load the general Linear Program optimization function of COBRA-k</span>
+<span class="c1"># which can be found in COBRA-k&#39;s submodule &#39;lps&#39;</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.lps</span><span class="w"> </span><span class="kn">import</span> <span class="n">perform_lp_optimization</span>
+<span class="c1"># Load some pretty-print functions (can be found in submodule &#39;printing&#39;)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.printing</span><span class="w"> </span><span class="kn">import</span> <span class="n">print_dict</span><span class="p">,</span> <span class="n">print_optimization_result</span>
+
+<span class="c1"># Maximize the flux of Glycolysis using the CBM constraints</span>
+<span class="n">fba_result</span> <span class="o">=</span> <span class="n">perform_lp_optimization</span><span class="p">(</span>
+    <span class="n">toy_model</span><span class="p">,</span>
+    <span class="s2">&quot;Glycolysis&quot;</span><span class="p">,</span>
+    <span class="o">+</span><span class="mi">1</span><span class="p">,</span>
+<span class="p">)</span> <span class="c1"># fba_result is a dict[str, float]</span>
+
+<span class="c1"># Pretty print result as dictionary</span>
+<span class="n">print_dict</span><span class="p">(</span><span class="n">fba_result</span><span class="p">)</span>
+
+<span class="c1"># Pretty print the result as (nicer-looking :-) tables</span>
+<span class="n">print_optimization_result</span><span class="p">(</span><span class="n">toy_model</span><span class="p">,</span> <span class="n">fba_result</span><span class="p">)</span>
+</code></pre></div>
+<p>First, we perform the Linear Program (or Linear Optimization) with <code>perform_lp_optimization</code> and reaction Glycolysis as objective target (for more complex objectives, see below). The <code>+1</code> stands for the third mandatory argument, the <code>objective_sense</code>, which in COBRA-k's logic is <span class="arithmatex">\(&gt;0\)</span> if a maximization is aimed, and <span class="arithmatex">\(&lt;0\)</span> if a minimization is aimed. Also, the objective result (in form of an objective variable, see below) is multiplied with this sense.</p>
+<p>Now, we got the <code>fba_result</code>, which is a <code>dict[str, float]</code>, where the keys (strings) stand for the variable names, e.g. the reaction IDs or fluxes, and the values stand for the numeric value of this variable.</p>
+<p>To showcase the result's nature as dictionary, we print it using <code>print_dict</code>. But, as shown in the code, there's also a nicer way to present a result as pretty colored tables using <code>print_optimization_result</code> :-)</p>
+<div class="admonition info">
+<p class="admonition-title">Finding out more about COBRA-k functions</p>
+<p>In our examples, we do not use all options provided by COBRA-k's functions. For example, the <code>print_optimization_result</code> function has many extra arguments for a fine-grained control of the output. To find out more about any COBRA-k function, search it using this site's search bar or in the "API" chapter of this documentation.</p>
+</div>
+<p>As mentioned, there is also a special objective variable which represent's the objective's value (e.g. if <code>objective_sense=+2</code>, it would be 2 times the sum of the maximized flux of Glycolysis). You can access this objective variable's value as follows:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># ...using the code from the previous snippet...</span>
+<span class="c1"># Load the name of the variable that holds the objective name</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.constants</span><span class="w"> </span><span class="kn">import</span> <span class="n">OBJECTIVE_VAR_NAME</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">fba_result</span><span class="p">[</span><span class="n">OBJECTIVE_VAR_NAME</span><span class="p">])</span>
+</code></pre></div>
+<div class="admonition warning">
+<p class="admonition-title">The most common FBA misunderstanding</p>
+<p>While objective values for a given FBA problem are unique, the solutions are <em>not</em> unique. I.e. it is possible that there are multiple or even infinite many solutions which can lead to a found objective value. To find out more about the solution space in which solutions with a given objective can lie, you may e.g. utilize Flux Variability Analyses (see next subchapter).</p>
+</div>
+<p>If you want to set a more complex objective, say:</p>
+<div class="arithmatex">\[ maximize \space -1.5 ⋅ v_{Glycolysis} + 2 ⋅ v_{Overflow} \]</div>
+<p>i.e. -1.5 times Glycolysis's flux plus 2 time Overflow's flux, you can do this by setting the objective target as dictionary with the given weights as follows:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.example_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">toy_model</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.lps</span><span class="w"> </span><span class="kn">import</span> <span class="n">perform_lp_optimization</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.printing</span><span class="w"> </span><span class="kn">import</span> <span class="n">print_optimization_result</span>
+
+<span class="c1"># Perform FBA with more complex objective</span>
+<span class="n">complex_fba_result</span> <span class="o">=</span> <span class="n">perform_lp_optimization</span><span class="p">(</span>
+    <span class="n">toy_model</span><span class="p">,</span>
+    <span class="p">{</span><span class="s2">&quot;Glycolysis&quot;</span><span class="p">:</span> <span class="o">-</span><span class="mf">1.5</span><span class="p">,</span> <span class="s2">&quot;Overflow&quot;</span><span class="p">:</span> <span class="mf">2.0</span><span class="p">},</span> <span class="c1"># No str anymore</span>
+    <span class="o">+</span><span class="mi">1</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Pretty print more complex FBA result</span>
+<span class="n">print_optimization_result</span><span class="p">(</span><span class="n">toy_model</span><span class="p">,</span> <span class="n">complex_fba_result</span><span class="p">)</span>
+</code></pre></div>
+<p>In fact, you can freely set the objective dictionary to any combination of flux and any other kind of variables that occur in extended COBRA-k optimization problems. These variables are gradually introduced at the end of this chapter and the next chapters.</p>
+<div class="admonition info">
+<p class="admonition-title">Solvers</p>
+<p>By default, COBRA-k uses the open-source and pre-bundled Linear Programming solver SCIP. To use other solvers or change the SCIP settings, you can set the <code>solver</code> (and, if wished) argument of <code>perform_lp_optimization</code>. This parameter requires an instance of the COBRA-k dataclass <code>Solver</code> and is explained at the end of this chapter :-), together with a list of preconfigured solvers provided by COBRA-k.</p>
+</div>
+<h2 id="parsimonious-flux-balance-analysis-pfba">Parsimonious Flux Balance Analysis (pFBA)</h2>
+<p>As mentioned, FBA solutions do not have to be unique. One way to find a virtually unique solution is to perform a pFBA <a href="https://doi.org/10.1038/msb.2010.47">[Paper]</a>, basically a second optimization after an FBA, where we set the FBA's objective value as minimum and then perform</p>
+<div class="arithmatex">\[ \operatorname*{\mathbf{min}}_{\mathbf{v}} \space ∑_i v_i \\ s.t. \space CBM \space constraints \]</div>
+<p>i.e. a minimization of the <em>flux sum</em>. This subsequent minimization may stand for a crude proxy e.g. of enzyme costs, where we assume that the lower the flux sum of a solution is, the lower the amount of needed enzymes are (for a more realistic approximation of enzyme costs, see this chapter's last subchapter).</p>
+<p>In COBRA-k, we can do this using the toggle <code>with_flux_sum_var</code> in <code>perform_lp_optimization</code>, which adds a variable called <code>autocobra.constants.FLUX_SUM_VAR_ID</code> (by default, "FLUX_SUM_VAR") to our optimization problem. This variable represents <span class="arithmatex">\(∑_i v_i\)</span> and can be used as follows following our FBA:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.example_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">toy_model</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.lps</span><span class="w"> </span><span class="kn">import</span> <span class="n">perform_lp_optimization</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.printing</span><span class="w"> </span><span class="kn">import</span> <span class="n">print_optimization_result</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">autocobra.constants</span><span class="w"> </span><span class="kn">import</span> <span class="n">FLUX_SUM_VAR_ID</span>
+
+<span class="c1"># We perform a pFBA on our Glycolysis optimization example</span>
+<span class="c1"># 1) We set the objective value as minimum</span>
+<span class="n">toy_model</span><span class="o">.</span><span class="n">reactions</span><span class="p">[</span><span class="s2">&quot;Glycolysis&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">min_flux</span> <span class="o">=</span> <span class="n">fba_result</span><span class="p">[</span><span class="s2">&quot;Glycolysis&quot;</span><span class="p">]</span>
+
+<span class="c1"># 2) Now, the flux sum minimization</span>
+<span class="n">pfba_result</span> <span class="o">=</span> <span class="n">perform_lp_optimization</span><span class="p">(</span>
+    <span class="n">toy_model</span><span class="p">,</span>
+    <span class="n">FLUX_SUM_VAR_ID</span><span class="p">,</span>
+    <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">with_flux_sum_var</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="c1"># Again, pfba_result is a dict[str, float]</span>
+
+<span class="c1"># Let&#39;s print our pFBA result</span>
+<span class="n">print_optimization_result</span><span class="p">(</span><span class="n">toy_model</span><span class="p">,</span> <span class="n">pfba_result</span><span class="p">)</span>
+
+<span class="c1"># Reset model for the next calculations</span>
+<span class="n">toy_model</span><span class="o">.</span><span class="n">reactions</span><span class="p">[</span><span class="s2">&quot;Glycolysis&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">min_flux</span> <span class="o">=</span> <span class="mf">0.0</span>
+</code></pre></div>
+<h2 id="flux-variability-analysis-fva">Flux Variability Analysis (FVA)</h2>
+<p>To find out the minimally and maximally <em>possible</em> fluxes of reactions, we can perform an FVA <a href="https://doi.org/10.1016/j.ymben.2003.09.002">[Paper]</a>. For any reaction <span class="arithmatex">\(i\)</span>, it performs the following optimization:</p>
+<div class="arithmatex">\[ \operatorname*{\mathbf{min}}_{\mathbf{v}} \space v_i \\ s.t. \space CBM \space constraints \]</div>
+<p>and
+$$ \operatorname*{\mathbf{max}}_{\mathbf{v}} \space v_i \ s.t. \space CBM \space constraints $$</p>
+<p>so that we get the wished minimal and maximal flux of a reaction.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>This does not mean that every <em>combination</em> between minimal and maximal fluxes of <em>multiple</em> reactions are possible. We just know the minimal and maximal flux for any single reaction.</p>
+</div>
+<p>In COBRA-k, we can perform an FVA for our toy model as follows:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.example_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">toy_model</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.lps</span><span class="w"> </span><span class="kn">import</span> <span class="n">perform_lp_variability_analysis</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.printing</span><span class="w"> </span><span class="kn">import</span> <span class="n">print_variability_result</span>
+
+<span class="c1"># Perform general FVA (we did not set the previous objective value as minimum)</span>
+<span class="n">var_result</span> <span class="o">=</span> <span class="n">perform_lp_variability_analysis</span><span class="p">(</span>
+    <span class="n">toy_model</span>
+<span class="p">)</span>
+
+<span class="c1"># Pretty print result as tables</span>
+<span class="n">print_variability_result</span><span class="p">(</span><span class="n">toy_model</span><span class="p">,</span> <span class="n">var_result</span><span class="p">)</span>
+</code></pre></div>
+<p>In COBRA-k, the type of variability results is <code>dict[str, tuple[float, float]]</code>. I.e. the variable names are the keys, and the values are tuples whose first entry is the minimal and the second entry is the maximal entry. E.g. if we want to print the minimal value of reaction Overflow, we ran</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># ...using the code snippet from above...</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">var_result</span><span class="p">[</span><span class="s2">&quot;Overflow&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+</code></pre></div>
+<div class="admonition note">
+<p class="admonition-title">Parallelization</p>
+<p>COBRA-k uses joblib <a href="https://github.com/joblib/joblib">[GitHub]</a> to parallelize any variability analysis. This means that as many CPU cores are used as there are on your computer, greatly speeding up the process.</p>
+</div>
+<h2 id="analyses-with-enzyme-constraints-ecfba-ecfva">Analyses with Enzyme Constraints: ecFBA &amp; ecFVA</h2>
+<p>Up to now, we only used <em>stoichiometric</em> constraints. I.e. we looked for solutions which fulfilled the CBM constraints such as the steady-state, all which depend on reaction fluxes (<span class="arithmatex">\(\mathbf{v}\)</span>) and the stoichiometries of metabolites in reactions (<span class="arithmatex">\(\mathbf{N}\)</span>).</p>
+<p>Now, we introduce "classic" linear <em>enzyme</em> constraints as already described by methods such as MOMENT <a href="https://doi.org/10.1371/journal.pcbi.1002575">[Paper]</a>, GECKO <a href="https://doi.org/10.15252/msb.20167411">[Paper]</a> or sMOMENT <a href="https://doi.org/10.1186/s12859-019-3329-9">[Paper]</a>. They are all based on the observation that the fraction of metabolically active enzymes on a cell's biomass is restricted. I.e. only a maximal percentage of a cell's biomass can be metabolically active enzymes, as the rest is occupied by non-metabolic enzymes, lipids, DNA, RNA etc..</p>
+<p>We call the maximal metabolic enzyme fraction <em>enzyme pool</em> <span class="arithmatex">\(Ω\)</span> with the unit g⋅gDW⁻¹, i.e. grams per gram dry weight. E.g. if <span class="arithmatex">\(Ω=0.5\)</span> g⋅gDW⁻¹, then a maximum of 0.5 grams of a gram dry weight can be used by metabolic enzymes.</p>
+<p>Furthermore, from Michaelis-Menten kinetics, we know that the maximal possible flux of a reaction is its $
+k_{cat}^+$ times its enzyme concentration <span class="arithmatex">\(E_i\)</span>.</p>
+<p>Thus, we may formulate linear enzyme constraints as follows:</p>
+<ul>
+<li>We introduce enzyme concentration variables <span class="arithmatex">\(E_i\)</span> and optional constraints for minimal and maximal enzyme concentrations (also, <span class="arithmatex">\(E^{min}_i≥0\)</span>):</li>
+</ul>
+<div class="arithmatex">\[ E^{min}_i ≤ E_i ≤ E^{max}_i \]</div>
+<ul>
+<li>We  add the maximal flux constraint:</li>
+</ul>
+<div class="arithmatex">\[ v_i ≤ E_i ⋅ k_{cat}^+ \]</div>
+<ul>
+<li>We add the enzyme pool constraint:</li>
+</ul>
+<div class="arithmatex">\[ ∑_i W_i ⋅ E_i ≤ Ω \]</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>A alternative formulation is also available which introduces new pseudo-metabolites and pseudo-reactions, as done in GECKO and sMOMENT. This formulation can optionally be used when exporting a COBRA-k model as annotated SBML and setting the <code>add_enzyme_constraints</code> parameter of <code>save_cobrak_model_as_annotated_sbml_model</code> to <code>True</code>.</p>
+</div>
+<p>Look again in chapter "Create Model from Scratch" to see where we defined the <span class="arithmatex">\(k_{cat}\)</span>, <span class="arithmatex">\(W\)</span> and <span class="arithmatex">\(Ω\)</span> values in our toy model. When we do not want a <code>Reaction</code> instance to be affected by enzyme constraints, we simply set its <code>enzyme_reaction_data</code> value to <code>None</code>.</p>
+<div class="admonition info">
+<p class="admonition-title">Info</p>
+<p>In COBRA-k, we make the simplifying assumption that there is a single enzyme (complex) for each single reaction. I.e. even if an enzyme catalyzes multiple reactions (isozyme), this enzyme is copied for each single reaction. To introduce concentration constraints for such isozymes, you may utilize <code>ExtraLinearConstraint</code> instances in the model's <code>extra_linear_constraint</code>.</p>
+</div>
+<p>Now, to perform an enzyme-constrained FBA - an <em>ec</em>FBA - i.e.</p>
+<div class="arithmatex">\[ \operatorname*{\mathbf{max}}_{\mathbf{v}, \mathbf{E}} \mathbf{g^\top} \\ s.t. \space CBM \space and \space enzyme \space constraints \]</div>
+<p>we simply set the associated argument <code>with_enzyme_constraints</code> in <code>perform_lp_optimization</code> to <code>True</code>, e.g.</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.example_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">toy_model</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.lps</span><span class="w"> </span><span class="kn">import</span> <span class="n">perform_lp_optimization</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.printing</span><span class="w"> </span><span class="kn">import</span> <span class="n">print_optimization_result</span>
+
+<span class="c1"># Perform ecFBA</span>
+<span class="n">ecfba_result</span> <span class="o">=</span> <span class="n">perform_lp_optimization</span><span class="p">(</span>
+    <span class="n">toy_model</span><span class="p">,</span>
+    <span class="p">{</span><span class="s2">&quot;Glycolysis&quot;</span><span class="p">:</span> <span class="o">+</span><span class="mf">1.0</span><span class="p">},</span> <span class="c1"># No str anymore</span>
+    <span class="o">+</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">with_enzyme_constraints</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="c1"># Activate linear enzyme constraints</span>
+<span class="p">)</span>
+
+<span class="c1"># Pretty-print result, now also with actual enzyme usage :-)</span>
+<span class="n">print_optimization_result</span><span class="p">(</span><span class="n">toy_model</span><span class="p">,</span> <span class="n">ecfba_result</span><span class="p">)</span>
+</code></pre></div>
+<p>Similarly, we can run an ecFVA - i.e.</p>
+<div class="arithmatex">\[ \operatorname*{\mathbf{min}}_{\mathbf{v,E}} \space v_i \\ s.t. \space CBM \space and \space enzyme \space constraints \]</div>
+<p>and
+$$ \operatorname*{\mathbf{max}}_{\mathbf{v,E}} \space v_i \ s.t. \space CBM \space and \space enzyme \space  constraints $$</p>
+<p>as follows:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Perform general ecFVA</span>
+<span class="n">var_result</span> <span class="o">=</span> <span class="n">perform_lp_variability_analysis</span><span class="p">(</span>
+    <span class="n">toy_model</span>
+<span class="p">)</span>
+
+<span class="c1"># Pretty print result as tables - again, now with enzyme usages :-)</span>
+<span class="n">print_variability_result</span><span class="p">(</span><span class="n">toy_model</span><span class="p">,</span> <span class="n">var_result</span><span class="p">)</span>
+</code></pre></div>
+<div class="admonition info">
+<p class="admonition-title">Enzyme constraint variables</p>
+<p>In any COBRA-k results, you can identify enzyme concentration variables as follows:</p>
+<p>They start with <code>autocobra.constants.ENZYME_VAR_PREFIX</code> (default is <code>"enzyme_"</code>), followed by the enzyme's ID, followed by <code>autocobra.constants.ENZYME_VAR_INFIX</code> (default is <code>"_of__"</code>), followed by the reaction's ID (remember that we give each reaction its own enzyme in COBRA-k). E.g., if a reaction "R1" has the enzyme "E1", its concentration variable would be called by default <code>"enzyme_E1_of_R1"</code>.</p>
+<p>To find out a reaction's enzyme concentration name, you can also use the following utility function, e.g.:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.example_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">toy_model</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.utilities</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_reaction_enzyme_var_id</span>
+
+<span class="n">enzyme_name_of_glycolysis</span> <span class="o">=</span> <span class="n">get_reaction_enzyme_var_id</span><span class="p">(</span><span class="s2">&quot;Glycolysis&quot;</span><span class="p">,</span> <span class="n">toy_model</span><span class="o">.</span><span class="n">reactions</span><span class="p">[</span><span class="s2">&quot;Glycolysis&quot;</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">enzyme_name_of_glycolysis</span><span class="p">)</span>
+</code></pre></div>
+</div>
+<h2 id="pretty-printing-optimization-andor-variability-results-as-an-xlsx-spreadsheet">Pretty-printing optimization and/or variability results as an XLSX spreadsheet</h2>
+<p>Up to now, we just pretty-printed optimization (e.g. (ec)FBA) and variability (e.g. (ec)FVA) results in the console. But you can also export these results as a pretty-printed XLSX spreadsheet :-) This spreadsheet has different sheets for e.g. reaction data (e.g. their IDs and fluxes), metabolite data (useful with thermodynamic constraints, see MILP chapter), enzyme data (including complexes, i.e. the enzymes associated with a single reactions and the single enzymes with their given concentration ranges) and more. Results are colored and sorted alphabetically.</p>
+<p>Each spreadsheet can contain multiple optimization <em>and/or</em> variability results. To create such an XLSX , we can use the associated methods in COBRA-k's module <code>spreadsheet_functionality</code> and its associated dataclasses <code>OptimizationData</code> and <code>VariabilityData</code> as follows:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.example_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">toy_model</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.lps</span><span class="w"> </span><span class="kn">import</span> <span class="n">perform_lp_optimization</span><span class="p">,</span> <span class="n">perform_lp_variability_analysis</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.spreadsheet_functionality</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">OptimizationDataset</span><span class="p">,</span> <span class="c1"># Here, we set the optimization result and its wished shown data</span>
+    <span class="n">VariabilityDataset</span><span class="p">,</span> <span class="c1"># Here, we set the variability result and its wished shown data</span>
+    <span class="n">create_cobrak_spreadsheet</span><span class="p">,</span> <span class="c1"># The function to generate the XLSX</span>
+<span class="p">)</span>
+
+<span class="c1"># We&#39;re going to create an XLSX with the following three results:</span>
+<span class="c1"># 1. General FVA</span>
+<span class="n">var_result</span> <span class="o">=</span> <span class="n">perform_lp_variability_analysis</span><span class="p">(</span>
+    <span class="n">toy_model</span>
+<span class="p">)</span>
+<span class="c1"># 2. ATP optimization</span>
+<span class="n">max_atp_result</span> <span class="o">=</span> <span class="n">perform_lp_optimization</span><span class="p">(</span>
+    <span class="n">toy_model</span><span class="p">,</span>
+    <span class="s2">&quot;ATP_Consumption&quot;</span><span class="p">,</span>
+    <span class="o">+</span><span class="mi">1</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="c1"># 2. Overflow optimization</span>
+<span class="n">max_overflow_result</span> <span class="o">=</span> <span class="n">perform_lp_optimization</span><span class="p">(</span>
+    <span class="n">toy_model</span><span class="p">,</span>
+    <span class="s2">&quot;Overflow&quot;</span><span class="p">,</span>
+    <span class="o">+</span><span class="mi">1</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Now let&#39;s wrap the variability result into a</span>
+<span class="c1"># create_cobrak_spreadsheet()-compatible format 🎁</span>
+<span class="c1"># The keys are the dataset titles in the spreadsheet</span>
+<span class="n">variability_datasets</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">VariabilityDataset</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;FVA result&quot;</span><span class="p">:</span> <span class="n">VariabilityDataset</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">var_result</span><span class="p">,</span> <span class="c1"># Obligatory argument</span>
+        <span class="n">with_df</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="c1"># Optional, default False; Do we show driving forces (see MILP chapter)?</span>
+    <span class="p">)</span>
+ <span class="p">}</span> <span class="c1"># This is a list as we could add multiple variability results</span>
+
+<span class="c1"># Now let&#39;s wrap the optimization results into a</span>
+<span class="c1"># create_cobrak_spreadsheet()-compatible format 🎁</span>
+<span class="c1"># The keys are the dataset titles in the spreadsheet</span>
+<span class="n">optimization_datasets</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">OptimizationDataset</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;Max ATP&quot;</span><span class="p">:</span> <span class="n">OptimizationDataset</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">max_atp_result</span><span class="p">,</span> <span class="c1"># Obligatory argument</span>
+        <span class="n">with_df</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="c1"># Optional, default False; Do we show driving forces (see MILP chapter)?</span>
+        <span class="n">with_vplus</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="c1"># Optional, default False; Do we show V+ (see enzyme constraints)?</span>
+        <span class="n">with_kappa</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="c1"># Optional, default False; Do we show kappa values (see NLP chapter)?</span>
+        <span class="n">with_gamma</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="c1"># Optional, default False; Do we show gamma values (see NLP chapter)?</span>
+        <span class="n">with_kinetic_differences</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="c1"># Optional, default False; Do we show NLP approximation differences (see corrections chapter)?</span>
+        <span class="n">with_error_corrections</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>  <span class="c1"># Optional, default False; Do we show corrections (see corrections chapter)?</span>
+    <span class="p">),</span>
+    <span class="s2">&quot;Max Overflow&quot;</span><span class="p">:</span> <span class="n">OptimizationDataset</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">max_overflow_result</span><span class="p">,</span>
+    <span class="p">),</span>
+<span class="p">}</span>
+
+<span class="c1"># Create XLSX spreadsheet (for this example, to not pollute your</span>
+<span class="c1"># file system, as temporary file)</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.io</span><span class="w"> </span><span class="kn">import</span> <span class="n">json_write</span>
+<span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">NamedTemporaryFile</span><span class="p">(</span><span class="n">suffix</span><span class="o">=</span><span class="s1">&#39;.xlsx&#39;</span><span class="p">,</span> <span class="n">delete</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="k">as</span> <span class="n">temp</span><span class="p">:</span>
+    <span class="n">json_write</span><span class="p">(</span><span class="n">temp</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">fba_result</span><span class="p">)</span>
+    <span class="n">create_cobrak_spreadsheet</span><span class="p">(</span>
+        <span class="n">temp</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+        <span class="n">toy_model</span><span class="p">,</span>
+        <span class="n">variability_datasets</span><span class="p">,</span>
+        <span class="n">optimization_datasets</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Spreadsheet created! You can now load it in your favorite spreadsheet viewer at </span><span class="si">{</span><span class="n">temp</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h2 id="exportimport-optimization-or-variability-result-as-json-file">Export/Import optimization or variability result as JSON file</h2>
+<p>Instead of the shown pretty-printing options, you can also save and load COBRA-k optimization and variability results in the form of a human- and machine-readable JSON <a href="">[Wikipedia]</a> file. The respective functionality can be found in COBRA-k's <code>io</code> submodule, whereby all associated functions start with <code>json</code>. Let's run an ecFBA and store its result as JSON (here, in a temporary file) and then load it again:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.example_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">toy_model</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.lps</span><span class="w"> </span><span class="kn">import</span> <span class="n">perform_lp_optimization</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.io</span><span class="w"> </span><span class="kn">import</span> <span class="n">json_load</span><span class="p">,</span> <span class="n">json_write</span>
+
+<span class="c1"># Perform FBA</span>
+<span class="n">fba_result</span> <span class="o">=</span> <span class="n">perform_lp_optimization</span><span class="p">(</span>
+    <span class="n">toy_model</span><span class="p">,</span>
+    <span class="p">{</span><span class="s2">&quot;Glycolysis&quot;</span><span class="p">:</span> <span class="o">+</span><span class="mf">1.0</span><span class="p">},</span>
+    <span class="o">+</span><span class="mi">1</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Store FBA result as JSON (for this example, to not pollute your</span>
+<span class="c1"># file system, as temporary file)</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.io</span><span class="w"> </span><span class="kn">import</span> <span class="n">json_write</span>
+<span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">NamedTemporaryFile</span><span class="p">(</span><span class="n">suffix</span><span class="o">=</span><span class="s1">&#39;.json&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">temp</span><span class="p">:</span>
+    <span class="n">json_write</span><span class="p">(</span><span class="n">temp</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">fba_result</span><span class="p">)</span>
+
+    <span class="c1"># Load the FBA result again</span>
+    <span class="n">loaded_fba_result</span> <span class="o">=</span> <span class="n">json_load</span><span class="p">(</span><span class="n">temp</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+
+    <span class="c1"># Print one flux value of the FBA result</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">loaded_fba_result</span><span class="p">[</span><span class="s2">&quot;Glycolysis&quot;</span><span class="p">])</span>
+</code></pre></div>
+<div class="admonition info">
+<p class="admonition-title">Pydantic dataclass validation</p>
+<p>COBRA-k also offers pydantic <a href="">[Site]</a><a href="">[GitHub]</a> dataclass validations that
+throw a <code>ValidationError</code> whenever a dataclass member variable is missing
+or of the wrong type (e.g. a <code>str</code> instead of a <code>float</code>) or of the wrong range (e.g. a negative number instead of a non-negative number).</p>
+<p>This validation occurs in the following two cases:</p>
+<ol>
+<li>You create a new instance of the dataclass</li>
+<li>You use the optional <code>dataclass_type</code> argument of <code>json_load</code> and provide the dataclass that you expect to be loaded from the given path. E.g., in our example above, we would load the result <code>loaded_ecfba_result</code> of the type <code>dict[str, float]</code>, or in our code snippet above:</li>
+</ol>
+<div class="highlight"><pre><span></span><code><span class="c1"># For the validation of variability results, use the type dict[str, tuple[float, float]]</span>
+<span class="n">loaded_fba_result</span> <span class="o">=</span> <span class="n">json_load</span><span class="p">(</span><span class="n">temp</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">dataclass_type</span><span class="o">=</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">])</span>
+</code></pre></div>
+<p>COBRA-k also provides type aliases for results, whereby OptimizationResult=dict[str, float] and VariabilityResult=dict[str, tuple[float, float]].</p>
+</div>
+<h2 id="export-optimization-or-variability-result-as-cnapy-scenario">Export optimization or variability result as CNApy scenario</h2>
+<p>In addition to storing an optimization optimization (e.g. FBA) or variability (e.g. FVA) result as an XLSX spreadsheet or JSON file, you can also export a result as a CNApy <a href="">[GitHub]</a><a href="">[Paper]</a> scenario file. Such files can be loaded by CNApy and directly displayed in an interactive CNApy map. To export an optimization or variability result, we can use the respective functions in the <code>utilities</code> package:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.example_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">toy_model</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.lps</span><span class="w"> </span><span class="kn">import</span> <span class="n">perform_lp_optimization</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.utilities</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_cnapy_scenario_out_of_optimization_dict</span>
+
+<span class="c1"># Perform FBA</span>
+<span class="n">fba_result</span> <span class="o">=</span> <span class="n">perform_lp_optimization</span><span class="p">(</span>
+    <span class="n">toy_model</span><span class="p">,</span>
+    <span class="p">{</span><span class="s2">&quot;Glycolysis&quot;</span><span class="p">:</span> <span class="o">+</span><span class="mf">1.0</span><span class="p">},</span>
+    <span class="o">+</span><span class="mi">1</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Store ecFBA result as CNApy scenario (for this example, to not pollute your</span>
+<span class="c1"># file system, as temporary file)</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
+<span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">NamedTemporaryFile</span><span class="p">(</span><span class="n">suffix</span><span class="o">=</span><span class="s2">&quot;.scen&quot;</span><span class="p">,</span> <span class="n">delete</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="k">as</span> <span class="n">temp</span><span class="p">:</span>
+    <span class="n">create_cnapy_scenario_out_of_optimization_dict</span><span class="p">(</span>
+        <span class="n">path</span><span class="o">=</span><span class="n">temp</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+        <span class="n">cobrak_model</span><span class="o">=</span><span class="n">toy_model</span><span class="p">,</span>
+        <span class="n">optimization_dict</span><span class="o">=</span><span class="n">fba_result</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Print one flux value of the ecFBA result</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;The .scen file is in:&quot;</span><span class="p">,</span> <span class="n">temp</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;and can now be loaded in CNApy&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Use the CNApy default model &#39;cobrak_toymodel.cna&#39; for a succesful visualization of the result&quot;</span><span class="p">)</span>
+</code></pre></div>
+<p>For variability results, we can use the function <code>create_cnapy_scenario_out_of_variability_dict</code> which just takes a different input but also exports a .scen file.</p>
+<div class="admonition info">
+<p class="admonition-title">CNApy map compatibility</p>
+<p>Usually, CNApy maps are made for models where the forward and reverse direction of a single reaction are <em>not</em> separated. Using the <code>fwd_suffix</code> and <code>rev_suffix</code> of the Model dataclass (see above), COBRA-k automatically converts its optimization (or variability) result back into a model where
+forward and reverse directions.</p>
+<p>If you do not wish the behaviour, set the optional "desplit_reactions" argument in <code>create_cnapy_scenario_out_of_optimization_dict</code> to <code>False</code>.</p>
+</div>
+<h2 id="changing-and-setting-solvers-with-the-dataclass-solver">Changing and setting solvers with the dataclass Solver</h2>
+<p>Up to now, we just used COBRA-k's default solver SCIP [<a href="https://scipopt.org/">Website</a>]. However, you can set your own solver using the dataclass Solver. E.g., if we wanted to use the local (and also open-source) solver IPOPT and make it possible to run for a large amount of internal optimization steps, we would define a Solver instance as follows:
+olver. E.g., if we wanted to use the local (and also open-source) solver IPOPT an
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.example_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">toy_model</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.lps</span><span class="w"> </span><span class="kn">import</span> <span class="n">perform_lp_optimization</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">Solver</span>
+
+<span class="n">ipopt</span> <span class="o">=</span> <span class="n">Solver</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;ipopt&quot;</span><span class="p">,</span> <span class="c1"># This must be the same name as given in pyomo</span>
+    <span class="n">solver_options</span><span class="o">=</span><span class="p">{</span> <span class="c1"># Options for the called solver itself</span>
+        <span class="s2">&quot;max_iter&quot;</span><span class="p">:</span> <span class="mi">100_000</span><span class="p">,</span>
+        <span class="c1"># Note that these options are solver-specific, i.e. they</span>
+        <span class="c1"># typically won&#39;t work for other solvers</span>
+    <span class="p">},</span>
+    <span class="n">solver_attrs</span><span class="o">=</span><span class="p">{</span>
+        <span class="c1"># These would be attributes to the pyomo solver object itself</span>
+        <span class="c1"># e.g., for the solver SCIP, we may set</span>
+        <span class="c1"># &quot;_version_timeout&quot;: 180 to prevent a fast timeout of pyomo&#39;s</span>
+        <span class="c1"># SCIP call</span>
+    <span class="p">},</span>
+    <span class="n">solve_extra_options</span><span class="o">=</span><span class="p">{</span>
+        <span class="c1"># These would be extra argument&#39;s to pyomo&#39;s solve function</span>
+        <span class="c1"># Consult pyomo&#39;s documentation on the possible arguments</span>
+    <span class="p">},</span>
+<span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Now we solve with the solver IPOPT :D&quot;</span><span class="p">)</span>
+<span class="n">perform_lp_optimization</span><span class="p">(</span>
+    <span class="n">toy_model</span><span class="p">,</span>
+    <span class="s2">&quot;ATP_Consumption&quot;</span><span class="p">,</span>
+    <span class="o">+</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">solver</span><span class="o">=</span><span class="n">ipopt</span><span class="p">,</span>
+    <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="c1"># Show explicitly the IPOPT output :-)</span>
+<span class="p">)</span>
+</code></pre></div></p>
+<p>All solvers supported by the optimziation framework pyomo <a href="https://github.com/Pyomo/pyomo">[GitHub]</a> are supported by COBRA-k, too.
+Please refer to pyomo's documentation for possible solver object and solve function attributes, as well as the list of supported solvers and their names in pyomo code. For the solver-specific options, please consult the solver's own documentation.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": ".", "features": ["content.code.copy"], "search": "assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="assets/javascripts/bundle.92b07e13.min.js"></script>
+      
+        <script src="javascript/katex/katex.min.js"></script>
+      
+        <script src="javascript/katex/contrib/auto-render.min.js"></script>
+      
+        <script src="javascript/init_katex.js"></script>
+      
+        <script src="assets/external/unpkg.com/mermaid@11/dist/mermaid.min.js"></script>
+      
+    
+  </body>
+</html>

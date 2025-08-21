@@ -1,0 +1,1237 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="lps.html">
+      
+      
+        <link rel="next" href="nlps.html">
+      
+      
+      <link rel="icon" href="assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.17">
+    
+    
+      
+        <title>5. Mixed-Integer Linear Programs - COBRA-k</title>
+      
+    
+    
+      <link rel="stylesheet" href="assets/stylesheets/main.7e37652d.min.css">
+      
+        
+        <link rel="stylesheet" href="assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+        <script src="assets/external/unpkg.com/iframe-worker/shim.js"></script>
+      
+    
+    
+      
+    
+    
+      <link rel="stylesheet" href="assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="javascript/katex/katex.min.css">
+    
+      <link rel="stylesheet" href="css-extra.css">
+    
+    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#mixed-integer-linear-programs" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="index.html" title="COBRA-k" class="md-header__button md-logo" aria-label="COBRA-k" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            COBRA-k
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              5. Mixed-Integer Linear Programs
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m14.3 16-.7-2h-3.2l-.7 2H7.8L11 7h2l3.2 9zM20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12zm-9.15 3.96h2.3L12 9z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_2" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to system preference"  type="radio" name="__palette" id="__palette_2">
+    
+      <label class="md-header__button md-icon" title="Switch to system preference" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="index.html" title="COBRA-k" class="md-nav__button md-logo" aria-label="COBRA-k" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    COBRA-k
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Start
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="installation.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    1. Installation
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="model_from_scratch.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    2. Create model from scratch
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="model_io.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    3. Load/Save models
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="lps.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    4. Linear Programs & Pretty-Print
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    5. Mixed-Integer Linear Programs
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="milps.html" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    5. Mixed-Integer Linear Programs
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#introduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      Introduction
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Introduction">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#milps" class="md-nav__link">
+    <span class="md-ellipsis">
+      MILPs
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#thermodynamic-measures" class="md-nav__link">
+    <span class="md-ellipsis">
+      Thermodynamic measures
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#thermodynamic-constraints" class="md-nav__link">
+    <span class="md-ellipsis">
+      Thermodynamic constraints
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Thermodynamic constraints">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#optional-concentration-sum-constraints" class="md-nav__link">
+    <span class="md-ellipsis">
+      Optional concentration sum constraints
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#thermodynamic-flux-balance-analysis-tfba" class="md-nav__link">
+    <span class="md-ellipsis">
+      Thermodynamic Flux Balance Analysis (TFBA)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#optmdfpathway" class="md-nav__link">
+    <span class="md-ellipsis">
+      OptMDFpathway
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#thermodynamic-bottleneck-analysis-tba" class="md-nav__link">
+    <span class="md-ellipsis">
+      Thermodynamic Bottleneck Analysis (TBA)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#thermodynamic-variability-analysis-tva-including-concentration-variability-analysis-cva" class="md-nav__link">
+    <span class="md-ellipsis">
+      Thermodynamic Variability Analysis (TVA), including Concentration Variability Analysis (CVA)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#combining-enzyme-and-thermodynamic-constraints" class="md-nav__link">
+    <span class="md-ellipsis">
+      Combining enzyme and thermodynamic constraints
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="nlps.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    6. Nonlinear COBRA-k Programs
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="evolutionary.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    7. Evolutionary Optimization
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="construct_own.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    8. Construct Own Optimizations
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="add_data.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    9. Automatic data collection
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="parameter_corrections.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    10. Parameter corrections
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="utilities.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    11. More utilities
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="paper_reproduction.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    12. Paper result reproduction
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="api.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    API Reference
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#introduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      Introduction
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Introduction">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#milps" class="md-nav__link">
+    <span class="md-ellipsis">
+      MILPs
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#thermodynamic-measures" class="md-nav__link">
+    <span class="md-ellipsis">
+      Thermodynamic measures
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#thermodynamic-constraints" class="md-nav__link">
+    <span class="md-ellipsis">
+      Thermodynamic constraints
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Thermodynamic constraints">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#optional-concentration-sum-constraints" class="md-nav__link">
+    <span class="md-ellipsis">
+      Optional concentration sum constraints
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#thermodynamic-flux-balance-analysis-tfba" class="md-nav__link">
+    <span class="md-ellipsis">
+      Thermodynamic Flux Balance Analysis (TFBA)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#optmdfpathway" class="md-nav__link">
+    <span class="md-ellipsis">
+      OptMDFpathway
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#thermodynamic-bottleneck-analysis-tba" class="md-nav__link">
+    <span class="md-ellipsis">
+      Thermodynamic Bottleneck Analysis (TBA)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#thermodynamic-variability-analysis-tva-including-concentration-variability-analysis-cva" class="md-nav__link">
+    <span class="md-ellipsis">
+      Thermodynamic Variability Analysis (TVA), including Concentration Variability Analysis (CVA)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#combining-enzyme-and-thermodynamic-constraints" class="md-nav__link">
+    <span class="md-ellipsis">
+      Combining enzyme and thermodynamic constraints
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="mixed-integer-linear-programs">Mixed-integer linear programs</h1>
+<details class="abstract">
+<summary>Quickstart code</summary>
+<div class="highlight"><pre><span></span><code><span class="c1">#% Thermodynamic Flux Balance Analysis</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.example_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">toy_model</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.lps</span><span class="w"> </span><span class="kn">import</span> <span class="n">perform_lp_optimization</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.printing</span><span class="w"> </span><span class="kn">import</span> <span class="n">print_dict</span><span class="p">,</span> <span class="n">print_optimization_result</span>
+
+<span class="c1"># Perform TFBA</span>
+<span class="n">tfba_result</span> <span class="o">=</span> <span class="n">perform_lp_optimization</span><span class="p">(</span>
+    <span class="n">cobrak_model</span><span class="o">=</span><span class="n">toy_model</span><span class="p">,</span>
+    <span class="n">objective_target</span><span class="o">=</span><span class="s2">&quot;ATP_Consumption&quot;</span><span class="p">,</span>
+    <span class="n">objective_sense</span><span class="o">=+</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">with_thermodynamic_constraints</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Pretty print result as dictionary</span>
+<span class="n">print_dict</span><span class="p">(</span><span class="n">tfba_result</span><span class="p">)</span>
+
+<span class="c1"># Pretty print result as tables</span>
+<span class="n">print_optimization_result</span><span class="p">(</span><span class="n">toy_model</span><span class="p">,</span> <span class="n">tfba_result</span><span class="p">)</span>
+
+
+<span class="c1">#% OptMDFpathway</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.constants</span><span class="w"> </span><span class="kn">import</span> <span class="n">MDF_VAR_ID</span>
+
+<span class="c1"># Perform OptMDFpathway</span>
+<span class="n">optmdfpathway_result</span> <span class="o">=</span> <span class="n">perform_lp_optimization</span><span class="p">(</span>
+    <span class="n">cobrak_model</span><span class="o">=</span><span class="n">toy_model</span><span class="p">,</span>
+    <span class="n">objective_target</span><span class="o">=</span><span class="n">MDF_VAR_ID</span><span class="p">,</span>
+    <span class="n">objective_sense</span><span class="o">=+</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">with_thermodynamic_constraints</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Print MDF only</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">optmdfpathway_result</span><span class="p">[</span><span class="n">MDF_VAR_ID</span><span class="p">])</span>
+
+
+<span class="c1">#% Thermodynamic Bottleneck Analysis</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.lps</span><span class="w"> </span><span class="kn">import</span> <span class="n">perform_lp_thermodynamic_bottleneck_analysis</span>
+
+<span class="c1"># Use model with extreme standard Gibbs free energy and enforced ATP production</span>
+<span class="k">with</span> <span class="n">toy_model</span> <span class="k">as</span> <span class="n">tba_model</span><span class="p">:</span>
+    <span class="n">tba_model</span><span class="o">.</span><span class="n">reactions</span><span class="p">[</span><span class="s2">&quot;Glycolysis&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">dG0</span> <span class="o">=</span> <span class="mi">100</span> <span class="c1"># A bottleneck :O</span>
+
+    <span class="c1"># Perform TBA</span>
+    <span class="n">list_of_bottleneck_reactions</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">perform_lp_thermodynamic_bottleneck_analysis</span><span class="p">(</span>
+        <span class="n">tba_model</span><span class="p">,</span>
+    <span class="p">)</span> <span class="c1"># The second returned value is the full solution (with fluxes, concentrations, ...) which we don&#39;t need here</span>
+
+<span class="c1"># Print list of thermodynamic bottlenecks</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">list_of_bottleneck_reactions</span><span class="p">)</span>
+
+
+<span class="c1">#% Thermodynamic Variability Analysis</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.example_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">toy_model</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.lps</span><span class="w"> </span><span class="kn">import</span> <span class="n">perform_lp_variability_analysis</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.printing</span><span class="w"> </span><span class="kn">import</span> <span class="n">print_variability_result</span>
+
+<span class="c1"># Perform TFVA</span>
+<span class="n">variability_dict</span> <span class="o">=</span> <span class="n">perform_lp_variability_analysis</span><span class="p">(</span>
+    <span class="n">toy_model</span><span class="p">,</span>
+    <span class="n">with_thermodynamic_constraints</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Pretty print result as tables</span>
+<span class="n">print_variability_result</span><span class="p">(</span><span class="n">toy_model</span><span class="p">,</span> <span class="n">variability_dict</span><span class="p">)</span>
+
+
+<span class="c1">#% Perform enzyme-constrained TFBA</span>
+<span class="c1"># Run ecTFBA</span>
+<span class="n">ectfba_result</span> <span class="o">=</span> <span class="n">perform_lp_optimization</span><span class="p">(</span>
+    <span class="n">cobrak_model</span><span class="o">=</span><span class="n">toy_model</span><span class="p">,</span>
+    <span class="n">objective_target</span><span class="o">=</span><span class="s2">&quot;ATP_Consumption&quot;</span><span class="p">,</span>
+    <span class="n">objective_sense</span><span class="o">=+</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">with_thermodynamic_constraints</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">with_enzyme_constraints</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Pretty print result as dictionary</span>
+<span class="n">print_dict</span><span class="p">(</span><span class="n">ectfba_result</span><span class="p">)</span>
+
+<span class="c1"># Pretty print result as tables,</span>
+<span class="c1"># now with enzyme concentrations *and* metabolite concentrations</span>
+<span class="n">print_optimization_result</span><span class="p">(</span><span class="n">toy_model</span><span class="p">,</span> <span class="n">ectfba_result</span><span class="p">)</span>
+</code></pre></div>
+</details>
+<h2 id="introduction">Introduction</h2>
+<h3 id="milps">MILPs</h3>
+<p>We used plain Linear Programming in the last chapter, where every variable is <em>rational</em> (which includes not only whole numbers (such as <span class="arithmatex">\(2\)</span>) but also fractions (such as <span class="arithmatex">\(7.31\)</span>)). Now, we use concepts based on Mixed-Integer Linear Programming (MILP), where a user-selected set of binary variables which can be <em>either</em> 0 or 1, nothing in-between.</p>
+<p>MILPs are much more difficult to solve than LPs. While the latter may contain hundreds of thousands of parameters and still be quickly solved, MILPs are restricted, at very best, to a few thousand parameters. Fortunately, that's still good enough for large genome-scale metabolic models.</p>
+<details class="excursion">
+<summary>Excursion: MILPs</summary>
+<p>Based on our definitions from the previous chapter, a general form of a maximizing MILP is:</p>
+<div class="arithmatex">\[
+\operatorname*{\mathbf{maximize}}_{\mathbf{x}} \ \mathbf{g}ᵀ  \\
+subject \ to \ the \ constraints \\
+\mathbf{A} ⋅ \mathbf{x} ≤ \mathbf{b} \\
+x^{min}_i &lt; x_i &lt; x^{max}_i \\
+x_j ∈ \{0,1 \} ∀ j∈1...i^{max}
+\]</div>
+<p>where j stands for all indices (out of all variables indices indicated by i) whose variable is restricted to the value 0 and 1.</p>
+<p>Major algorithms for the solution of the selection of binary variables in MILPs are branch-and-bound <a href="https://doi.org/10.2307/1910129">[Paper]</a><a href="https://en.wikipedia.org/wiki/Branch_and_bound">[Wikipedia]</a> and the cutting-plane method <a href="https://doi.org/10.1287/opre.9.6.849">[Paper]</a><a href="https://en.wikipedia.org/wiki/Cutting-plane_method">[Wikipadia]</a> as well as their combination branch-and-cut <a href="https://doi.org/10.1137%2F1033004">[Paper]</a><a href="https://en.wikipedia.org/wiki/Branch_and_cut">[Wikipedia]</a>.</p>
+</details>
+<h3 id="thermodynamic-measures">Thermodynamic measures</h3>
+<p>Binary variables allow us to introduce <em>thermodynamic</em> constraints in our constraint-based model. Thermodynamic constraints make sure that our solution is thermodynamically feasible. This means that the concentration(s) of any active reaction's substrate are somehow high enough in comparison to the reaction's products. In exact form, whether this neccessary substrate(s)-to-product(s) concentration ratio is reached can be deduced with the driving force <span class="arithmatex">\(f_i\)</span> (side note: this is the negative Gibbs energy <span class="arithmatex">\(Δ_r G^{´}\)</span> <a href="https://en.wikipedia.org/wiki/Gibbs_free_energy">[Wikipedia]</a>) with the unit kJ⋅mol⁻¹. <span class="arithmatex">\(f_i\)</span> is for a reaction <span class="arithmatex">\(i\)</span>:</p>
+<div class="arithmatex">\[ f_i = -Δ_r G^{´°}_i + R ⋅ T ⋅ Q_i \]</div>
+<p>R stands for the Gas constant in kJ⋅K⁻¹⋅mol⁻¹ <a href="https://en.wikipedia.org/wiki/Gas_constant">[Wikipedia]</a> and T for the temperature in K; <span class="arithmatex">\(Q_i\)</span> is explained further below.</p>
+<p><span class="arithmatex">\(Δ_r G^{´°}_i\)</span> (with the ° at the end) is the physiologic <em>standard</em> Gibbs energy. Just like <span class="arithmatex">\(f_i\)</span>, it has the unit kJ⋅mol⁻¹ and stands for the amount of energy (in kJ) that is used when the reaction converts 1 mole of substrates into 1 mole of products, whereby <em>all</em> substrates and products have a concentration of 1 M=1 mol⋅l⁻¹. Furthermore, to account for physiological effects, the reaction compartment's pH, pMg and ionic strength are accounted for in the complicated calculations for the determination of a <span class="arithmatex">\(Δ_r G^{´°}_i\)</span>. This becomes even more complicated for multi-compartmental reactions. For more details, look at this fantastic paper from the authors of the fantastic eQuilibrator-API <a href="https://doi.org/10.1093/nar/gkab1106">[here]</a> and the excellent eQuilibrator FAQ <a href="https://equilibrator.weizmann.ac.il/static/classic_rxns/faq.html">[here]</a>. This (COBRA-k-unaffiliated) API is also used by COBRA-k's functionality to retrieve <span class="arithmatex">\(Δ_r G^{´°}_i\)</span> of reactions, as detailed in chapter 10.</p>
+<p>The main value of the standard Gibbs energy is its following meaning:</p>
+<ul>
+<li>
+<p>If <span class="arithmatex">\(Δ_r G^{´°}_i &lt; 0\)</span>, it means that energy is <em>released</em> when all substrates and products have the standard concentration of 1 M. As every working reaction needs energy to be released, this means that under standard concentrations, the reaction would be thermodynamically <em>feasible</em>. In other works, it could run.</p>
+</li>
+<li>
+<p>If <span class="arithmatex">\(Δ_r G^{´°}_i ≥ 0\)</span>, <em>no</em> energy is released at standard concentrations. This would mean that with the given standard concentrations, the reaction would be thermodynamically <em>infeasible</em>, it could not run.</p>
+</li>
+</ul>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The driving force <span class="arithmatex">\(f_i\)</span> uses the <em>negated</em> sign logic as it negates the Gibbs energy. Also, as explained below with the factor <span class="arithmatex">\(Q_i\)</span>, <span class="arithmatex">\(f_i\)</span> can be used for any metabolite concentrations, not only 1 M.</p>
+</div>
+<p><span class="arithmatex">\(f_i\)</span> means the following:</p>
+<ul>
+<li>
+<p>The <em>higher</em> the <span class="arithmatex">\(f_i\)</span>, the more energy is released by a reaction.</p>
+</li>
+<li>
+<p>The <em>lower</em> the <span class="arithmatex">\(f_i\)</span>, the less energy is released by a reaction.</p>
+</li>
+</ul>
+<p>⇒ if <span class="arithmatex">\(f_i&gt;0\)</span>, a reaction is thermodynamically <em>feasible</em>; if <span class="arithmatex">\(f_i≤0\)</span>, a reaction is thermodynamically <em>in</em>feasible</p>
+<p><span class="arithmatex">\(Q_i\)</span> is the appropriately formulated thermodynamic logarithmic concentration ratio between substrates and products:</p>
+<div class="arithmatex">\[ Q_i = ∑_{j}( -N_{i,j} ⋅ ln(c_j) )\]</div>
+<p><span class="arithmatex">\(ln\)</span> is the natural logarithm, <span class="arithmatex">\(c_j\)</span> the concentration of metabolite <span class="arithmatex">\(j\)</span> and <span class="arithmatex">\(N_{i,j}\)</span> is its stoichiometry (negative for substrates, positive for products) in the stoichiometric matrix <span class="arithmatex">\(\mathbf{N}\)</span>. The influence of substrate and product concentrations on <span class="arithmatex">\(Q_i\)</span>, and therefore <span class="arithmatex">\(f_i\)</span>, is as follows:</p>
+<ul>
+<li>
+<p>Through the stoichiometry-negating factor <span class="arithmatex">\(-N_{i,j}\)</span>, <span class="arithmatex">\(Q_i\)</span> is defined such that is becomes lower the higher the substrate concentration(s) are. In other words, the driving force <span class="arithmatex">\(f_i\)</span> of a reaction becomes "better" (it goes in the direction of thermodynamic feasibility, i.e. higher) the higher the the substrate concentration(s) are.</p>
+</li>
+<li>
+<p>In contrast, <span class="arithmatex">\(Q_i\)</span> becomes higher the higher the product concentration(s) are, bringing the reactions more towards an infeasible state as the <span class="arithmatex">\(f_i\)</span> also becomes lower.</p>
+</li>
+</ul>
+<details>
+<summary>A toy reaction example</summary>
+<p>To illustrate the (often complicated looking) measures introduced in the previous paragraphs, let's look at a simple reaction called X:</p>
+<p>$ A → 2 B $</p>
+<p>Lets say that this reaction's standard Gibbs energy <span class="arithmatex">\(Δ_r G^{´°}_{X}\)</span> is -1 kJ⋅mol⁻¹ A's concentration (<span class="arithmatex">\(c_A\)</span>) is 0.2 M, and $c_B§ is 0.1 M.</p>
+<p>Then, the driving force <span class="arithmatex">\(f\)</span> of reaction X is:</p>
+<p>$ f_{X} = Δ_r G^{´°} + -N_{X,A} ⋅ ln(c_A) + -N_{X,B} ⋅ ln(c_B) $</p>
+<p>$ = -1 + -1 ⋅ ln(0.2) + -(-2) ⋅ ln(0.1) ≈ -3.996 kJ⋅mol⁻¹ $</p>
+<p><span class="arithmatex">\(f_X&lt;0\)</span>, this, the reaction is thermodynamically feasible, it can run!</p>
+</details>
+<h2 id="thermodynamic-constraints">Thermodynamic constraints</h2>
+<p><em>Aim:</em> Using the thermodynamic measured introduced above, we can now integrate thermodynamic constraints into constraint-based modeling (CBM). More precisely, we want that the driving force <span class="arithmatex">\(f_i\)</span> of any active reaction is positive. In other words, whenever the flux of a reaction is greater than zero (<span class="arithmatex">\(v_i&gt;0\)</span>), <span class="arithmatex">\(f_i&gt;0\)</span> holds. As a first step to do so, we add metabolite concentrations for any metabolite <span class="arithmatex">\(j\)</span>:</p>
+<div class="arithmatex">\[ \ln (c_j^{min} ) ≤ x̃_j ≤ \ln ( c_j^{max} ) \]</div>
+<p><span class="arithmatex">\(c_j^{min}\)</span> is the minimal metabolite concentration in M, <span class="arithmatex">\(c_j^{max}\)</span> the respective maximal concentration in M. <span class="arithmatex">\(x̃_j\)</span>, an element of the vector <span class="arithmatex">\(\mathbf{x̃}\)</span>, stands for a variable that holds the <em>logaritmic</em> concentration of metabolite <span class="arithmatex">\(j\)</span>.</p>
+<div class="admonition info">
+<p class="admonition-title">How to set concentration ranges</p>
+<p>Typical standard minimal and maximal concentrations are 10⁻⁶ M up to 0.02 M for intracellular metabolites, with higher maximal concentrations for extracellular metabolites. The concentrations for water (<span class="arithmatex">\(H_2 O\)</span>) and protons (<span class="arithmatex">\(H^+\)</span>) are often set to 0 M (i.e. their logarithm is 1). This is because both water (with a fixed "active" concentration) and proton (as pH) concentrations are integrated in the calculation of the physiologic standard Gibbs energy <span class="arithmatex">\(Δ_r G^{´°}\)</span>. For more details of how e.g. the fantastic eQuilibrator does this, read their FAQ <a href="https://equilibrator.weizmann.ac.il/static/classic_rxns/faq.html#why-can-t-i-change-the-concentration-of-water">here</a>.</p>
+</div>
+<p>Now, we can formulate the driving forces <span class="arithmatex">\(f_i\)</span> - for any reaction <span class="arithmatex">\(i\)</span> for which we want thermodynamic constraints - as follows:</p>
+<div class="arithmatex">\[ f_i = -(Δ_r G^{´°}_i + R ⋅ T ⋅ \mathbf{N_{⋅,i}} ⋅ \mathbf{x̃}) \]</div>
+<p>Again, <span class="arithmatex">\(Δ_r G^{´°}_i\)</span> is the reaction's standard Gibbs energy, R the gas constant, T the temperature. The term <span class="arithmatex">\(\mathbf{N_{⋅,i}} ⋅ \mathbf{x̃}\)</span> is equivalent to the formulation of <span class="arithmatex">\(Q_i\)</span> above and means the following: We take the stoichiometries of all (⋅) metabolites in reaction i through <span class="arithmatex">\(\mathbf{N_{⋅,i}}\)</span>, i.e. we take the <span class="arithmatex">\(i\)</span>-th row of the stoichiometric matrix <span class="arithmatex">\(\mathbf{N}\)</span>. Then, we multiply these stoichiometries with the logarithmic concentration vector <span class="arithmatex">\(\mathbf{x̃}\)</span>. This effectively gives us - as for <span class="arithmatex">\(Q_i\)</span> - the sum of stoichiometries multiplied with the logarithmic concentrations.</p>
+<p>While we now have the driving force, we did not enforce it yet to be positive (i.e. to indicate feasiblity). For this, we also introduce a controlling binary variable vector <span class="arithmatex">\(\mathbf{z}\)</span> which holds a binary value for any reaction <span class="arithmatex">\(i\)</span> with thermodynamic constraints:</p>
+<div class="arithmatex">\[ z_i ∈ \{0,1 \} \]</div>
+<p>Any <span class="arithmatex">\(z_i\)</span> must be 1 if a reaction wants to run through the constraint:</p>
+<div class="arithmatex">\[ v_i ≤ ub_i ⋅ z_i \]</div>
+<p>Also, any <span class="arithmatex">\(z_i\)</span> must be 0 (thus making a reaction not run) if <span class="arithmatex">\(f_i ≤ 0\)</span>:</p>
+<div class="arithmatex">\[ B ≤ f_i + M ⋅ ( 1-z_i ) \]</div>
+<p>Thereby, <span class="arithmatex">\(B\)</span> is a variable that stands for a set <em>minimal</em> driving force that has to be reached by any active reaction:</p>
+<div class="arithmatex">\[ B ≥ f^{min} \]</div>
+<p>The constant <span class="arithmatex">\(f^{min}&gt;0\)</span> is the lower bound for <span class="arithmatex">\(B\)</span>. <span class="arithmatex">\(f^{min}&gt;0\)</span> must hold if we want to ensure thermodynamic feasibility.</p>
+<p>And that's it! Through the two constraints utilizing <span class="arithmatex">\(z_i\)</span>, we ensure that any thermodynamically infeasible reaction is inactive (its flux is 0), while any thermodynamically feasible reaction may be active.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Through our formulation over all reactions, we ensure the <em>network-wide</em> thermodynamic feasiblity of any solution with thermodynamic constraints as long as we set <span class="arithmatex">\(f^{min}&gt;0\)</span>.</p>
+</div>
+<h3 id="optional-concentration-sum-constraints">Optional concentration sum constraints</h3>
+<p>COBRA-k also provides the possibility to introduce <em>concentration sum constraints</em>. They are only activated if a Model's <code>max_conc_sum</code> member variable is smaller than the default value <code>float("inf")</code>. In exact form, the concentration constraint would be</p>
+<div class="arithmatex">\[ Φ ≤ \sum{e^(x̃_j)} \]</div>
+<p>whereby <span class="arithmatex">\(Φ\)</span> stands for the maximal concentration sum we set, and <span class="arithmatex">\(e^(x̃_j)\)</span> for a exponentiated logarithmic concentration. As <span class="arithmatex">\(e^(x̃_j)\)</span> is <em>non</em>-linear, we cannot use them directly in our MILP. Hence, we need a linearized approximation (whereby we use most of the formulation from [<a href="https://doi.org/10.1101/2024.03.19.585265">this preprint</a>]).</p>
+<p>This works as, luckily, the exponential function is monotonically rising :D This means that we can always draw a "minimum" linear constraint underneath the exponential function's curve without cutting this curve. Even more lucky, we have to set <span class="arithmatex">\(x̃_j\)</span> concentration bounds anyway for thermodynamic constraints (see above), so that we know for which range of logarithmic concentrations we apply the exponential function. I.e. we know the possible minimal and maximal logarithmic concentration and only have to approximate the exponential function for these values.</p>
+<p>Now, mathematically, the exponential function's linear approximation is built as follows:</p>
+<ul>
+<li>
+<p>For each metabolite <span class="arithmatex">\(j\)</span>, we first look at its possible minimal and maximal logarithmic concentration. Then, we segment this interval into <span class="arithmatex">\(ξ\)</span> many values creating the value vector <span class="arithmatex">\(\mathbf{S}\)</span> (we will clarify how large <span class="arithmatex">\(X\)</span> should be, i.e. how many segments are needed). I.e., we get X many equally distant values <span class="arithmatex">\(\mathbf{S}\)</span> from (and including) the minimal and maximal logarithmic concentration of <span class="arithmatex">\(j\)</span>.</p>
+</li>
+<li>
+<p>For each segment value, we approximate its delogarithmic concentration <span class="arithmatex">\(C_j\)</span>, i.e. <span class="arithmatex">\(e^(x̃_j)\)</span> a linear constraint of the following form (for a visualization see <a href="https://doi.org/10.1101/2024.03.19.585265">[Fig. 5 in this preprint]</a>):</p>
+</li>
+</ul>
+<div class="arithmatex">\[C_j ≥ a_{s,j} ⋅ x̃_j + b_{s,j}\]</div>
+<p><span class="arithmatex">\(s\)</span> is the linear approximation segment index in <span class="arithmatex">\([1,S]\)</span>. <span class="arithmatex">\(a_{s,j}\)</span> is the slope of the exponential function at the segment's value. <span class="arithmatex">\(b_{s,j}\)</span> is the necessary correction such that <span class="arithmatex">\(a_{s,j} ⋅ x̃_j + b_{s,j} = e^(x̃_j)\)</span>. It is defined as:</p>
+<p><span class="arithmatex">\(e^(x̃_j) - e^(x̃_j) * S_s\)</span></p>
+<p>where <span class="arithmatex">\(S_s\)</span> is the segment <span class="arithmatex">\(s\)</span>'s value.</p>
+<ul>
+<li>
+<p>We still didn't clarify how many segments are needed, i.e. how large <span class="arithmatex">\(ξ\)</span> has to be. To determine <span class="arithmatex">\(ξ\)</span>, we use the following algorithm:</p>
+</li>
+<li>
+<p>We start with just <span class="arithmatex">\(ξ=2\)</span>, i.e. two segments</p>
+</li>
+<li>For the current number of <span class="arithmatex">\(ξ\)</span>, and define its two linear approximations as described above.</li>
+<li>Then, for each segment value <span class="arithmatex">\(S_s \space ∀ \space s&lt;ξ\)</span>, we calculate the <em>Y intersect</em> of the linear approximation function at <span class="arithmatex">\(S_s\)</span> and <span class="arithmatex">\(S_{s+1}\)</span>. I.e., this is the X value where this linear approximation and the linear approximation of the <em>following</em> segment have the same Y value. We do this because, due to the monotonically rising nature of the exponential function, this intersect is the point with the <em>largest possible</em> approximation error (again, for a visualization see <a href="https://doi.org/10.1101/2024.03.19.585265">[Fig. 5 in this preprint]</a>).</li>
+<li>
+<p>We now calculate the relative difference between the exponential function and the linear approximation at this Y intersect. If this relative difference is larger than the set <code>conc_sum_max_rel_error</code> (default: <code>0.05</code>), we increase <span class="arithmatex">\(ξ\)</span> by 1 and start again with step 2 of this algorithm. Otherwise, we have a linear approximation within our set maximal relative error and can stop the algorithm :D</p>
+</li>
+<li>
+<p>Finally, we can constrain our sum of the approximation of delogarithmic concentrations as follows:</p>
+</li>
+</ul>
+<div class="arithmatex">\[ Φ ≤ \sum{C_j} \]</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>For numeric reasons, linear approximations at very low concentrations may cause numeric problems :-( To mitigate this, we can set <code>conc_sum_min_abs_error</code> (default: <code>1e-6</code>) in our Model instance, which sets a minimal value for <span class="arithmatex">\(Φ\)</span> and removing all linear constraints for any logarithmic concentration where <span class="arithmatex">\(e^(x̃_j)\)</span> is smaller than <code>conc_sum_min_abs_error</code>.</p>
+</div>
+<h2 id="thermodynamic-flux-balance-analysis-tfba">Thermodynamic Flux Balance Analysis (TFBA)</h2>
+<p>TFBA combines Flux Balance Analysis (FBA) with thermodynamic constraints to ensure that the predicted flux distribution is <em>both</em> stoichiometrically and thermodynamically feasible <a href="https://doi.org/10.1529/biophysj.106.093138">[Paper]</a>. The resulting optimization problem is (also using the FBA definitions from the previous chapter):</p>
+<div class="arithmatex">\[ \operatorname*{\mathbf{min}}_{\mathbf{v}, \mathbf{E}, \mathbf{x̃}, \mathbf{f}, B}  \mathbf{g^\top} \\ s.t. \space CBM \space \&amp; \space thermodynamic \space constraints \]</div>
+<p>In COBRA-k, we can run a TFBA as follows utilizing the toggle <code>with_thermodynamic_constraints</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.example_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">toy_model</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.lps</span><span class="w"> </span><span class="kn">import</span> <span class="n">perform_lp_optimization</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.printing</span><span class="w"> </span><span class="kn">import</span> <span class="n">print_dict</span><span class="p">,</span> <span class="n">print_optimization_result</span>
+
+<span class="c1"># Perform TFBA</span>
+<span class="n">tfba_result</span> <span class="o">=</span> <span class="n">perform_lp_optimization</span><span class="p">(</span>
+    <span class="n">cobrak_model</span><span class="o">=</span><span class="n">toy_model</span><span class="p">,</span>
+    <span class="n">objective_target</span><span class="o">=</span><span class="s2">&quot;ATP_Consumption&quot;</span><span class="p">,</span>
+    <span class="n">objective_sense</span><span class="o">=+</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">with_thermodynamic_constraints</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Pretty print result as dictionary</span>
+<span class="n">print_dict</span><span class="p">(</span><span class="n">tfba_result</span><span class="p">)</span>
+
+<span class="c1"># Pretty print result as tables</span>
+<span class="n">print_optimization_result</span><span class="p">(</span><span class="n">toy_model</span><span class="p">,</span> <span class="n">tfba_result</span><span class="p">)</span>
+</code></pre></div>
+<p>Note that the printed results now also show reaction driving forces and metabolite concentrations in a solution.</p>
+<div class="admonition info metabolite legarithmic concentration variables">
+<p class="admonition-title">Info</p>
+<p>In COBRA-k result dictionaries, logarithmic metabolite concentration variables start with <code>cobrak.constant.LNCONC_PREFIX</code>, by default <code>x_</code>. E.g., the logarithmic metabolite concentration of metabolite <code>atp_c</code> (cytosolic ATP) would be called <code>x_atp_c</code>.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Just like in a non-thermodynamic FBA, there may be up to infinite many alternative solutions for the same optimal value. For an elucidation of the full solution space, you may use a TFVA (see below).</p>
+<p>Also, to make real use of thermodynamic constraints, your reactions need associated <code>dG0</code> values. For a way to automatically calculate them, see chapter 10.</p>
+</div>
+<h2 id="optmdfpathway">OptMDFpathway</h2>
+<p>Sometimes, it is interesting to find out the max-min driving force of a network, also called MDF. This MDF stands for the maximized minimal driving force of all active reactions. In other words, it stands for the highest possible minimal <span class="arithmatex">\(f_i\)</span> in a network. We can easily formulate this optimization problem, known as OptMDFpathway <a href="https://doi.org/10.1371/journal.pcbi.1006492">[Paper]</a>, as:</p>
+<div class="arithmatex">\[ \operatorname*{\mathbf{max}}_{\mathbf{v}, \mathbf{x̃}, \mathbf{f}, B}  B \\ s.t. \space CBM \space  \&amp; \space thermodynamic \space constraints \]</div>
+<p>In COBRA-k, the variable <span class="arithmatex">\(B\)</span> has the constant name <code>cobrak.constants.MDF_VAR_ID</code>, by default <code>"var_B"</code>. With our toy model, we can perform OptMDFpathway as follows:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.example_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">toy_model</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.lps</span><span class="w"> </span><span class="kn">import</span> <span class="n">perform_lp_optimization</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.constants</span><span class="w"> </span><span class="kn">import</span> <span class="n">MDF_VAR_ID</span>
+
+<span class="c1"># Perform OptMDFpathway</span>
+<span class="n">optmdfpathway_result</span> <span class="o">=</span> <span class="n">perform_lp_optimization</span><span class="p">(</span>
+    <span class="n">cobrak_model</span><span class="o">=</span><span class="n">toy_model</span><span class="p">,</span>
+    <span class="n">objective_target</span><span class="o">=</span><span class="n">MDF_VAR_ID</span><span class="p">,</span>
+    <span class="n">objective_sense</span><span class="o">=+</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">with_thermodynamic_constraints</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Print MDF only</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">optmdfpathway_result</span><span class="p">[</span><span class="n">MDF_VAR_ID</span><span class="p">])</span>
+</code></pre></div>
+<h2 id="thermodynamic-bottleneck-analysis-tba">Thermodynamic Bottleneck Analysis (TBA)</h2>
+<p>Often, reactions such as growth are thermodynamically infeasible in our model with a given set of <span class="arithmatex">\(Δ_r G^{´°}_i\)</span> and concentration ranges. This is typically caused by thermodynamic <em>bottleneck</em> reactions, i.e. reactions whose <span class="arithmatex">\(Δ_r G^{´°}_i\)</span> is so high that the equation</p>
+<div class="arithmatex">\[ f^{min} &gt; 0 \]</div>
+<p>cannot hold :-( To solve this problem, COBRA-k includes the thermodynamic bottleneck analysis (TBA) introduced <a href="https://doi.org/10.1038/s41467-023-40297-8">[here]</a>. It searches for one (not necessarily unique) <em>minimal</em> number of reactions whose <span class="arithmatex">\(Δ_r G^{´°}_i\)</span> has to be reduced to make a model state thermodynamically feasible. As a MILP, it introduces a new vector of binary variables <span class="arithmatex">\(\mathbf{z^b}\)</span> for each reaction <span class="arithmatex">\(i\)</span> with thermodynamic constraints whereby</p>
+<div class="arithmatex">\[ z^{B}_i ∈ \{0,1 \} \]</div>
+<p>The <span class="arithmatex">\(z^{B}_i\)</span> are now integrated in the reformulated constraint that controls whether a reaction is thermodynamically feasible or not (see above for the formulation without <span class="arithmatex">\(z^{B}_i\)</span> ):</p>
+<div class="arithmatex">\[ f_i + M ⋅ \left( 1-z_i \right) + M ⋅ z_i^B ≥ B \]</div>
+<p>Essentially, if <span class="arithmatex">\(z_i^B=1\)</span>, then <span class="arithmatex">\(z_i\)</span> can be zero even though the reaction is thermodynamically infeasible. We can now identify a minimal set of reactions whose <span class="arithmatex">\(Δ_r G^{´°}_i\)</span> has to be reduced through</p>
+<div class="arithmatex">\[ \operatorname*{\mathbf{min}}_{\mathbf{v}, \mathbf{x̃}, \mathbf{f}, B}  ∑(z^{B}_i) \\ s.t. \space CBM \space  \&amp; \space thermodynamic \space \&amp; \space TBA \space constraints \]</div>
+<p>In COBRA-k, we can perform this analysis as follows:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.example_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">toy_model</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.lps</span><span class="w"> </span><span class="kn">import</span> <span class="n">perform_lp_thermodynamic_bottleneck_analysis</span>
+
+<span class="c1"># Use model with extreme standard Gibbs free energy and enforced ATP production</span>
+<span class="k">with</span> <span class="n">toy_model</span> <span class="k">as</span> <span class="n">tba_model</span><span class="p">:</span>
+    <span class="n">tba_model</span><span class="o">.</span><span class="n">reactions</span><span class="p">[</span><span class="s2">&quot;Glycolysis&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">dG0</span> <span class="o">=</span> <span class="mi">100</span> <span class="c1"># A bottleneck :O</span>
+
+    <span class="c1"># Perform TBA</span>
+    <span class="n">list_of_bottleneck_reactions</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">perform_lp_thermodynamic_bottleneck_analysis</span><span class="p">(</span>
+        <span class="n">tba_model</span><span class="p">,</span>
+    <span class="p">)</span> <span class="c1"># The second returned value is the full solution (with fluxes, concentrations, ...) which we don&#39;t need here</span>
+
+<span class="c1"># Print list of thermodynamic bottlenecks</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">list_of_bottleneck_reactions</span><span class="p">)</span>
+</code></pre></div>
+<div class="admonition info">
+<p class="admonition-title">Using with statement</p>
+<p>In our code snippet, we used Python's <code>with</code> with a <code>Model</code> instance. This is a handy way to automatically create a deep copy of our model, which does not affect the original model.</p>
+</div>
+<h2 id="thermodynamic-variability-analysis-tva-including-concentration-variability-analysis-cva">Thermodynamic Variability Analysis (TVA), including Concentration Variability Analysis (CVA)</h2>
+<p>Analogously to the Flux Variability Analysis shown in the previous chapter, we can now perform a general Thermodynamic Variability Analysis (TVA). Now, we may not only minimize and maximize fluxes, but also logarithmic concentrations:</p>
+<div class="arithmatex">\[ \operatorname*{\mathbf{min}}_{\mathbf{v},\mathbf{x̃}, \mathbf{f}, B}  β_i, β_i∈\mathbf{v}∪\mathbf{x} \\ s.t. \space CBM \space \&amp; \space thermodynamic \space constraints \]</div>
+<div class="arithmatex">\[ \operatorname*{\mathbf{max}}_{\mathbf{v}, \mathbf{x̃}, \mathbf{f}, B}  β_i, β_i∈\mathbf{v}∪\mathbf{x} \\ s.t. \space CBM \space \&amp; \space thermodynamic \space constraints \]</div>
+<p>We can recover the actual minimal and maximal concentrations through exponentiation:</p>
+<div class="arithmatex">\[ c_i^{min}=e^{x̃_i^{min}} \]</div>
+<div class="arithmatex">\[ c_i^{max}=e^{x̃_i^{max}} \]</div>
+<p>In COBRA-k, a TVA looks as follows:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.example_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">toy_model</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.lps</span><span class="w"> </span><span class="kn">import</span> <span class="n">perform_lp_variability_analysis</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.printing</span><span class="w"> </span><span class="kn">import</span> <span class="n">print_variability_result</span>
+
+<span class="c1"># Perform TFVA</span>
+<span class="n">variability_dict</span> <span class="o">=</span> <span class="n">perform_lp_variability_analysis</span><span class="p">(</span>
+    <span class="n">toy_model</span><span class="p">,</span>
+    <span class="n">with_thermodynamic_constraints</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Pretty print result as tables</span>
+<span class="n">print_variability_result</span><span class="p">(</span><span class="n">toy_model</span><span class="p">,</span> <span class="n">variability_dict</span><span class="p">)</span>
+</code></pre></div>
+<h2 id="combining-enzyme-and-thermodynamic-constraints">Combining enzyme and thermodynamic constraints</h2>
+<p>Of course, you can combine thermodynamic constraints with enzyme constraints (shown in the last chapter), which e.g. makes a TFBA an <em>ec</em>TFBA. Just set the <code>with_thermodynamic_constraints</code> and <code>with_enzyme_constraints</code> to <code>True</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.example_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">toy_model</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.lps</span><span class="w"> </span><span class="kn">import</span> <span class="n">perform_lp_optimization</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.printing</span><span class="w"> </span><span class="kn">import</span> <span class="n">print_dict</span><span class="p">,</span> <span class="n">print_optimization_result</span>
+
+<span class="c1"># Perform ecTFBA</span>
+<span class="n">ectfba_result</span> <span class="o">=</span> <span class="n">perform_lp_optimization</span><span class="p">(</span>
+    <span class="n">cobrak_model</span><span class="o">=</span><span class="n">toy_model</span><span class="p">,</span>
+    <span class="n">objective_target</span><span class="o">=</span><span class="s2">&quot;ATP_Consumption&quot;</span><span class="p">,</span>
+    <span class="n">objective_sense</span><span class="o">=+</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">with_thermodynamic_constraints</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">with_enzyme_constraints</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># Pretty print result as dictionary</span>
+<span class="n">print_dict</span><span class="p">(</span><span class="n">ectfba_result</span><span class="p">)</span>
+
+<span class="c1"># Pretty print result as tables,</span>
+<span class="c1"># now with enzyme concentrations *and* metabolite concentrations</span>
+<span class="n">print_optimization_result</span><span class="p">(</span><span class="n">toy_model</span><span class="p">,</span> <span class="n">ectfba_result</span><span class="p">)</span>
+</code></pre></div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": ".", "features": ["content.code.copy"], "search": "assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="assets/javascripts/bundle.92b07e13.min.js"></script>
+      
+        <script src="javascript/katex/katex.min.js"></script>
+      
+        <script src="javascript/katex/contrib/auto-render.min.js"></script>
+      
+        <script src="javascript/init_katex.js"></script>
+      
+        <script src="assets/external/unpkg.com/mermaid@11/dist/mermaid.min.js"></script>
+      
+    
+  </body>
+</html>

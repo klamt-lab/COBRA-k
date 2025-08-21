@@ -1,0 +1,1330 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="installation.html">
+      
+      
+        <link rel="next" href="model_io.html">
+      
+      
+      <link rel="icon" href="assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.17">
+    
+    
+      
+        <title>2. Create model from scratch - COBRA-k</title>
+      
+    
+    
+      <link rel="stylesheet" href="assets/stylesheets/main.7e37652d.min.css">
+      
+        
+        <link rel="stylesheet" href="assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+        <script src="assets/external/unpkg.com/iframe-worker/shim.js"></script>
+      
+    
+    
+      
+    
+    
+      <link rel="stylesheet" href="assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="javascript/katex/katex.min.css">
+    
+      <link rel="stylesheet" href="css-extra.css">
+    
+    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#building-metabolic-models-from-scratch" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="index.html" title="COBRA-k" class="md-header__button md-logo" aria-label="COBRA-k" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            COBRA-k
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              2. Create model from scratch
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m14.3 16-.7-2h-3.2l-.7 2H7.8L11 7h2l3.2 9zM20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12zm-9.15 3.96h2.3L12 9z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_2" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to system preference"  type="radio" name="__palette" id="__palette_2">
+    
+      <label class="md-header__button md-icon" title="Switch to system preference" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="index.html" title="COBRA-k" class="md-nav__button md-logo" aria-label="COBRA-k" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    COBRA-k
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Start
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="installation.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    1. Installation
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    2. Create model from scratch
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="model_from_scratch.html" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    2. Create model from scratch
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#model" class="md-nav__link">
+    <span class="md-ellipsis">
+      Model
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#metabolite" class="md-nav__link">
+    <span class="md-ellipsis">
+      Metabolite
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reaction" class="md-nav__link">
+    <span class="md-ellipsis">
+      Reaction
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#enzymereactiondata" class="md-nav__link">
+    <span class="md-ellipsis">
+      EnzymeReactionData
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#enzyme" class="md-nav__link">
+    <span class="md-ellipsis">
+      Enzyme
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extralinearconstraint" class="md-nav__link">
+    <span class="md-ellipsis">
+      ExtraLinearConstraint
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#loading-a-completed-toy_model" class="md-nav__link">
+    <span class="md-ellipsis">
+      Loading a completed toy_model
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="model_io.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    3. Load/Save models
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="lps.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    4. Linear Programs & Pretty-Print
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="milps.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    5. Mixed-Integer Linear Programs
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="nlps.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    6. Nonlinear COBRA-k Programs
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="evolutionary.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    7. Evolutionary Optimization
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="construct_own.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    8. Construct Own Optimizations
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="add_data.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    9. Automatic data collection
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="parameter_corrections.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    10. Parameter corrections
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="utilities.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    11. More utilities
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="paper_reproduction.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    12. Paper result reproduction
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="api.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    API Reference
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#model" class="md-nav__link">
+    <span class="md-ellipsis">
+      Model
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#metabolite" class="md-nav__link">
+    <span class="md-ellipsis">
+      Metabolite
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reaction" class="md-nav__link">
+    <span class="md-ellipsis">
+      Reaction
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#enzymereactiondata" class="md-nav__link">
+    <span class="md-ellipsis">
+      EnzymeReactionData
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#enzyme" class="md-nav__link">
+    <span class="md-ellipsis">
+      Enzyme
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extralinearconstraint" class="md-nav__link">
+    <span class="md-ellipsis">
+      ExtraLinearConstraint
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#loading-a-completed-toy_model" class="md-nav__link">
+    <span class="md-ellipsis">
+      Loading a completed toy_model
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="building-metabolic-models-from-scratch">Building metabolic models from scratch</h1>
+<details class="abstract">
+<summary>Quickstart code</summary>
+<div class="highlight"><pre><span></span><code><span class="c1"># IMPORT SECTION</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">math</span><span class="w"> </span><span class="kn">import</span> <span class="n">log</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.constants</span><span class="w"> </span><span class="kn">import</span> <span class="n">STANDARD_R</span><span class="p">,</span> <span class="n">STANDARD_T</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">Enzyme</span><span class="p">,</span>
+    <span class="n">EnzymeReactionData</span><span class="p">,</span>
+    <span class="n">ExtraLinearConstraint</span><span class="p">,</span>
+    <span class="n">Metabolite</span><span class="p">,</span>
+    <span class="n">Model</span><span class="p">,</span>
+    <span class="n">Reaction</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># EXAMPLE MODEL DEFINITION SECTION</span>
+<span class="n">toy_model</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span>
+    <span class="n">reactions</span><span class="o">=</span><span class="p">{</span>
+        <span class="c1"># Metabolic reactions</span>
+        <span class="s2">&quot;Glycolysis&quot;</span><span class="p">:</span> <span class="n">Reaction</span><span class="p">(</span>
+            <span class="c1"># Stoichiometrically relevant member variables</span>
+            <span class="n">stoichiometries</span><span class="o">=</span><span class="p">{</span>
+                <span class="s2">&quot;S&quot;</span><span class="p">:</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>  <span class="c1"># Negative stoichiometry → S is consumed by Glycolysis</span>
+                <span class="s2">&quot;ADP&quot;</span><span class="p">:</span> <span class="o">-</span><span class="mi">2</span><span class="p">,</span>
+                <span class="s2">&quot;M&quot;</span><span class="p">:</span> <span class="o">+</span><span class="mi">1</span><span class="p">,</span>  <span class="c1"># Positive stoichiometry → M is produced by Glycolysis</span>
+                <span class="s2">&quot;ATP&quot;</span><span class="p">:</span> <span class="o">+</span><span class="mi">2</span><span class="p">,</span>  <span class="c1"># Two ATP molecules are produced by Glycolysis</span>
+            <span class="p">},</span>
+            <span class="n">min_flux</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>  <span class="c1"># Minimal flux in mmol⋅gDW⁻¹⋅h⁻¹; should be ≥0 for most analyses</span>
+            <span class="n">max_flux</span><span class="o">=</span><span class="mf">1_000.0</span><span class="p">,</span>  <span class="c1"># Maximal flux in mmol⋅gDW⁻¹⋅h⁻¹</span>
+            <span class="c1"># Thermodynamically relevant member variables</span>
+            <span class="c1"># (only neccessary if thermodynamic constraints are used)</span>
+            <span class="n">dG0</span><span class="o">=-</span><span class="mf">10.0</span><span class="p">,</span>  <span class="c1"># Standard Gibb&#39;s free energy ΔG&#39;° in kJ⋅mol⁻¹; Default is None (no ΔG&#39;°)</span>
+            <span class="n">dG0_uncertainty</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>  <span class="c1"># ΔG&#39;° uncertainty in kJ⋅mol⁻¹; Default is None (no uncertainty)</span>
+            <span class="c1"># Let&#39;s set the variable for enzyme-kinetic parameters</span>
+            <span class="c1"># of the dataclass EnzymeReactionData</span>
+            <span class="c1"># (Default is None, i.e. no enzyme parameters given)</span>
+            <span class="n">enzyme_reaction_data</span><span class="o">=</span><span class="n">EnzymeReactionData</span><span class="p">(</span>
+                <span class="n">identifiers</span><span class="o">=</span><span class="p">[</span>
+                    <span class="s2">&quot;E_glyc&quot;</span>
+                <span class="p">],</span>  <span class="c1"># Subunit(s) which constitute the reaction&#39;s catalyst</span>
+                <span class="n">k_cat</span><span class="o">=</span><span class="mf">140_000.0</span><span class="p">,</span>  <span class="c1"># Turnover number in h⁻¹</span>
+                <span class="n">k_ms</span><span class="o">=</span><span class="p">{</span>  <span class="c1"># Michaelis-Menten constants in M=mol⋅l⁻¹; Default is {}</span>
+                    <span class="s2">&quot;S&quot;</span><span class="p">:</span> <span class="mf">0.0001</span><span class="p">,</span>  <span class="c1"># e.g., K_m of reaction Glycolysis regarding metabolite A</span>
+                    <span class="s2">&quot;ADP&quot;</span><span class="p">:</span> <span class="mf">0.0001</span><span class="p">,</span>
+                    <span class="s2">&quot;M&quot;</span><span class="p">:</span> <span class="mf">0.0001</span><span class="p">,</span>
+                    <span class="s2">&quot;ATP&quot;</span><span class="p">:</span> <span class="mf">0.0001</span><span class="p">,</span>
+                <span class="p">},</span>
+                <span class="n">special_stoichiometries</span><span class="o">=</span><span class="p">{},</span>  <span class="c1"># No special stoichiometry, all subunits occur once</span>
+            <span class="p">),</span>
+            <span class="c1"># Extra information member variables</span>
+            <span class="n">annotation</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;This is reaction Glycolysis&quot;</span><span class="p">},</span>  <span class="c1"># Default is {}</span>
+            <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Reaction Glycolysis&quot;</span><span class="p">,</span>  <span class="c1"># Default is &quot;&quot;</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;Respiration&quot;</span><span class="p">:</span> <span class="n">Reaction</span><span class="p">(</span>
+            <span class="n">stoichiometries</span><span class="o">=</span><span class="p">{</span>
+                <span class="s2">&quot;M&quot;</span><span class="p">:</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+                <span class="s2">&quot;ADP&quot;</span><span class="p">:</span> <span class="o">-</span><span class="mi">4</span><span class="p">,</span>
+                <span class="s2">&quot;C&quot;</span><span class="p">:</span> <span class="o">+</span><span class="mi">1</span><span class="p">,</span>
+                <span class="s2">&quot;ATP&quot;</span><span class="p">:</span> <span class="o">+</span><span class="mi">4</span><span class="p">,</span>
+            <span class="p">},</span>
+            <span class="n">min_flux</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+            <span class="n">max_flux</span><span class="o">=</span><span class="mf">1_000.0</span><span class="p">,</span>
+            <span class="n">dG0</span><span class="o">=-</span><span class="mf">10.0</span><span class="p">,</span>
+            <span class="n">enzyme_reaction_data</span><span class="o">=</span><span class="n">EnzymeReactionData</span><span class="p">(</span>
+                <span class="n">identifiers</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;E_resp&quot;</span><span class="p">],</span>
+                <span class="n">k_cat</span><span class="o">=</span><span class="mf">140_000.0</span><span class="p">,</span>
+                <span class="n">k_ms</span><span class="o">=</span><span class="p">{</span>
+                    <span class="s2">&quot;ADP&quot;</span><span class="p">:</span> <span class="mf">0.00027</span><span class="p">,</span>
+                    <span class="s2">&quot;M&quot;</span><span class="p">:</span> <span class="mf">0.00027</span><span class="p">,</span>
+                    <span class="s2">&quot;C&quot;</span><span class="p">:</span> <span class="mf">0.0001</span><span class="p">,</span>
+                    <span class="s2">&quot;ATP&quot;</span><span class="p">:</span> <span class="mf">0.0001</span><span class="p">,</span>
+                <span class="p">},</span>
+            <span class="p">),</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;Overflow&quot;</span><span class="p">:</span> <span class="n">Reaction</span><span class="p">(</span>
+            <span class="n">stoichiometries</span><span class="o">=</span><span class="p">{</span>
+                <span class="s2">&quot;M&quot;</span><span class="p">:</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+                <span class="s2">&quot;P&quot;</span><span class="p">:</span> <span class="o">+</span><span class="mi">1</span><span class="p">,</span>
+            <span class="p">},</span>
+            <span class="n">min_flux</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+            <span class="n">max_flux</span><span class="o">=</span><span class="mf">1_000.0</span><span class="p">,</span>
+            <span class="n">dG0</span><span class="o">=-</span><span class="mf">10.0</span><span class="p">,</span>
+            <span class="n">enzyme_reaction_data</span><span class="o">=</span><span class="n">EnzymeReactionData</span><span class="p">(</span>
+                <span class="n">identifiers</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;E_over&quot;</span><span class="p">],</span>
+                <span class="n">k_cat</span><span class="o">=</span><span class="mf">140_000.0</span><span class="p">,</span>
+                <span class="n">k_ms</span><span class="o">=</span><span class="p">{</span>
+                    <span class="s2">&quot;M&quot;</span><span class="p">:</span> <span class="mf">0.001</span><span class="p">,</span>
+                    <span class="s2">&quot;P&quot;</span><span class="p">:</span> <span class="mf">0.0001</span><span class="p">,</span>
+                <span class="p">},</span>
+            <span class="p">),</span>
+        <span class="p">),</span>
+        <span class="c1"># Exchange reactions</span>
+        <span class="s2">&quot;EX_S&quot;</span><span class="p">:</span> <span class="n">Reaction</span><span class="p">(</span>
+            <span class="n">stoichiometries</span><span class="o">=</span><span class="p">{</span>
+                <span class="s2">&quot;S&quot;</span><span class="p">:</span> <span class="o">+</span><span class="mi">1</span><span class="p">,</span>
+            <span class="p">},</span>
+            <span class="n">min_flux</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+            <span class="n">max_flux</span><span class="o">=</span><span class="mf">1_000.0</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;EX_C&quot;</span><span class="p">:</span> <span class="n">Reaction</span><span class="p">(</span>
+            <span class="n">stoichiometries</span><span class="o">=</span><span class="p">{</span>
+                <span class="s2">&quot;C&quot;</span><span class="p">:</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">,</span>
+            <span class="p">},</span>
+            <span class="n">min_flux</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+            <span class="n">max_flux</span><span class="o">=</span><span class="mf">1_000.0</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;EX_P&quot;</span><span class="p">:</span> <span class="n">Reaction</span><span class="p">(</span>
+            <span class="n">stoichiometries</span><span class="o">=</span><span class="p">{</span>
+                <span class="s2">&quot;P&quot;</span><span class="p">:</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+            <span class="p">},</span>
+            <span class="n">min_flux</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+            <span class="n">max_flux</span><span class="o">=</span><span class="mf">1_000.0</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;ATP_Consumption&quot;</span><span class="p">:</span> <span class="n">Reaction</span><span class="p">(</span>
+            <span class="n">stoichiometries</span><span class="o">=</span><span class="p">{</span>
+                <span class="s2">&quot;ATP&quot;</span><span class="p">:</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+                <span class="s2">&quot;ADP&quot;</span><span class="p">:</span> <span class="o">+</span><span class="mi">1</span><span class="p">,</span>
+            <span class="p">},</span>
+            <span class="n">min_flux</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+            <span class="n">max_flux</span><span class="o">=</span><span class="mf">1_000.0</span><span class="p">,</span>
+        <span class="p">),</span>
+    <span class="p">},</span>
+    <span class="n">metabolites</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;S&quot;</span><span class="p">:</span> <span class="n">Metabolite</span><span class="p">(</span>
+            <span class="n">log_min_conc</span><span class="o">=</span><span class="n">log</span><span class="p">(</span>
+                <span class="mf">1e-6</span>
+            <span class="p">),</span>  <span class="c1"># optional, minimal ln(concentration); Default is ln(1e-6 M)</span>
+            <span class="n">log_max_conc</span><span class="o">=</span><span class="n">log</span><span class="p">(</span>
+                <span class="mf">0.02</span>
+            <span class="p">),</span>  <span class="c1"># optional, maximal ln(concentration); Default is ln(0.02 M)</span>
+            <span class="n">annotation</span><span class="o">=</span><span class="p">{</span>
+                <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;This is metabolite S&quot;</span>
+            <span class="p">},</span>  <span class="c1"># optional, default is &quot;&quot;</span>
+            <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Metabolite S&quot;</span><span class="p">,</span>  <span class="c1"># optional, default is &quot;&quot;</span>
+            <span class="n">formula</span><span class="o">=</span><span class="s2">&quot;X&quot;</span><span class="p">,</span>  <span class="c1"># optional, default is &quot;&quot;</span>
+            <span class="n">charge</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>  <span class="c1"># optional, default is 0</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;M&quot;</span><span class="p">:</span> <span class="n">Metabolite</span><span class="p">(),</span>
+        <span class="s2">&quot;C&quot;</span><span class="p">:</span> <span class="n">Metabolite</span><span class="p">(),</span>
+        <span class="s2">&quot;P&quot;</span><span class="p">:</span> <span class="n">Metabolite</span><span class="p">(),</span>
+        <span class="s2">&quot;ATP&quot;</span><span class="p">:</span> <span class="n">Metabolite</span><span class="p">(),</span>
+        <span class="s2">&quot;ADP&quot;</span><span class="p">:</span> <span class="n">Metabolite</span><span class="p">(),</span>
+    <span class="p">},</span>
+    <span class="n">enzymes</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;E_glyc&quot;</span><span class="p">:</span> <span class="n">Enzyme</span><span class="p">(</span>
+            <span class="n">molecular_weight</span><span class="o">=</span><span class="mf">1_000.0</span><span class="p">,</span>  <span class="c1"># Molecular weight in kDa</span>
+            <span class="n">min_conc</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>  <span class="c1"># Optional concentration in mmol⋅gDW⁻¹; Default is None (minimum is 0)</span>
+            <span class="n">max_conc</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>  <span class="c1"># Optional maximal concentration in mmol⋅gDW⁻¹; Default is None (only protein pool restricts)</span>
+            <span class="n">annotation</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Enzyme of Glycolysis&quot;</span><span class="p">},</span>  <span class="c1"># Default is {}</span>
+            <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Glycolysis enzyme&quot;</span><span class="p">,</span>  <span class="c1"># Default is &quot;&quot;</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;E_resp&quot;</span><span class="p">:</span> <span class="n">Enzyme</span><span class="p">(</span><span class="n">molecular_weight</span><span class="o">=</span><span class="mf">2_500.0</span><span class="p">),</span>
+        <span class="s2">&quot;E_over&quot;</span><span class="p">:</span> <span class="n">Enzyme</span><span class="p">(</span><span class="n">molecular_weight</span><span class="o">=</span><span class="mf">500.0</span><span class="p">),</span>
+    <span class="p">},</span>
+    <span class="n">max_prot_pool</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span>  <span class="c1"># In g⋅gDW⁻¹; This value is used for our analyses with enzyme constraints</span>
+    <span class="c1"># We set the following two constraints:</span>
+    <span class="c1"># 1.0 * EX_A - 1.0 * Glycolysis ≤ 0.0</span>
+    <span class="c1"># and</span>
+    <span class="c1"># 1.0 * EX_A + 1.0 * Glycolysis ≥ 0.0</span>
+    <span class="c1"># in other words, effectively,</span>
+    <span class="c1"># 1.0 * EX_A = 1.0 * Glycolysis</span>
+    <span class="n">extra_linear_constraints</span><span class="o">=</span><span class="p">[</span>
+        <span class="n">ExtraLinearConstraint</span><span class="p">(</span>
+            <span class="n">stoichiometries</span><span class="o">=</span><span class="p">{</span>
+                <span class="s2">&quot;EX_S&quot;</span><span class="p">:</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">,</span>
+                <span class="s2">&quot;Glycolysis&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
+            <span class="p">},</span>
+            <span class="n">lower_value</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+            <span class="n">upper_value</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="p">],</span>  <span class="c1"># Keep in mind that this is a list as multiple extra flux constraints are possible</span>
+    <span class="n">kinetic_ignored_metabolites</span><span class="o">=</span><span class="p">[],</span>
+    <span class="n">R</span><span class="o">=</span><span class="n">STANDARD_R</span><span class="p">,</span>
+    <span class="n">T</span><span class="o">=</span><span class="n">STANDARD_T</span><span class="p">,</span>
+    <span class="n">max_conc_sum</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="s2">&quot;inf&quot;</span><span class="p">),</span>
+    <span class="n">annotation</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;COBRA-k toy model&quot;</span><span class="p">},</span>
+<span class="p">)</span>
+</code></pre></div>
+</details>
+<p>To encode a metabolic network in COBRA-k, you can:</p>
+<ol>
+<li>Create a model from scratch - explained in this chapter :-)</li>
+<li>Load an already existing metabolic model - all such options, including JSON &amp; SBML import/export, are explained in the next chapters :D</li>
+</ol>
+<p>Here, we recreate the toymodel from COBRA-k's publication <a href=""></a>. It looks as follows:</p>
+<p><img src="img/toymodel.001.png" alt="Toymodel visualization" class="img-border img-half"></p>
+<p>Arrows stand for toy <em>reactions</em> with the name given in italic letters. Bold letters for toy <em>metabolites</em>. The numbers at the begin and end of arrows stand for the stoichiometry of each metabolite. E.g. the toy reaction "Respiration" looks as follows:
+<div class="highlight"><pre><span></span><code>1 M ⇒ 1 C + 6 ATP
+</code></pre></div></p>
+<p>By convention, reactions starting with "EX_" are substrate or product exchange reactions. They produce/consume their metabolite out of/into nothing, simulating an exchange with the outside. Such "EX" reactions are neccessary to make constraint-based model calculations work (see next chapters).</p>
+<p>The reactions "Glycolysis", "Respiration" and "Overflow" are toy metabolic reactions with a full set of kinetic and thermodynamic parameters.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The usage of stoichiometric, kinetic and thermodynamic parameters will be explained in the following chapters. Here, we concentrate on recreating the model first and simply set the parameters as neccessary.</p>
+</div>
+<h2 id="model">Model</h2>
+<p>Programmatically, a metabolic model in COBRA-k is an instance of the <a href="https://docs.python.org/3/library/dataclasses.html">dataclass</a> Model.</p>
+<div class="admonition info">
+<p class="admonition-title">About dataclasses and pydantic validation</p>
+<p>Dataclasses hold multiple objects together as one dataclass object. In many programming languages, they are known as <code>struct</code>. The objects held by a dataclass are called <em>member variables</em>.</p>
+<p>To automatically validate that your data is in the right numeric ranges (e.g., we only want positive values for molecular weights of enzymes), COBRA-k also integrated pydantic <a href="https://github.com/pydantic/pydantic">[GitHub]</a> validation for its dataclasses. That's why you can find pydantic types such as <code>PositiveFloat</code>in COBRA-k's dataclass definitions. But you can still use normal types (e.g. <code>float</code>instead of <code>PositiveFloat</code>) for any dataclass member variable.</p>
+</div>
+<p>As a first step, we'll create a Model dataclass instance with an empty set of metabolites, reactions and enzymes (we'll fill these sets later on) and where we explicitly set every member variable for didactic purposes:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># All COBRA-k dataclasses can be found in the &quot;dataclasses&quot; submodule</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">Model</span>
+<span class="c1"># In the &quot;constants&quot; subpackage, we can find values and identifiers</span>
+<span class="c1"># that are used throughout COBRA-k</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.constants</span><span class="w"> </span><span class="kn">import</span> <span class="n">STANDARD_R</span><span class="p">,</span> <span class="n">STANDARD_T</span>
+
+<span class="c1"># Instantiate empty Model</span>
+<span class="n">toy_model</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span>
+    <span class="n">metabolites</span><span class="o">=</span><span class="p">{},</span> <span class="c1"># will become a dict[str, Metabolite] (see below)</span>
+    <span class="n">reactions</span><span class="o">=</span><span class="p">{},</span> <span class="c1"># will become a dict[str, Reaction] (see below)</span>
+    <span class="n">enzymes</span><span class="o">=</span><span class="p">{},</span> <span class="c1"># optional, default is {}, will become a dict[str, Enzyme] (see below)</span>
+    <span class="n">max_prot_pool</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span> <span class="c1"># optional, default is 1e9</span>
+    <span class="n">extra_linear_constraints</span><span class="o">=</span><span class="p">[],</span> <span class="c1"># optional, defaults to []</span>
+    <span class="n">kinetic_ignored_metabolites</span><span class="o">=</span><span class="p">[],</span> <span class="c1"># optional, defaults to []</span>
+    <span class="n">R</span><span class="o">=</span><span class="n">STANDARD_R</span><span class="p">,</span> <span class="c1"># optional, defaults to STANDARD_R = 8.314e-3 kJ⋅K⁻¹⋅mol⁻¹</span>
+    <span class="n">T</span><span class="o">=</span><span class="n">STANDARD_T</span><span class="p">,</span> <span class="c1"># optional, defaults to STANDARD_T = 298.15 K = 25 °C = 77 °F</span>
+    <span class="n">max_conc_sum</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="s2">&quot;inf&quot;</span><span class="p">),</span> <span class="c1"># optional, defaults to float(&quot;inf&quot;)</span>
+    <span class="n">annotation</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;COBRA-k toy model&quot;</span><span class="p">},</span> <span class="c1"># optional, defaults to {}</span>
+    <span class="c1"># For additional Model member variables not relevant here, see below :-)</span>
+<span class="p">)</span>
+</code></pre></div>
+<p>Only <code>metabolites</code> and <code>reactions</code> are neccessary and we'll fill them in the following paragraphs :-) All other member variables are only neccessary if you want to use COBRA-k's kinetic and/or thermodynamic analysis features, which are explained in the next chapters.</p>
+<p>The Model member variables have the following meaning (variables in italic are <em>optional</em>):</p>
+<ul>
+<li>metabolites: dict[str, Metabolite] ~ This dictionary contains the metabolite names as <em>keys</em>, and metabolite data instances as <em>values</em>. Further explained below.</li>
+<li>reactions: dict[str, Reaction] ~ This dictionary contains the reaction names as <em>keys</em>, and reaction data instances as <em>values</em>. Further explained below.</li>
+<li><em>max_prot_pool: float</em> ~ Only relevant if enzymatic constraints are used (see the "Linear Programs" chapter). It represents the fraction of the modeled enzymes on the total biomass. The unit is g/gDW.</li>
+<li><em>extra_linear_constraints: list[ExtraLinearConstraint]</em> ~ Stands for linear set relationships between model variables. Further explained below.</li>
+<li><em>kinetic_ignored_metabolites</em>: list[str] ~ Only relevant if enzyme kinetic constraints are used (see "Non-linear Programs" chapter). Contains the metabolite identifiers (see next paragraph) of metabolites which do not need a <span class="arithmatex">\(K_M\)</span> value (see chapter about NLPs for more).</li>
+<li><em>R: float</em> ~ Only relevant if thermodynamic constraints are used (see the "Mixed-Integer Linear Programs" chapter). Stands for the gas constant in kJ/(K⋅mol).</li>
+<li><em>T: float</em> ~ Only relevant if thermodynamic constraints are used (see the "Mixed-Integer Linear Programs" chapter). Stands for the temperature in K.</li>
+<li><em>T: float</em> ~ Only relevant if thermodynamic constraints are used (see the "Mixed-Integer Linear Programs" chapter). Stands for the temperature in K.</li>
+<li><em>max_conc_sum: float</em> ~ Only relevant if thermodynamic constraints are used (see "Mixed-Integer Linear Programs" chapter). Stands for the maximally allowed sum of concentrations in a solutions. If it is set to <code>float("inf")</code> (which is also the default value), no such constraint is introduced. Note that in mixed-integer linear programs, an approximation is used (as explained in the "Mixed-Integer Linear Programs" chapter) which can be further controlled by the <code>conc_sum_...</code> member variables explained below. Also note the member variable <code>conc_sum_include_suffixes</code> as only metabolites with the given suffixes in their IDs are included in the concentration sum.</li>
+</ul>
+<details class="info">
+<summary>Further optional Model member variables</summary>
+<p>There are also further optional Model member variables that may be used (but are not relevant for our toy model):</p>
+<ul>
+<li><em>fwd_suffix: str</em> ~ Only relevant if statistics of forward and reverse reaction directions are regarded, or such reactions shall be merged in an SBML export (see 'Load/Save Models' chapter). This is a suffix (i.e. something attached to the end) for all of the Model's forward reaction IDs. E.g. if we would have a reversible reaction A→B, its forward direction would be indicated by this suffix. Note that you have to add this suffix manually to all of your forward direction reactions! Default is <code>'_FWD'</code>.</li>
+<li><em>rev_suffix: str</em> ~ Only relevant if statistics of forward and reverse reaction directions are regarded, or such reactions shall be merged in an SBML export (see 'Load/Save Models' chapter). This is a suffix for all of the Model's reverse reaction IDs. E.g. if we would have a reversible reaction A→B, its reverse direction B→A would be indicated by this suffix. Note that you have to add this suffix manually to all of your reverse direction reactions! Default is <code>'_REV'</code>.</li>
+<li><em>conc_sum_ignore_prefixes: list[str]</em> ~ Only relevant if <code>max_conc_sum != float("inf")</code> (see above) and mixed-integer linear programs with thermodynamic constraints are used (see "Mixed-Integer Linear Programs" chapter). Metabolites with the given prefixes are <em>not</em> included in the concentration sum constraint (see next member variable). Default is <code>[]</code>.</li>
+<li><em>conc_sum_include_suffixes: list[str]</em> ~ Only relevant if <code>max_conc_sum != float("inf")</code> (see above) and mixed-integer linear programs with thermodynamic constraints are used (see "Mixed-Integer Linear Programs" chapter). Only metabolites with the given suffixes are included in the concentration sum constraint. Default is <code>[]</code>.</li>
+<li><em>conc_sum_max_rel_error: float</em> ~ Only relevant if <code>max_conc_sum != float("inf")</code> (see above) and mixed-integer linear programs with thermodynamic constraints are used (see "Mixed-Integer Linear Programs" chapter). Stands for the maximal allowed relative concentration sum approximation error. Default is <code>0.05</code>, i.e. 5 %.</li>
+<li><em>conc_sum_min_abs_error: float</em> ~ Only relevant if <code>max_conc_sum != float("inf")</code> (see above) and mixed-integer linear programs with thermodynamic constraints are used (see "Mixed-Integer Linear Programs" chapter). Stands for the minimal absolute value of an approximated concentration sum. Default is <code>1e-6</code>.</li>
+</ul>
+</details>
+<h2 id="metabolite">Metabolite</h2>
+<p>Now, let's create the metabolites <span class="arithmatex">\(S\)</span>, <span class="arithmatex">\(M\)</span>, <span class="arithmatex">\(C\)</span>, <span class="arithmatex">\(P\)</span> and <span class="arithmatex">\(ATP\)</span> for our toy model. For this, we use COBRA-k's Metabolite dataclass, and use it in our Model instance:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Import COBRA-k&#39;s Metabolite dataclass</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">Metabolite</span>
+<span class="c1"># Let&#39;s import the standard Python natural logarithm function</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">math</span><span class="w"> </span><span class="kn">import</span> <span class="n">log</span>
+
+<span class="n">toy_model</span><span class="o">.</span><span class="n">metabolites</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;S&quot;</span><span class="p">:</span> <span class="n">Metabolite</span><span class="p">(</span>
+        <span class="n">log_min_conc</span><span class="o">=</span><span class="n">log</span><span class="p">(</span><span class="mf">1e-6</span><span class="p">),</span> <span class="c1"># optional, minimal ln(conc); Default is ln(1e-6 M)</span>
+        <span class="n">log_max_conc</span><span class="o">=</span><span class="n">log</span><span class="p">(</span><span class="mf">0.02</span><span class="p">),</span> <span class="c1"># optional, maximal ln(conc); Default is ln(0.02 M)</span>
+        <span class="n">annotation</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;This is metabolite A&quot;</span><span class="p">},</span> <span class="c1"># optional, default is &quot;&quot;</span>
+        <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Metabolite A&quot;</span><span class="p">,</span> <span class="c1"># optional, default is &quot;&quot;</span>
+        <span class="n">formula</span><span class="o">=</span><span class="s2">&quot;X&quot;</span><span class="p">,</span> <span class="c1"># optional, default is &quot;&quot;</span>
+        <span class="n">charge</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="c1"># optional, default is 0</span>
+    <span class="p">),</span>
+    <span class="s2">&quot;M&quot;</span><span class="p">:</span> <span class="n">Metabolite</span><span class="p">(),</span>
+    <span class="s2">&quot;C&quot;</span><span class="p">:</span> <span class="n">Metabolite</span><span class="p">(),</span>
+    <span class="s2">&quot;P&quot;</span><span class="p">:</span> <span class="n">Metabolite</span><span class="p">(),</span>
+    <span class="s2">&quot;ATP&quot;</span><span class="p">:</span> <span class="n">Metabolite</span><span class="p">(),</span>
+    <span class="s2">&quot;ADP&quot;</span><span class="p">:</span> <span class="n">Metabolite</span><span class="p">(),</span>
+<span class="p">}</span>
+</code></pre></div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>A metabolite's ID (the name with which it can be accessed) is set as the key of the <code>metabolites</code> member variable dictionary.</p>
+<p>Also, you don't have to set Metabolite instances all at once. E.g. alternative ways to set ATP in our model are:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Alternative 1</span>
+<span class="n">toy_model</span><span class="o">.</span><span class="n">metabolites</span><span class="p">[</span><span class="s2">&quot;ATP&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">Metabolite</span><span class="p">()</span>
+
+<span class="c1"># Alternative 2</span>
+<span class="n">atp</span> <span class="o">=</span> <span class="n">Metabolite</span><span class="p">()</span>
+<span class="n">toy_model</span><span class="o">.</span><span class="n">metabolites</span><span class="p">[</span><span class="s2">&quot;ATP&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">atp</span>
+
+<span class="c1"># Alternative 3</span>
+<span class="n">atp_id</span> <span class="o">=</span> <span class="s2">&quot;ATP&quot;</span>
+<span class="n">atp_met</span> <span class="o">=</span> <span class="n">Metabolite</span><span class="p">()</span>
+<span class="n">toy_model</span><span class="o">.</span><span class="n">metabolites</span><span class="p">[</span><span class="n">atp_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">atp_met</span>
+</code></pre></div>
+<p>These alternatives also apply for Reaction and Enzyme instances (see below).</p>
+</div>
+<p>The (optional) Metabolite member variables are:</p>
+<ul>
+<li><em>log_min_conc: float &amp; log_max_conc: float</em> ~ only relevant if thermodynamic constraints are used (see chapter "Linear Programs"). They stand for the logarithmized minimal and maximal allowed concentration of the metabolite. The concentration's unit is M=mol/l.</li>
+<li><em>annotation: dict[str, str]</em> ~ Optional extra data in the form of a dictionary.</li>
+<li><em>name: str</em> ~ Optional colloquial name of metabolite.</li>
+<li><em>charge: int</em> ~ Optional electron charge of metabolite. Is not used in analyses right now, but may help the user as additional information.</li>
+</ul>
+<h2 id="reaction">Reaction</h2>
+<p>Now, we create the toy model's reactions together (if given) with their parameters:</p>
+<ol>
+<li>Glycolysis: S + 2 ADP ⇒ M + 2 ATP</li>
+<li>Respiration: M + 4 ADP ⇒ C + 4 ATP</li>
+<li>Overflow: M ⇒ P</li>
+<li>EX_S: ⇒ S</li>
+<li>EX_C: C ⇒</li>
+<li>EX_P: P ⇒</li>
+<li>ATP_Consumption: ATP ⇒ ADP</li>
+</ol>
+<p>This can be done using COBRA-k's Reaction and EnzymeReactionData dataclasses and setting our toy model Model instance's <code>reaction</code> member variable:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Let&#39;s import the relevant COBRA-k dataclasses</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">Reaction</span><span class="p">,</span> <span class="n">EnzymeReactionData</span>
+
+<span class="n">toy_model</span><span class="o">.</span><span class="n">reactions</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="c1"># Metabolic reactions</span>
+    <span class="s2">&quot;Glycolysis&quot;</span><span class="p">:</span> <span class="n">Reaction</span><span class="p">(</span>
+        <span class="c1"># Stoichiometrically relevant member variables</span>
+        <span class="n">stoichiometries</span><span class="o">=</span><span class="p">{</span>
+            <span class="s2">&quot;S&quot;</span><span class="p">:</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>  <span class="c1"># Negative stoichiometry → S is consumed by Glycolysis</span>
+            <span class="s2">&quot;ADP&quot;</span><span class="p">:</span> <span class="o">-</span><span class="mi">2</span><span class="p">,</span>
+            <span class="s2">&quot;M&quot;</span><span class="p">:</span> <span class="o">+</span><span class="mi">1</span><span class="p">,</span>  <span class="c1"># Positive stoichiometry → M is produced by Glycolysis</span>
+            <span class="s2">&quot;ATP&quot;</span><span class="p">:</span> <span class="o">+</span><span class="mi">2</span><span class="p">,</span>  <span class="c1"># Two ATP molecules are produced by Glycolysis</span>
+        <span class="p">},</span>
+        <span class="n">min_flux</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>  <span class="c1"># Minimal flux in mmol⋅gDW⁻¹⋅h⁻¹; should be ≥0 for most analyses</span>
+        <span class="n">max_flux</span><span class="o">=</span><span class="mf">1_000.0</span><span class="p">,</span>  <span class="c1"># Maximal flux in mmol⋅gDW⁻¹⋅h⁻¹</span>
+        <span class="c1"># Thermodynamically relevant member variables</span>
+        <span class="c1"># (only neccessary if thermodynamic constraints are used)</span>
+        <span class="n">dG0</span><span class="o">=-</span><span class="mf">10.0</span><span class="p">,</span>  <span class="c1"># Standard Gibb&#39;s free energy ΔG&#39;° in kJ⋅mol⁻¹; Default is None (no ΔG&#39;°)</span>
+        <span class="n">dG0_uncertainty</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>  <span class="c1"># ΔG&#39;° uncertainty in kJ⋅mol⁻¹; Default is None (no uncertainty)</span>
+        <span class="c1"># Let&#39;s set the variable for enzyme-kinetic parameters</span>
+        <span class="c1"># of the dataclass EnzymeReactionData</span>
+        <span class="c1"># (Default is None, i.e. no enzyme parameters given)</span>
+        <span class="n">enzyme_reaction_data</span><span class="o">=</span><span class="n">EnzymeReactionData</span><span class="p">(</span>
+            <span class="n">identifiers</span><span class="o">=</span><span class="p">[</span>
+                <span class="s2">&quot;E_glyc&quot;</span>
+            <span class="p">],</span>  <span class="c1"># Subunit(s) which constitute the reaction&#39;s catalyst</span>
+            <span class="n">k_cat</span><span class="o">=</span><span class="mf">140_000.0</span><span class="p">,</span>  <span class="c1"># Turnover number in h⁻¹</span>
+            <span class="n">k_ms</span><span class="o">=</span><span class="p">{</span>  <span class="c1"># Michaelis-Menten constants in M=mol⋅l⁻¹; Default is {}</span>
+                <span class="s2">&quot;S&quot;</span><span class="p">:</span> <span class="mf">0.0001</span><span class="p">,</span>  <span class="c1"># e.g., K_m of reaction Glycolysis regarding metabolite A</span>
+                <span class="s2">&quot;ADP&quot;</span><span class="p">:</span> <span class="mf">0.0001</span><span class="p">,</span>
+                <span class="s2">&quot;M&quot;</span><span class="p">:</span> <span class="mf">0.0001</span><span class="p">,</span>
+                <span class="s2">&quot;ATP&quot;</span><span class="p">:</span> <span class="mf">0.0001</span><span class="p">,</span>
+            <span class="p">},</span>
+            <span class="n">special_stoichiometries</span><span class="o">=</span><span class="p">{},</span>  <span class="c1"># No special stoichiometry, all subunits occur once</span>
+        <span class="p">),</span>
+        <span class="c1"># Extra information member variables</span>
+        <span class="n">annotation</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;This is reaction Glycolysis&quot;</span><span class="p">},</span>  <span class="c1"># Default is {}</span>
+        <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Reaction Glycolysis&quot;</span><span class="p">,</span>  <span class="c1"># Default is &quot;&quot;</span>
+    <span class="p">),</span>
+    <span class="s2">&quot;Respiration&quot;</span><span class="p">:</span> <span class="n">Reaction</span><span class="p">(</span>
+        <span class="n">stoichiometries</span><span class="o">=</span><span class="p">{</span>
+            <span class="s2">&quot;M&quot;</span><span class="p">:</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+            <span class="s2">&quot;ADP&quot;</span><span class="p">:</span> <span class="o">-</span><span class="mi">4</span><span class="p">,</span>
+            <span class="s2">&quot;C&quot;</span><span class="p">:</span> <span class="o">+</span><span class="mi">1</span><span class="p">,</span>
+            <span class="s2">&quot;ATP&quot;</span><span class="p">:</span> <span class="o">+</span><span class="mi">4</span><span class="p">,</span>
+        <span class="p">},</span>
+        <span class="n">min_flux</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">max_flux</span><span class="o">=</span><span class="mf">1_000.0</span><span class="p">,</span>
+        <span class="n">dG0</span><span class="o">=-</span><span class="mf">10.0</span><span class="p">,</span>
+        <span class="n">enzyme_reaction_data</span><span class="o">=</span><span class="n">EnzymeReactionData</span><span class="p">(</span>
+            <span class="n">identifiers</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;E_resp&quot;</span><span class="p">],</span>
+            <span class="n">k_cat</span><span class="o">=</span><span class="mf">140_000.0</span><span class="p">,</span>
+            <span class="n">k_ms</span><span class="o">=</span><span class="p">{</span>
+                <span class="s2">&quot;ADP&quot;</span><span class="p">:</span> <span class="mf">0.00027</span><span class="p">,</span>
+                <span class="s2">&quot;M&quot;</span><span class="p">:</span> <span class="mf">0.00027</span><span class="p">,</span>
+                <span class="s2">&quot;C&quot;</span><span class="p">:</span> <span class="mf">0.0001</span><span class="p">,</span>
+                <span class="s2">&quot;ATP&quot;</span><span class="p">:</span> <span class="mf">0.0001</span><span class="p">,</span>
+            <span class="p">},</span>
+        <span class="p">),</span>
+    <span class="p">),</span>
+    <span class="s2">&quot;Overflow&quot;</span><span class="p">:</span> <span class="n">Reaction</span><span class="p">(</span>
+        <span class="n">stoichiometries</span><span class="o">=</span><span class="p">{</span>
+            <span class="s2">&quot;M&quot;</span><span class="p">:</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+            <span class="s2">&quot;P&quot;</span><span class="p">:</span> <span class="o">+</span><span class="mi">1</span><span class="p">,</span>
+        <span class="p">},</span>
+        <span class="n">min_flux</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">max_flux</span><span class="o">=</span><span class="mf">1_000.0</span><span class="p">,</span>
+        <span class="n">dG0</span><span class="o">=-</span><span class="mf">10.0</span><span class="p">,</span>
+        <span class="n">enzyme_reaction_data</span><span class="o">=</span><span class="n">EnzymeReactionData</span><span class="p">(</span>
+            <span class="n">identifiers</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;E_over&quot;</span><span class="p">],</span>
+            <span class="n">k_cat</span><span class="o">=</span><span class="mf">140_000.0</span><span class="p">,</span>
+            <span class="n">k_ms</span><span class="o">=</span><span class="p">{</span>
+                <span class="s2">&quot;M&quot;</span><span class="p">:</span> <span class="mf">0.001</span><span class="p">,</span>
+                <span class="s2">&quot;P&quot;</span><span class="p">:</span> <span class="mf">0.0001</span><span class="p">,</span>
+            <span class="p">},</span>
+        <span class="p">),</span>
+    <span class="p">),</span>
+    <span class="c1"># Exchange reactions</span>
+    <span class="s2">&quot;EX_S&quot;</span><span class="p">:</span> <span class="n">Reaction</span><span class="p">(</span>
+        <span class="n">stoichiometries</span><span class="o">=</span><span class="p">{</span>
+            <span class="s2">&quot;S&quot;</span><span class="p">:</span> <span class="o">+</span><span class="mi">1</span><span class="p">,</span>
+        <span class="p">},</span>
+        <span class="n">min_flux</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">max_flux</span><span class="o">=</span><span class="mf">1_000.0</span><span class="p">,</span>
+    <span class="p">),</span>
+    <span class="s2">&quot;EX_C&quot;</span><span class="p">:</span> <span class="n">Reaction</span><span class="p">(</span>
+        <span class="n">stoichiometries</span><span class="o">=</span><span class="p">{</span>
+            <span class="s2">&quot;C&quot;</span><span class="p">:</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">,</span>
+        <span class="p">},</span>
+        <span class="n">min_flux</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">max_flux</span><span class="o">=</span><span class="mf">1_000.0</span><span class="p">,</span>
+    <span class="p">),</span>
+    <span class="s2">&quot;EX_P&quot;</span><span class="p">:</span> <span class="n">Reaction</span><span class="p">(</span>
+        <span class="n">stoichiometries</span><span class="o">=</span><span class="p">{</span>
+            <span class="s2">&quot;P&quot;</span><span class="p">:</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+        <span class="p">},</span>
+        <span class="n">min_flux</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">max_flux</span><span class="o">=</span><span class="mf">1_000.0</span><span class="p">,</span>
+    <span class="p">),</span>
+    <span class="c1"># ATP &quot;maintenance&quot; reaction</span>
+    <span class="s2">&quot;ATP_Consumption&quot;</span><span class="p">:</span> <span class="n">Reaction</span><span class="p">(</span>
+        <span class="n">stoichiometries</span><span class="o">=</span><span class="p">{</span>
+            <span class="s2">&quot;ATP&quot;</span><span class="p">:</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+            <span class="s2">&quot;ADP&quot;</span><span class="p">:</span> <span class="o">+</span><span class="mi">1</span><span class="p">,</span>
+        <span class="p">},</span>
+        <span class="n">min_flux</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">max_flux</span><span class="o">=</span><span class="mf">1_000.0</span><span class="p">,</span>
+    <span class="p">),</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Reaction's member variables are as follows (optional variables are <em>italic</em>):</p>
+<ul>
+<li>stoichiometries: dict[str, float] ~ A dictionary that describes the stoichiometry of the reaction. Metabolite IDs are keys, stoichiometries values.</li>
+<li>min_flux: float ~ Minimal flux in mmol/(gDW⋅h); <strong>For most analyses, it must be ≥0, i.e. the reaction must be irreversible (no backwards flux possible)</strong>.</li>
+<li>max_flux: float ~ Maximal flux in mmol/(gDW⋅h)</li>
+<li><em>dG0: float</em> ~ Only neccessary if thermodynamic constraints are used; Standard Gibbs free energy (ΔrG'°) of the reaction. For more about it, see <a href="https://equilibrator.weizmann.ac.il/static/classic_rxns/faq.html#what-are-rg-rg-and-rg">the great explanation from the eQuilibrator FAQ</a>.</li>
+<li><em>dG0_uncertainty: float</em>: Only neccessary if thermodynamic constraints are used; The standard Gibb free energy's uncertainty, as returned, e.g., by the eQuilibrator API.</li>
+<li><em>enzyme_reaction_data: None | EnzymeReactionData</em> ~ See subparagraph below.</li>
+<li><em>annotation: dict[str, str]</em> ~ Any additional information regarding this reaction.</li>
+<li><em>name: str</em> ~ Optional colloquial name of reaction.</li>
+</ul>
+<div class="admonition info">
+<p class="admonition-title">Info</p>
+<p>Reaction and Metabolite are the only <em>obligatory</em> dataclasses for a Model. All following presented dataclasses are only neccessary if you want to use enzymatic, kinetic and/or thermodynamic constraints. For these, see chapters "Linear Programs" and "Non-Linear Programs", which also explain what you can do with a Model as built here ;-)</p>
+</div>
+<h2 id="enzymereactiondata">EnzymeReactionData</h2>
+<p>The defining feature of COBRA-k is that it can include the <em>full</em> reversible Michaelis-Menten kinetics. For this, COBRA-k needs associated enzymatic and kinetic data if it is known for a reaction (in this example, we just set some arbitrary values). If such data exists, we can set a Reaction's <code>enzyme_reaction_data</code> member variable to an EnzymeReactionData instance. If such data does not exist, enzyme_reaction_data is just <code>None</code>, which is also its default value.</p>
+<p>In our toy model, we could set the <code>enzyme_reaction_data</code> of the three toy metabolic reactions. Thereby, the member variables <code>identifiers</code> and <code>k_cat</code> are the only obligatory member variables for an EnzymeReactionData instance and all that's needed for "classic" linear enzyme-constrained modeling (see chapter "Linear Programs"). The other member variables are neccessary for the new COBRA-k non-linear modeling methologies (see chapter "Non-Linear Programs"). The member variables are:</p>
+<ul>
+<li>identifiers: list[str] ~ List of Enzyme IDs (see next subparagraph)</li>
+<li>k_cat: float ~ Turnover number in h</li>
+<li><em>k_ms: dict[str, float]</em> ~ Michaelis-Menten constants for metabolites; the metabolites IDs are the string keys, and the <span class="arithmatex">\(K_M\)</span> values the float values. Defaults to {}.</li>
+<li><em>special_stoichiometries: dict[str, float]</em> ~ If any of the reaction's enzyme subunits (given in <code>identifiers</code>) has a stoichiometry that differs from 1, it can be given here. E.g. if an enzyme <span class="arithmatex">\(E\)</span> would occur twice to form the reaction's enzyme complex, special_stoichiometries would be <code>{"E": 2}</code>.</li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>In COBRA-k, we assume that there is <em>only one</em> enzyme (complex) that catalyzes a single reaction. If multiple enzymes can catalyze the stoichiometrically identical reaction, multiple reactions have to be created in a Model. Nevertheless, this single enzyme that catalyzes a reaction
+can be made out of multiple subunits, all which are referenced in the <code>identifiers</code>
+member variable of EnzymeReactionData.</p>
+</div>
+<details class="info">
+<summary>Adding references for <span class="arithmatex">\(k_cat\)</span> and <span class="arithmatex">\(k_M\)</span> data in EnzymeReactionData</summary>
+<p>EnzymeReactionData also provides the following two optional member variables:</p>
+<ul>
+<li><em>k_cat_references: list[ParameterReference]</em> and</li>
+<li><em>k_m_references: list[ParameterReference]</em></li>
+</ul>
+<p>Both use <code>cobrak.dataclasses.ParameterReference</code>, which you can look up in this documentation's API overview.
+Using parameter references, you can e.g. include from which database(s) or paper(s) you got your information regarding
+the <span class="arithmatex">\(k_{cat}\)</span> or <span class="arithmatex">\(k_M\)</span>.</p>
+</details>
+<h2 id="enzyme">Enzyme</h2>
+<p>Any enzyme (or enzyme subunit) that is referenced in the identifiers of a reaction's EnzymeReactionData instance must be included as its own Enzyme instance, as part of the Model's enzyme variable. In our toy_model, we may add the enzymes as follows:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">Enzyme</span>
+
+<span class="n">toy_model</span><span class="o">.</span><span class="n">enzymes</span><span class="o">=</span><span class="p">{</span>
+    <span class="s2">&quot;E_glyc&quot;</span><span class="p">:</span> <span class="n">Enzyme</span><span class="p">(</span>
+        <span class="n">molecular_weight</span><span class="o">=</span><span class="mf">1_000.0</span><span class="p">,</span> <span class="c1"># Molecular weight in kDa</span>
+        <span class="n">min_conc</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="c1"># Optional concentration in mmol⋅gDW⁻¹; Default is None (minimum is 0)</span>
+        <span class="n">max_conc</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="c1"># Optional maximal concentration in mmol⋅gDW⁻¹; Default is None (only protein pool restricts)</span>
+        <span class="n">annotation</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Enzyme of Glycolysis&quot;</span><span class="p">},</span> <span class="c1"># Default is {}</span>
+        <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Glycolysis enzyme&quot;</span><span class="p">,</span> <span class="c1"># Default is &quot;&quot;</span>
+    <span class="p">),</span>
+    <span class="s2">&quot;E_resp&quot;</span><span class="p">:</span> <span class="n">Enzyme</span><span class="p">(</span><span class="n">molecular_weight</span><span class="o">=</span><span class="mf">2_500.0</span><span class="p">),</span>
+    <span class="s2">&quot;E_over&quot;</span><span class="p">:</span> <span class="n">Enzyme</span><span class="p">(</span><span class="n">molecular_weight</span><span class="o">=</span><span class="mf">500.0</span><span class="p">),</span>
+<span class="p">},</span>
+</code></pre></div>
+<p>The full molecular weight of a reaction's enzyme is the sum of all its subunit molecular weights. In this example, A_to_B's enzyme E has the weight 100.0 kDa + 110.0 kDa=210.0 kDa.</p>
+<p>Only the molecular weight is mandatory to be set, all other member variables are optional. If <code>min_conc</code> and/or <code>max_conc</code> are <code>None</code>, their respective concentration bounds are ignored. I.e., if <code>min_conc</code> is its default value <code>None</code>, the enzyme's minimal concentration is just 0; if <code>max_conc</code> is <code>None</code>, the enzyme's maximal concentration is as high as possible (<code>max_prot_pool / molecular_weight</code>).</p>
+<p><code>max_prot_pool</code> (<span class="arithmatex">\(Ω\)</span> in our formulas) stands for the biomass fraction of all modeled metabolic enzymes. Its unit is g⋅gDW⁻¹ and it is an essential upper limit for the usage of enzymes in our analyses with enzyme constraints (see next chapters). In our toy model, we set it to 0.5 g⋅gDW⁻¹:</p>
+<div class="highlight"><pre><span></span><code><span class="n">toy_model</span><span class="o">.</span><span class="n">max_prot_pool</span> <span class="o">=</span> <span class="mf">0.5</span>
+</code></pre></div>
+<h2 id="extralinearconstraint">ExtraLinearConstraint</h2>
+<p>Optional extra linear constraints (further explained in the chapter "Linear Programs") can be included. E.g., if we want to set the (admittedly unnecessary as the model structure already enforces it in steady-state) reaction <span class="arithmatex">\(EX_S\)</span> to have the same flux as reaction Glycolysis, we would set</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExtraLinearConstraint</span>
+
+<span class="c1"># We set the following two constraints:</span>
+<span class="c1"># 1.0 * EX_S - 1.0 * Glycolysis ≤ 0.0</span>
+<span class="c1"># and</span>
+<span class="c1"># 1.0 * EX_S + 1.0 * Glycolysis ≥ 0.0</span>
+<span class="c1"># in other words, effectively,</span>
+<span class="c1"># 1.0 * EX_S = 1.0 * Glycolysis</span>
+<span class="n">toy_model</span><span class="o">.</span><span class="n">extra_linear_constraints</span><span class="o">=</span><span class="p">[</span><span class="n">ExtraLinearConstraint</span><span class="p">(</span>
+    <span class="n">stoichiometries</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;EX_S&quot;</span><span class="p">:</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">,</span>
+        <span class="s2">&quot;Glycolysis&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
+    <span class="p">},</span>
+    <span class="n">lower_value</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">upper_value</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+<span class="p">)]</span> <span class="c1"># Keep in mind that this is a list as multiple extra flux constraints are possible</span>
+</code></pre></div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Extra linear constraints do not only work with reaction fluxes, but also with all other variables introduced in the analyses provided by COBRA-k (see next chapters). E.g. you could also use logarithmic metabolite concentrations, saturation values etc. inside an extra linear constraint, and even mix these types of variables.</p>
+</div>
+<h2 id="loading-a-completed-toy_model">Loading a completed toy_model</h2>
+<p>We are going to use the toy model that we created in the next chapters. You don't have to add the code of this chapter manually to provide the model as it is already provided as a COBRA-k example model:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">cobrak.example_models</span><span class="w"> </span><span class="kn">import</span> <span class="n">toy_model</span>
+
+<span class="c1"># Now, we can do what we want with this chapter&#39;s toy_model :-)</span>
+</code></pre></div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": ".", "features": ["content.code.copy"], "search": "assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="assets/javascripts/bundle.92b07e13.min.js"></script>
+      
+        <script src="javascript/katex/katex.min.js"></script>
+      
+        <script src="javascript/katex/contrib/auto-render.min.js"></script>
+      
+        <script src="javascript/init_katex.js"></script>
+      
+        <script src="assets/external/unpkg.com/mermaid@11/dist/mermaid.min.js"></script>
+      
+    
+  </body>
+</html>
