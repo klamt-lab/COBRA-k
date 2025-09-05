@@ -19,7 +19,6 @@ from .dataclasses import CorrectionConfig, ExtraLinearConstraint, Model, Solver
 from .genetic import COBRAKGENETIC
 from .io import json_load, json_write
 from .lps import (
-    add_statuses_to_optimziation_dict,
     get_lp_from_cobrak_model,
     perform_lp_optimization,
     perform_lp_variability_analysis,
@@ -31,6 +30,7 @@ from .pyomo_functionality import (
 )
 from .standard_solvers import IPOPT, SCIP
 from .utilities import (
+    add_statuses_to_optimziation_dict,
     add_objective_value_as_extra_linear_constraint,
     apply_variability_dict,
     delete_orphaned_metabolites_and_enzymes,

@@ -32,10 +32,10 @@ from pyomo.environ import (
     minimize,
     value,
 )
-
 from cobrak.pyomo_functionality import add_linear_approximation_to_pyomo_model
 
 from .constants import (
+    ALL_OK_KEY,
     BIG_M,
     DF_VAR_PREFIX,
     DG0_VAR_PREFIX,
@@ -56,8 +56,9 @@ from .constants import (
     QUASI_INF,
     STANDARD_MIN_MDF,
     Z_VAR_PREFIX,
+    OBJECTIVE_VAR_NAME,
 )
-from .dataclasses import CorrectionConfig, Model, Reaction, Solver
+from .dataclasses import CorrectionConfig, ExtraLinearConstraint, Model, Reaction, Solver
 from .pyomo_functionality import get_model_var_names, get_objective, get_solver
 from .standard_solvers import SCIP
 from .utilities import (
@@ -1509,7 +1510,6 @@ def get_lp_from_cobrak_model(
         )
 
     # Apply error scenarios and add error sum term if error handling is configured
-    print(correction_config)
     if is_any_error_term_active(correction_config):
         if correction_config.error_scenario != {}:
             _apply_error_scenario(
@@ -1822,6 +1822,117 @@ def perform_lp_thermodynamic_bottleneck_analysis(
         bottleneck_counter += 1
 
     return bottleneck_reactions
+
+
+@validate_call(validate_return=True)
+def _batch_dG0_varying_bottleneck_calculation(
+    solver: Solver,
+    old_mdf: float,
+    min_mdf_advantage: float,
+    dG0_variation: float,
+    cobrak_model: Model,
+    with_enzyme_constraints: bool,
+    target_reac_id: str,
+    verbose: bool,
+    ignore_nonlinear_terms: bool,
+) -> str:
+    with cobrak_model as dG0_varied_cobrak_model:
+        dG0_varied_cobrak_model.reactions[target_reac_id].dG0 += dG0_variation
+        dG0_varied_cobrak_model.extra_linear_constraints.append(
+            ExtraLinearConstraint(
+                stoichiometries={MDF_VAR_ID: 1.0},
+                lower_value=old_mdf + min_mdf_advantage
+            )
+        )
+        try:
+            variation_result = perform_lp_optimization(
+                cobrak_model=dG0_varied_cobrak_model,
+                objective_target=MDF_VAR_ID,
+                objective_sense=+1,
+                solver=solver,
+                with_enzyme_constraints=with_enzyme_constraints,
+                ignore_nonlinear_terms=ignore_nonlinear_terms,
+                with_thermodynamic_constraints=True,
+            )
+        except ValueError:
+            variation_result = {ALL_OK_KEY: False}
+    if variation_result[ALL_OK_KEY]:
+        if verbose:
+            print(f"{target_reac_id} identified as bottleneck (new OptMDF: {variation_result[MDF_VAR_ID]} kJ⋅mol⁻¹)!")
+        return target_reac_id
+    return ""
+
+
+@validate_call(validate_return=True)
+def perform_lp_dG0_varying_thermodynamic_bottleneck_analysis(
+    cobrak_model: Model,
+    dG0_variation: float = -100,
+    min_mdf_advantage: float = 1e-6,
+    with_enzyme_constraints: bool = False,
+    solver: Solver = SCIP,
+    ignore_nonlinear_terms: bool = False,
+    verbose: bool = False,
+    parallel_verbosity_level: int = 0,
+) -> list[str]:
+    """Perform thermodynamic bottleneck analysis on a COBRA-k model using mixed-integer linear programming *with ΔG'° variations*.
+
+    This function identifies the *current* set of thermodynamic bottlenecks in a COBRAk model by lowering the ΔG'° of each
+    one reaction by the given factor (in kJ/mol). Typically, the minimal MDF to be reached would be a previously calculated
+    optimal network-wide MDF (also called OptMDF). The basic methology was first described in [1].
+    To prevent thermodynamic cycles, the ΔG'° of potential reverse reactions is raised by the amount the one ΔG'° was lowered.
+
+    [1] Bekiaris et al. (2021). PLOS Computational Biology, 14(1), https://doi.org/10.1371/journal.pcbi.1009093
+
+    Args:
+        cobrak_model (Model): The COBRAk model to analyze for thermodynamic bottlenecks.
+        dG0_lowering (float, optional): The amount in kJ/mol by which a reaction's ΔG'° is lowered. Defaults to -100.
+        min_mdf_advantage (float, optional): The minimal OptMDF advantage through weakening tbhis bottleneck. Defaults to 1e-6.
+        with_enzyme_constraints (bool, optional): Whether to include enzyme constraints in the analysis.
+        verbose (bool, optional): If True, print immediate information about identified bottlenecks. Defaults to False.
+        solver_name (str, optional): Name of the solver to use for optimization. Defaults to "scip".
+        solver_options (dict[str, float | int | str], optional): Options for the solver, such as number of threads
+                                                                 and LP method. Defaults to an empty dictionary.
+        parallel_verbosity_level (int, optional): Sets the verbosity level for the analysis parallelization. The higher,
+                                            the value, the more is printed. Default: 0.
+        ignore_nonlinear_terms: bool, optional
+            Whether or not non-linear extra watches and constraints shall *not* be included. Defaults to False.
+            Note: If such non-linear values exist and are included, the whole problem becomes *non-linear*, making it
+            incompatible with any purely linear solver!
+
+    Returns:
+        list[str]: A list of reaction IDs identified as thermodynamic bottlenecks.
+    """
+    cobrak_model = deepcopy(cobrak_model)
+
+    old_mdf = perform_lp_optimization(
+        cobrak_model=cobrak_model,
+        objective_target=MDF_VAR_ID,
+        objective_sense=+1,
+        with_enzyme_constraints=with_enzyme_constraints,
+        with_thermodynamic_constraints=True,
+        solver=solver,
+        ignore_nonlinear_terms=ignore_nonlinear_terms,
+    )[OBJECTIVE_VAR_NAME]
+
+    target_reac_ids = [
+        reac_id for reac_id, reac in cobrak_model.reactions.items()
+        if reac.dG0 is not None
+    ]
+    results: list[str] = Parallel(n_jobs=-1, verbose=parallel_verbosity_level)(
+        delayed(_batch_dG0_varying_bottleneck_calculation)(
+            solver,
+            old_mdf,
+            min_mdf_advantage,
+            dG0_variation,
+            cobrak_model,
+            with_enzyme_constraints,
+            target_reac_id,
+            verbose,
+            ignore_nonlinear_terms,
+        )
+        for target_reac_id in target_reac_ids
+    )
+    return [reac_id for reac_id in results if len(reac_id) > 0]
 
 
 @validate_call
