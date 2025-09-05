@@ -16,8 +16,8 @@ from .io import ensure_folder_existence, json_load, json_write, standardize_fold
 
 # FUNCTIONS SECTION #
 @validate_call(config=ConfigDict(arbitrary_types_allowed=True), validate_return=True)
-def uniprot_get_enzyme_molecular_weights(
-    model: cobra.Model,
+def uniprot_get_enzyme_molecular_weights_for_sbml(
+    sbml_path: str,
     cache_basepath: str,
     multiplication_factor: float = 1 / 1000,
 ) -> dict[str, float]:
@@ -28,7 +28,7 @@ def uniprot_get_enzyme_molecular_weights(
 
     Arguments
     ----------
-    * model: cobra.Model ~ The model in the cobrapy format
+    * sbml_path: str ~ The SBML's file path
 
     Output
     ----------
@@ -41,7 +41,7 @@ def uniprot_get_enzyme_molecular_weights(
     }
     </pre>
     """
-
+    model = cobra.io.read_sbml_model(sbml_path)
     # GET UNIPROT ID - PROTEIN MAPPING
     uniprot_id_protein_id_mapping: dict[str, list[str]] = {}
     for gene in model.genes:

@@ -446,6 +446,8 @@ class Solver:
     """[Optional] Options set on the solver object in pyomo."""
     solve_extra_options: dict[str, Any] = Field(default_factory=dict)
     """[Optional] Options set on pyomo's solve function."""
+    solver_factory_args: dict[str, float | int | str] = Field(default_factory=dict)
+    """[Optional] Arguments for pyomo's SolverFactory function"""
 
 
 # SHORTHAND TYPE ALIASES

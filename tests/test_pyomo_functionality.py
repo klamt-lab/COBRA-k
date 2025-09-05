@@ -10,6 +10,7 @@ from pyomo.environ import (
 )
 from pyomo.solvers.plugins.solvers.GLPK import GLPKSHELL
 
+from cobrak.dataclasses import Solver
 from cobrak.pyomo_functionality import get_objective, get_solver
 
 
@@ -43,7 +44,11 @@ def test_get_objective_zero_sense() -> None:  # noqa: D103
 
 
 def test_get_solver() -> None:  # noqa: D103
-    solver = get_solver("glpk", {"timelimit": 600, "mipgap": 0.01}, {})
+    glpk = Solver(
+        name="glpk",
+        solver_options={"timelimit": 600, "mipgap": 0.01},
+    )
+    solver = get_solver(glpk)
     assert isinstance(solver, GLPKSHELL)
 
 

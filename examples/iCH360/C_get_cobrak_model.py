@@ -33,7 +33,6 @@ cobrak_model = get_cobrak_model_from_sbml_and_thermokinetic_data(
     kinetic_ignored_metabolites=kinetic_ignored_metabolites,
     fwd_suffix="_fw",
     rev_suffix="_bw",
-    keep_parameter_refs=True,
 )
 
 # Delete NAD-dependent fatty acid EAR reactions (if not essential)
@@ -59,7 +58,7 @@ for met_id, metabolite in cobrak_model.metabolites.items():
         continue
     metabolite.log_max_conc = log(0.2)
 
-cobrak_model.max_conc_sum = 0.3
+cobrak_model.max_conc_sum = 0.4
 cobrak_model.conc_sum_ignore_prefixes = ["h2o_", "h_"]
 cobrak_model.conc_sum_include_suffixes = ["_c"]
 cobrak_model.conc_sum_max_rel_error = 0.1

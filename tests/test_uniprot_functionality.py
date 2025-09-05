@@ -2,11 +2,12 @@
 
 import json
 import os
+import tempfile
 from shutil import rmtree
 
 import cobra
 
-from cobrak.uniprot_functionality import uniprot_get_enzyme_molecular_weights
+from cobrak.uniprot_functionality import uniprot_get_enzyme_molecular_weights_for_sbml
 
 
 def test_uniprot_get_enzyme_molecular_weights() -> None:  # noqa: D103
@@ -21,9 +22,11 @@ def test_uniprot_get_enzyme_molecular_weights() -> None:  # noqa: D103
 
     # Call the function
     cache_basepath = "test_cache"
-    protein_id_mass_mapping = uniprot_get_enzyme_molecular_weights(
-        model, cache_basepath
-    )
+    with tempfile.TemporaryDirectory() as tmp_dict:
+        cobra.io.write_sbml_model(model, tmp_dict + "temp.xml")
+        protein_id_mass_mapping = uniprot_get_enzyme_molecular_weights_for_sbml(
+            tmp_dict + "temp.xml", cache_basepath
+        )
 
     # Check that the function returns a dictionary
     assert isinstance(protein_id_mass_mapping, dict)
@@ -53,9 +56,11 @@ def test_uniprot_get_enzyme_molecular_weights_cache() -> None:  # noqa: D103
         json.dump(cache_json, f)
 
     # Call the function
-    protein_id_mass_mapping = uniprot_get_enzyme_molecular_weights(
-        model, cache_basepath
-    )
+    with tempfile.TemporaryDirectory() as tmp_dict:
+        cobra.io.write_sbml_model(model, tmp_dict + "temp.xml")
+        protein_id_mass_mapping = uniprot_get_enzyme_molecular_weights_for_sbml(
+            tmp_dict + "temp.xml", cache_basepath
+        )
 
     # Check that the function returns a dictionary
     assert isinstance(protein_id_mass_mapping, dict)
@@ -78,9 +83,11 @@ def test_uniprot_get_enzyme_molecular_weights_no_uniprot_id() -> None:  # noqa: 
 
     # Call the function
     cache_basepath = "test_cache"
-    protein_id_mass_mapping = uniprot_get_enzyme_molecular_weights(
-        model, cache_basepath
-    )
+    with tempfile.TemporaryDirectory() as tmp_dict:
+        cobra.io.write_sbml_model(model, tmp_dict + "temp.xml")
+        protein_id_mass_mapping = uniprot_get_enzyme_molecular_weights_for_sbml(
+            tmp_dict + "temp.xml", cache_basepath
+        )
 
     # Check that the function returns an empty dictionary
     assert protein_id_mass_mapping == {}
@@ -109,7 +116,11 @@ def test_uniprot_get_enzyme_molecular_weights_cleanup() -> None:  # noqa: D103
 
     # Call the function
     cache_basepath = "test_cache"
-    uniprot_get_enzyme_molecular_weights(model, cache_basepath)
+    with tempfile.TemporaryDirectory() as tmp_dict:
+        cobra.io.write_sbml_model(model, tmp_dict + "temp.xml")
+        uniprot_get_enzyme_molecular_weights_for_sbml(
+            tmp_dict + "temp.xml", cache_basepath
+        )
 
     # Check that the cache file was created
     cache_filepath = f"{cache_basepath}_cache_uniprot_molecular_weights.json"

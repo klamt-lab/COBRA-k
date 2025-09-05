@@ -464,8 +464,8 @@ def _is_fitting_ec_numbers(
 
 # "PUBLIC" FUNCTIONS SECTION #
 @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
-def brenda_select_enzyme_kinetic_data_for_model(
-    cobra_model: cobra.Model,
+def brenda_select_enzyme_kinetic_data_for_sbml(
+    sbml_path: str,
     brenda_json_targz_file_path: str,
     bigg_metabolites_json_path: str,
     brenda_version: str,
@@ -484,12 +484,12 @@ def brenda_select_enzyme_kinetic_data_for_model(
     transfered_ec_number_json: str = "",
     max_taxonomy_level: NonNegativeInt = 1e9,
 ) -> dict[str, EnzymeReactionData | None]:
-    """Select and assign enzyme kinetic data for each reaction in a COBRApy model based on BRENDA
+    """Select and assign enzyme kinetic data for each reaction in an SBML model based on BRENDA
     database entries and taxonomic similarity.
 
     This function retrieves enzyme kinetic data from a compressed BRENDA JSON file, merges it
     with BiGG metabolite translation data and taxonomy information from NCBI. It then iterates
-    over the reactions in the provided COBRApy model to:
+    over the reactions in the provided SBML model to:
 
       - Filter reactions that have EC code annotations.
       - Identify eligible EC codes (ignoring those with hyphens).
@@ -503,7 +503,7 @@ def brenda_select_enzyme_kinetic_data_for_model(
       - Merge with any custom enzyme kinetic data provided.
 
     Parameters:
-        cobra_model (cobra.Model): A COBRApy model object representing the metabolic network.
+        sbml_path (str): Path to SBML model.
         brenda_json_targz_file_path (str): Path to the compressed JSON file containing
             BRENDA enzyme kinetic data.
         bigg_metabolites_json_path (str): Path to the JSON file mapping metabolite IDs to
@@ -542,12 +542,13 @@ def brenda_select_enzyme_kinetic_data_for_model(
 
     Notes:
         - Kinetic values are converted to standardized units:
-            - k_cat values are converted from s⁻¹ to h⁻¹.
-            - KM and KI values are converted from mM to M.
+            - k_cat values use the unit h⁻¹.
+            - KM, KA and KI values use the unit M=mol⋅l⁻¹.
         - The function leverages taxonomic similarity (using NCBI TAXONOMY data)
           to select the most relevant kinetic values.
         - Custom enzyme kinetic data and k_cat overrides will replace any computed values.
     """
+    cobra_model = cobra.io.read_sbml_model(sbml_path)
     transfered_ec_codes: dict[str, str] = (
         json_load(transfered_ec_number_json, dict[str, str])
         if transfered_ec_number_json

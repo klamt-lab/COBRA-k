@@ -31,7 +31,6 @@ Here's a usage example:
 
 ```py
 from cobrak.model_instantiation import get_cobrak_model_with_kinetic_data_from_sbml_model_alone
-from cobrak.dataclasses import ParameterRange
 
 cobrak_model = get_cobrak_model_with_kinetic_data_from_sbml_model_alone(
     sbml_model_path="/path/to/sbml.xml",
@@ -44,7 +43,7 @@ cobrak_model = get_cobrak_model_with_kinetic_data_from_sbml_model_alone(
     conc_ranges={
         # E.g., for all metabolites without a given identifier,
         # we can use the key "DEFAULT":
-        "DEFAULT": ParameterRange(1e-6, 0.02),
+        "DEFAULT": (1e-6, 0.02),
         # (...)
     },
     inner_to_outer_compartments=["INNERMOST_COMPARTMENT", "NEXT_TO_INNERMOST_", ], # E.g., ["c", "p", "e"], used for dG0 calculation
@@ -58,7 +57,7 @@ cobrak_model = get_cobrak_model_with_kinetic_data_from_sbml_model_alone(
     do_model_fullsplit = True, # Explained below
     do_delete_enzymatically_suboptimal_reactions = True, # Explained below
     ignore_dG0_uncertainty=True, # Whether or not eQuilibrator-calculated dG0 uncertainties shall be simply set to 0
-    enzyme_conc_ranges={}, # Is dict[str, ParameterRange | None]
+    enzyme_conc_ranges={}, # Is dict[str, tuple[float, float] | None]
     dG0_exclusion_prefixes=[], # Prefixes (first parts of IDs) for which no dG0 shall be set, a common one would be "EX_"; is list[str]
     dG0_exclusion_inner_parts=[], # Infixes (inner parts of IDs) for which no dG0 shall be set, is list[str]
     extra_flux_constraints=[], # list[ExtraFluxConstraint]
@@ -87,7 +86,7 @@ Finally, if you already have some data and want to add it to an SBML file Model 
 
 ```py
 from cobrak.model_instantiation import get_cobrak_model_from_sbml_and_thermokinetic_data
-from cobrak.dataclasses import EnzymeReactionData, ParameterRange
+from cobrak.dataclasses import EnzymeReactionData
 
 cobrak_model = get_cobrak_model_from_sbml_and_thermokinetic_data(
     sbml_path="path/to/sbml.xml",
@@ -100,8 +99,8 @@ cobrak_model = get_cobrak_model_from_sbml_and_thermokinetic_data(
         "$REAC_ID": dG0_of_reaction,
         # (...)
     },
-    conc_ranges={ # Is dict[str, ParameterRange], these are the concentrations in M
-        "$MET_ID": ParameterRange(minimum=min_conc_of_met, maximum=max_conc_of_met),
+    conc_ranges={ # Is dict[str, tuple[float, flaot]], these are the concentrations in M
+        "$MET_ID": (min_conc_of_met, max_conc_of_met),
         # (...)
     },
     extra_conc_ratios=[], # Is a list[ExtraConcRatios]
@@ -112,8 +111,8 @@ cobrak_model = get_cobrak_model_from_sbml_and_thermokinetic_data(
     enzyme_reaction_data: dict[str, EnzymeReactionData | None],  # Contains k_cats, k_ms, k_is, k_as and Hill coefficients
     max_prot_pool=0.5, # In g/gDW
     kinetic_ignored_metabolites=["h2_c", "h2_p",], # Is list[str]
-    enzyme_conc_ranges = { # Is dict[str, ParameterRange | None]
-        "$ENZYME_ID": ParameterRange(minimum=min_enzyme_conc, maximum=max_enzyme_conc),
+    enzyme_conc_ranges = { # Is dict[str, tuple[float, float] | None]
+        "$ENZYME_ID": (min_enzyme_conc, max_enzyme_conc),
         # (...)
     },
     do_model_fullsplit: bool = False, # Explained below

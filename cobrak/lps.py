@@ -11,6 +11,7 @@ For non-linear-programs (NLP), see nlps.py in the same folder.
 from copy import deepcopy
 from itertools import chain
 from math import ceil, floor
+from time import time
 from typing import Any
 
 from joblib import Parallel, cpu_count, delayed
@@ -1145,6 +1146,7 @@ def _batch_variability_optimization(
     model: ConcreteModel,
     batch: list[tuple[str, str]],
     solve_extra_options: dict[str, Any] = {},
+    verbose: bool = False,
 ) -> list[tuple[bool, str, float | None]]:
     """Perform batch flux variability optimization on a given model. Used in (parallelized) Flux Variability analysis function.
 
@@ -1157,6 +1159,7 @@ def _batch_variability_optimization(
     - pyomo_solver: The pyomo solver instance used to solve the model.
     - model (Model): The pyomo model on which the optimization will be performed.
     - batch (list[tuple[str, str]]): A list of tuples where each tuple contains an objective name and a target variable ID.
+    - verbose (bool): If True, computational time and objective results are printed.
 
     Returns:
     - list[tuple[bool, str, float | None]]: A list of tuples containing:
@@ -1171,6 +1174,8 @@ def _batch_variability_optimization(
     """
     resultslist: list[tuple[bool, str, float | None]] = []
     for objective_name, target_id in batch:
+        if verbose:
+            t0 = time()
         getattr(model, objective_name).activate()
         try:
             results = pyomo_solver.solve(
@@ -1184,6 +1189,9 @@ def _batch_variability_optimization(
             result = value(getattr(model, target_id))
         getattr(model, objective_name).deactivate()
         resultslist.append((objective_name.startswith("MIN_OBJ_"), target_id, result))
+        if verbose:
+            t1 = time()
+            print(f"{target_id}: {result} ({round(t1 - t0, 4)} s)")
     return resultslist
 
 
@@ -1501,6 +1509,7 @@ def get_lp_from_cobrak_model(
         )
 
     # Apply error scenarios and add error sum term if error handling is configured
+    print(correction_config)
     if is_any_error_term_active(correction_config):
         if correction_config.error_scenario != {}:
             _apply_error_scenario(
@@ -1627,7 +1636,7 @@ def perform_lp_min_active_reactions_analysis(
     minz_model.obj = get_objective(minz_model, "extrazsum", minimize)
 
     # Initialize the solver with the specified options and attributes
-    solver = get_solver(solver.name, solver.solver_options, solver.solver_attrs)
+    solver = get_solver(solver)
 
     # Solve the LP model
     solver.solve(minz_model, tee=verbose, **solver.solve_extra_options)
@@ -1728,7 +1737,7 @@ def perform_lp_optimization(
         optimization_model, objective_target, objective_sense
     )
 
-    pyomo_solver = get_solver(solver.name, solver.solver_options, solver.solver_attrs)
+    pyomo_solver = get_solver(solver)
     results = pyomo_solver.solve(
         optimization_model, tee=verbose, **solver.solve_extra_options
     )
@@ -1789,7 +1798,7 @@ def perform_lp_thermodynamic_bottleneck_analysis(
         "zb_sum",
         objective_sense=-1,
     )
-    pyomo_solver = get_solver(solver.name, solver.solver_options, solver.solver_attrs)
+    pyomo_solver = get_solver(solver)
     pyomo_solver.solve(thermo_constraint_lp, tee=verbose, **solver.solve_extra_options)
     solution_dict = get_pyomo_solution_as_dict(thermo_constraint_lp)
 
@@ -1834,6 +1843,7 @@ def perform_lp_variability_analysis(
     solver: Solver = SCIP,
     parallel_verbosity_level: int = 0,
     ignore_nonlinear_terms: bool = False,
+    verbose: bool = False,
 ) -> dict[str, tuple[float, float]]:
     """Perform linear programming variability analysis on a COBRAk model.
 
@@ -1864,6 +1874,7 @@ def perform_lp_variability_analysis(
         ignore_nonlinear_terms: (bool): Whether or not non-linear watches/constraints shall be ignored in ecTFBAs. Defaults to True.
             Note: If such non-linear values exist and are included, the whole problem becomes *non-linear*, making it incompatible with any
             purely linear solver!
+        verbose (bool): If True, the objective values of solved problems are shown, together with computation time in s. Defaults to False.
 
     Returns:
         dict[str, tuple[float, float]]: A dictionary mapping variable IDs to their minimum and maximum values
@@ -2016,11 +2027,11 @@ def perform_lp_variability_analysis(
         objectives_data.append((objective_name, target_id))
 
     objectives_data_batches = split_list(objectives_data, cpu_count())
-    pyomo_solver = get_solver(solver.name, solver.solver_options, solver.solver_attrs)
+    pyomo_solver = get_solver(solver)
 
     results_list = Parallel(n_jobs=-1, verbose=parallel_verbosity_level)(
         delayed(_batch_variability_optimization)(
-            pyomo_solver, model, batch, solver.solve_extra_options
+            pyomo_solver, model, batch, solver.solve_extra_options, verbose
         )
         for batch in objectives_data_batches
     )

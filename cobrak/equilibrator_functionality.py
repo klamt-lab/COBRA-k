@@ -15,7 +15,7 @@ from .constants import USED_IDENTIFIERS_FOR_EQUILIBRATOR
 
 # PUBLIC FUNCTIONS #
 @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
-def equilibrator_get_model_dG0_and_uncertainty_values(
+def equilibrator_get_model_dG0_and_uncertainty_values_for_sbml(
     sbml_path: str,
     inner_to_outer_compartments: list[str],
     phs: dict[str, float],
@@ -26,6 +26,8 @@ def equilibrator_get_model_dG0_and_uncertainty_values(
     exclusion_inner_parts: list[str] = [],
     ignore_uncertainty: bool = False,
     max_uncertainty: float = 1_000.0,
+    calculate_multicompartmental: bool = True,
+    ignored_metabolites: list[str] = [],
 ) -> tuple[dict[str, float], dict[str, float]]:
     """Cobrapy model wrapper for the ΔG'° determination of reactions using the eQuilibrator-API.
 
@@ -44,6 +46,10 @@ def equilibrator_get_model_dG0_and_uncertainty_values(
             the ID of an innter and outer compartment, and the potential difference between them.
         max_uncertainty (float): The maximal accepted uncertainty value (defaults to 1000 kJ⋅mol⁻¹). If a calculated uncertainty
             is higher than this value, the associated ΔG'° is *not* used (i.e., the specific reaction gets no ΔG'°).
+        calculate_multicompartmental (bool): If True, multicompartmental reactions also get a ΔG'° using the eQuilibrator's special
+            routine for them. Defaults to True.
+        ignored_metabolites (list[str]): List of metabolites that shall be ignored in reaction stoichiometries (e.g., for pseudo-metabolites)
+            such as enzyme_pool in certain enzyme-constrained models. Defaults to [].
 
     Returns:
         Dict[str, Dict[str, float]]: A dictionary with the reaction IDs as keys, and dictionaries as values which,
@@ -73,6 +79,8 @@ def equilibrator_get_model_dG0_and_uncertainty_values(
         identifier_keys: list[str] = []
         for metabolite_x in reaction.metabolites:
             metabolite: cobra.Metabolite = metabolite_x
+            if metabolite.id in ignored_metabolites:
+                continue
             stoichiometries.append(reaction.metabolites[metabolite])
             compartments.append(metabolite.compartment)
             identifier = ""
@@ -159,7 +167,7 @@ def equilibrator_get_model_dG0_and_uncertainty_values(
                 print(
                     f"INFO: Reaction {reaction.id} uncertainty is too high with {uncertainty} kJ⋅mol⁻¹; ΔG'° not assigned for this reaction"
                 )
-        elif num_compartments == 2:
+        elif calculate_multicompartmental and num_compartments == 2:
             index_zero = inner_to_outer_compartments.index(
                 unique_reaction_compartments[0]
             )

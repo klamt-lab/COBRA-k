@@ -1,17 +1,28 @@
 """Functions for plotting different types of data or reaction kinetics, all using matplotlib."""
 
 import itertools
-from collections.abc import Callable
+from collections.abc import Callable, Iterable, Sequence
 from copy import deepcopy
-from typing import Any, Literal
+from typing import Any
 
+import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mtick
 import numpy as np
 from matplotlib.cm import get_cmap
 from matplotlib.ticker import FuncFormatter
 from pydantic import ConfigDict, validate_call
 
 from cobrak.io import json_load
+
+
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
+def _as_numpy_array(seq: Iterable) -> np.ndarray:
+    """Convert any iterable to a 1‑D NumPy array (fast, safe)."""
+    arr = np.asarray(seq, dtype=float)
+    if arr.ndim != 1:
+        raise ValueError("Each dataset must be 1‑dimensional.")
+    return arr
 
 
 @validate_call(validate_return=True)
@@ -45,6 +56,62 @@ def _get_constant_combinations(
             constant_combination[index] = constant_values[combination[i]][index]
         constant_combinations.append(constant_combination)
     return constant_combinations
+
+
+@validate_call(validate_return=True)
+def distinct_colors(n: int) -> list[str]:
+    """Produce *n* distinct Matplotlib colour specifications.
+
+    Parameters
+    ----------
+    n : int
+        Number of colours required (must be > 0).
+
+    Returns
+    -------
+    List[str]
+        A list of *n* colour strings.  The list is deterministic:
+        calling ``distinct_colors(5)`` today and tomorrow returns
+        exactly the same five colours.
+
+    Notes
+    -----
+    * The first 10 colours are the Tableau palettetab:orange`` …) – the same palette that
+    Matplotlib uses for its default colour cycle.
+    * If ``n`` > 10 the function continues with the CSS‑4 colour
+    dictionary, sorted by hue (HSV) so that successive colours
+    are as dissimilar as possible * All colours are returned as hex strings (e.g. ``'#1f77b4'``)
+    because hex codes are universally accepted by Matplotlib.
+    """
+    if n <= 0:
+        raise ValueError("n must be a positive integer")
+
+    # ----------------------------------------------------------
+    # 1️⃣  Tableau colours – the first 10 highly‑distinct colours
+    # ----------------------------------------------------------
+    tableau_hex = list(mcolors.TABLEAU_COLORS.values())  # 10 entries
+    if n <= len(tableau_hex):
+        return tableau_hex[:n]
+
+    # ----------------------------------------------------------
+    # 2️⃣  Prepare the remaining colours (CSS‑4) sorted by hue
+    # ----------------------------------------------------------
+    # Convert every CSS‑4 colour to RGB → HSV, keep the original hex
+    css_items = [
+        (mcolors.rgb_to_hsv(mcolors.to_rgb(hexcol)), hexcol)
+        for hexcol in mcolors.CSS4_COLORS.values()
+    ]
+    # Sort by hue (the first component of HSV)
+    css_items.sort(key=lambda pair: pair[0][0])
+
+    # Extract the sorted hex strings
+    css_sorted_hex = [hexcol for _, hexcol in css_items]
+
+    # ----------------------------------------------------------
+    # 3️⃣  Concatenate Tableau + sorted CSS‑4 and slice to *n*
+    # ----------------------------------------------------------
+    all_colours = tableau_hex + css_sorted_hex
+    return all_colours[:n]
 
 
 @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
@@ -274,12 +341,12 @@ def plot_combinations(
     * A scatter plot with points representing the data.
 
     Example usage:
-    >>> min_values = [-1.0, 0.0, 0.0]
-    >>> max_values = [10.0, 5.0, 10.0]
-    >>> def example_func(args: List[float]) -> float:
-    >>>    return args[0] + args[1] + args[2]
-    >>>
-    >>> plot_combinations(example_func, min_values, max_values)
+    from cobrak.plotting import plot_combinations
+    min_values = [-1.0, 0.0, 0.0]
+    max_values = [10.0, 5.0, 10.0]
+    def example_func(args: List[float]) -> float:
+       return args[0] + args[1] + args[2]
+    plot_combinations(example_func, min_values, max_values)
 
     Args:
     - func: The function to be plotted. It takes a list of floats and returns a float.
@@ -441,13 +508,192 @@ def plot_combinations(
 
 
 @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
+def multi_step_histogram(
+    data: list[list[float]],
+    *,
+    bins: int | Sequence[float] | str = 10,
+    range_: tuple[float, float] | None = None,
+    density: bool = False,
+    labels: Sequence[str] | None = None,
+    colors: Sequence[str] | None = None,
+    linewidth: float = 1.5,
+    alpha: float = 1.0,
+    linestyle: str = "-",
+    title: str | None = None,
+    xlabel: str | None = "Value",
+    ylabel: str | None = None,
+    legend_loc: str | None = "best",
+    ax: plt.Axes | None = None,
+    logmode: bool = False,
+    **hist_kwargs,  # noqa: ANN003
+) -> plt.Axes:
+    """
+    Plot several 1‑D data sets as *step* histograms on a single Axes.
+
+    Parameters
+    ----------
+    data : sequence of iterables
+        Each element is a collection of numbers (list, np.ndarray, pd.Series …).
+    bins : int, sequence of scalars, or str, default 10
+        Passed straight to ``np.histogram`` / ``plt.hist``.
+        Use e.g. ``'auto'`` or an explicit array of bin edges for full control.
+    range_ : (float, float), optional
+        Lower and upper range_ of the bins.  If ``None`` the range_ is
+        inferred from the data.
+    density : bool, default False
+        If True, the histogram is normalized to form a probability density,
+        i.e. the integral of the histogram is 1.
+    labels : sequence of str, optional
+        Human‑readable names for the data sets.  If omitted, generic names
+        ``Dataset 0``, ``Dataset 1`` … are used.
+    colors : sequence of str, optional
+        Matplotlib colour specifications.  If omitted, the default colour cycle
+        is used.
+    linewidth : float, default 1.5
+        Width of the step lines.
+    alpha : float in [0,1], default 1.0
+        Transparency of the lines.
+    linestyle : str, default '-'
+        Any valid matplotlib line style (``'-'``, ``'--'``, ``':'`` …).
+    title, xlabel, ylabel : str, optional
+        Axis titles.
+    legend_loc : str or None, default 'best'
+        Location of the legend; set to ``None`` to suppress the legend.
+    ax : matplotlib.axes.Axes, optional
+        Provide an existing Axes to plot into; otherwise a new figure/axes
+        pair is created.
+    **hist_kwargs
+        Additional keyword arguments forwarded to ``plt.hist`` (e.g.
+        ``log=True`` for a log‑scale y‑axis).
+
+    Returns
+    -------
+    matplotlib.axes.Axes
+        The Axes object containing the plot (useful for further tweaking).
+
+    Example
+    -------
+    import numpy as np
+    from cobrak.plotting import multi_step_histogram
+    rng = np.random.default_rng()
+    d1 = rng.normal(size=1000)
+    d2 = rng.exponential(scale=2, size=1000)
+    multi_step_histogram([d1, d2],
+                        bins=40,
+                        density=True,
+                        labels=['Normal', 'Exp'],
+                        colors=['tab:blue', 'tab:red'],
+                        title='Density step‑histograms')
+    """
+
+    def _fmt(val: Any, _: Any) -> str:  # noqa: ANN401
+        return f"{np.exp(val):.0e}"
+
+    # ------------------------------------------------------------------
+    # 1️⃣  Prepare the Axes
+    # ------------------------------------------------------------------
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(8, 5))
+    else:
+        fig = ax.figure
+
+    # ------------------------------------------------------------------
+    # 2️⃣  Normalise input arguments
+    # ------------------------------------------------------------------
+    n_sets = len(data)
+    if labels is None:
+        labels = [f"Dataset {i}" for i in range(n_sets)]
+    if len(labels) != n_sets:
+        raise ValueError("Length of `labels` must match number of data sets.")
+
+    if colors is not None and len(colors) != n_sets:
+        raise ValueError("Length of `colors` must match number of data sets.")
+    if colors is None:
+        colors = distinct_colors(n_sets)
+
+    # ------------------------------------------------------------------
+    # 3️⃣  Plot each histogram as a step line
+    # ------------------------------------------------------------------
+    for idx, (ds, lbl) in enumerate(zip(data, labels)):
+        arr = _as_numpy_array(ds)
+        if logmode:
+            arr = np.log(arr)
+        # plt.hist with `histtype='step'` draws exactly what we need.
+        # We forward any extra **hist_kwargs** (e.g. log=True) to give the user
+        # full flexibility.
+        counts, bin_edges, _ = ax.hist(
+            arr,
+            bins=bins,
+            range=range_,
+            density=density,
+            histtype="step",
+            label=lbl,
+            color=None if colors is None else colors[idx],
+            linewidth=linewidth,
+            alpha=alpha,
+            linestyle=linestyle,
+            **hist_kwargs,
+        )
+
+        # --------------------------------------------------------------
+        #  Median line – stops at the histogram step
+        # --------------------------------------------------------------
+        med = np.median(arr)  # median of the data set
+        # Find the bin that contains the median
+        bin_idx = np.searchsorted(bin_edges, med, side="right") - 1
+        # Guard against edge‑cases (median exactly on the rightmost edge)
+        bin_idx = np.clip(bin_idx, 0, len(counts) - 1)
+
+        # Height of the histogram at the median (count or density)
+        med_height = counts[bin_idx]
+
+        # Draw a vertical line from y=0 up to the histogram line
+        ax.vlines(
+            med,
+            0,
+            med_height,
+            colors=colors[idx] if colors is not None else None,
+            linestyles="dashed",
+            linewidth=1.5,
+        )
+
+    # ------------------------------------------------------------------
+    # 4️⃣  Tidy up the figure
+    # ------------------------------------------------------------------
+    if title:
+        ax.set_title(title, fontsize=14, pad=12)
+
+    if xlabel:
+        ax.set_xlabel(xlabel, fontsize=12)
+
+    # If the user did not provide a custom ylabel we choose a sensible default.
+    if ylabel is None:
+        ylabel = "Density" if density else "Count"
+    ax.set_ylabel(ylabel, fontsize=12)
+
+    if legend_loc is not None:
+        ax.legend(loc=legend_loc, fontsize=10)
+
+    ax.grid(True, which="both", ls=":", linewidth=0.5, alpha=0.7)
+
+    # Tight layout so labels are not clipped.
+    fig.tight_layout()
+
+    if logmode:
+        ax.xaxis.set_major_formatter(mtick.FuncFormatter(_fmt))
+
+    plt.show()
+
+    return ax
+
+
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def plot_objvalue_evolution(
     json_path: str,
     output_path: str,
     ylabel: str = "Objective value",
     objvalue_multiplicator: float = -1.0,
     with_legend: bool = False,
-    algorithm: Literal["pso", "genetic"] = "genetic",
     precision: int = 4,
 ) -> None:
     """Plots the evolution of the objective value over computational time.
@@ -458,7 +704,6 @@ def plot_objvalue_evolution(
         ylabel (str, optional): Label for the Y-axis. Defaults to "Objective value".
         objvalue_multiplicator (float, optional): Multiplier to apply to the objective value. Defaults to -1.0.
         with_legend (bool, optional): Whether to display the legend. Defaults to False.
-        algorithm (Literal["pso", "genetic"], optional): The optimization algorithm used. Defaults to "genetic".
         precision (int, optional): The number of decimal places to display on the Y-axis. Defaults to 4.
 
     Returns:
@@ -475,42 +720,15 @@ def plot_objvalue_evolution(
     timepoints = tuple(float(key) for key in data)
 
     # Initialize objvalues list
-    match algorithm:
-        case "pso":
-            objvalues = [[] for _ in range(len(list(data.values())[0]))]
-        case "genetic":
-            objvalues = [[]]
-        case _:
-            raise ValueError
+    objvalues = [[]]
 
     # Populate objvalues list
     for values in data.values():
-        match algorithm:
-            case "pso":
-                for value_idx, value in enumerate(values):
-                    if value >= 1_000_000.0:
-                        objvalues[value_idx].append(None)
-                    else:
-                        objvalues[value_idx].append(value * objvalue_multiplicator)
-            case "genetic":
-                objvalues[0].append(objvalue_multiplicator * values[0])
+        objvalues[0].append(objvalue_multiplicator * values[0])
 
     plt.clf()
     plt.cla()
-    match algorithm:
-        case "pso":
-            for objvalue_idx, objvalue_list in enumerate(objvalues):
-                plt.plot(
-                    timepoints,
-                    objvalue_list,
-                    linestyle="-",
-                    marker=None,
-                    label=f"Particle {objvalue_idx + 1}",
-                )
-        case "genetic":
-            plt.plot(
-                timepoints, objvalues[0], linestyle="-", marker=None, label="Best value"
-            )
+    plt.plot(timepoints, objvalues[0], linestyle="-", marker=None, label="Best value")
 
     # Customize the plot
     plt.xlabel("Computational Time [s]")
@@ -571,15 +789,16 @@ def plot_variabilities(
 
     Example:
     --------
-    >>> in_vivo = [(1.0, 3.0, 2.0), (2.0, 4.0, 3.0), (3.0, 5.0, 4.0)]
-    >>> in_silico = [(1.5, 3.5, 2.5), (2.5, 4.5, 3.5), (3.5, 5.5, 4.5)]
-    >>> another_variability = [(1.2, 3.2, 2.2), (2.2, 4.2, 3.2), (3.2, 5.2, 4.2)]
-    >>> variabilities = [in_vivo, in_silico, another_variability]
-    >>> variability_names = ['in_vivo', 'in_silico', 'another_variability']
-    >>> colors = ['blue', 'orange', 'green']
-    >>> plot_variabilities(variabilities, variability_names, colors)
-    >>> plot_variabilities(variabilities, variability_names, colors, plot_mean=False)
-    >>> plot_variabilities(variabilities, variability_names, colors, save_path='plot.png')
+    from cobrak.plotting import plot_variabilities
+    in_vivo = [(1.0, 3.0, 2.0), (2.0, 4.0, 3.0), (3.0, 5.0, 4.0)]
+    in_silico = [(1.5, 3.5, 2.5), (2.5, 4.5, 3.5), (3.5, 5.5, 4.5)]
+    another_variability = [(1.2, 3.2, 2.2), (2.2, 4.2, 3.2), (3.2, 5.2, 4.2)]
+    variabilities = [in_vivo, in_silico, another_variability]
+    variability_names = ['in_vivo', 'in_silico', 'another_variability']
+    colors = ['blue', 'orange', 'green']
+    plot_variabilities(variabilities, variability_names, colors)
+    plot_variabilities(variabilities, variability_names, colors, plot_mean=False)
+    plot_variabilities(variabilities, variability_names, colors, save_path='plot.png')
     """
     # Number of variabilities
     n = len(variabilities[0])
@@ -674,8 +893,7 @@ def scatterplot_with_labels(
     x_labelsize: float = 13,
     y_labelsize: float = 13,
 ) -> plt.Axes:
-    """
-    Generates a scatter plot with error bars and optional point labels.
+    """Generates a scatter plot with error bars and optional point labels.
 
     Can be used standalone ("one-off" plot with plt.show()), or for subplotting by passing an Axes object.
     Optionally saves the figure if save_path is provided.

@@ -2,7 +2,6 @@
 
 from collections.abc import Callable
 
-from joblib import cpu_count
 from numpy import linspace
 from pydantic.dataclasses import dataclass
 from pyomo.environ import (
@@ -16,9 +15,9 @@ from pyomo.environ import (
     maximize,
     minimize,
 )
-from pyomo.opt.base.solvers import SolverFactoryClass
 
 from .constants import OBJECTIVE_VAR_NAME, QUASI_INF
+from .dataclasses import Solver
 
 
 @dataclass
@@ -301,29 +300,21 @@ def get_model_var_names(model: ConcreteModel) -> list[str]:
     return [v.name for v in model.component_objects(Var)]
 
 
-def get_solver(
-    solver_name: str,
-    solver_options: dict[str, float | int | str],
-    solver_attrs: dict[str, float | int | str],
-) -> SolverFactoryClass:
+def get_solver(solver: Solver) -> SolverFactory:
     """Create and configure a solver for the given solver name and options.
 
     This function returns a Pyomo solver using the specified solver name and applies the provided options to it.
 
     Parameters:
-    - solver_name (str): The name of the solver to be used (e.g., 'glpk', 'cbc').
-    - solver_options (dict[str, float | int | str]): A dictionary of solver options where keys are option names and values are the corresponding option values.
-    - solver_attrs (dict[str, float | int | str]): A dictionary of solver attributes where keys are attribute names and values are the corresponding attribute values.
+    - solver: The COBRA-k Solver instance.
 
     Returns:
-    - SolverFactoryClass: The configured solver instance.
+    - SolverFactory: The configured solver instance.
     """
-    if solver_name == "ipopt" and cpu_count() > 16:
-        solver = SolverFactory(solver_name)
-    else:
-        solver = SolverFactory(solver_name)
-    for attr_name, attr_value in solver_attrs.items():
-        setattr(solver, attr_name, attr_value)
-    for option_name, option_value in solver_options.items():
-        solver.options[option_name] = option_value
-    return solver
+    pyomo_solver = SolverFactory(solver.name, **solver.solver_factory_args)
+
+    for attr_name, attr_value in solver.solver_attrs.items():
+        setattr(pyomo_solver, attr_name, attr_value)
+    for option_name, option_value in solver.solver_options.items():
+        pyomo_solver.options[option_name] = option_value
+    return pyomo_solver

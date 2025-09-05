@@ -2,9 +2,9 @@
 import cobra
 import z_add_path  # noqa: F401
 
-from cobrak.brenda_functionality import brenda_select_enzyme_kinetic_data_for_model
+from cobrak.brenda_functionality import brenda_select_enzyme_kinetic_data_for_sbml
 from cobrak.io import ensure_folder_existence, json_write
-from cobrak.sabio_rk_functionality import sabio_select_enzyme_kinetic_data_for_model
+from cobrak.sabio_rk_functionality import sabio_select_enzyme_kinetic_data_for_sbml
 from cobrak.utilities import combine_enzyme_reaction_datasets, parse_external_resources
 from examples.iCH360.A_general_model_constants import (
     kinetic_ignored_enzyme_ids,
@@ -57,9 +57,10 @@ json_write(f"{output_folder}kcats.json", kcat_per_h)
 
 cobra_model.remove_metabolites([cobra_model.metabolites.enzyme_pool])
 cobra_model.remove_reactions([cobra_model.reactions.enzyme_pool_supply])
+cleaned_sbml_path = f"{output_folder}EC_iCH360_unadjusted_kcats_cleaned.xml"
 cobra.io.write_sbml_model(
     cobra_model,
-    f"{output_folder}EC_iCH360_unadjusted_kcats_cleaned.xml",
+    cleaned_sbml_path,
 )
 
 parse_external_resources(
@@ -67,8 +68,8 @@ parse_external_resources(
     brenda_version="2024_1",
 )
 
-brenda_enzyme_reaction_data = brenda_select_enzyme_kinetic_data_for_model(
-    cobra_model=cobra_model,
+brenda_enzyme_reaction_data = brenda_select_enzyme_kinetic_data_for_sbml(
+    sbml_path=cleaned_sbml_path,
     brenda_json_targz_file_path=f"{common_input_folder}brenda_2024_1.json.tar.gz",
     bigg_metabolites_json_path=f"{common_input_folder}bigg_models_metabolites.json",
     brenda_version="2024_1",
@@ -81,8 +82,8 @@ brenda_enzyme_reaction_data = brenda_select_enzyme_kinetic_data_for_model(
     max_taxonomy_level=6,
 )
 
-sabio_enzyme_reaction_data = sabio_select_enzyme_kinetic_data_for_model(
-    cobra_model=cobra_model,
+sabio_enzyme_reaction_data = sabio_select_enzyme_kinetic_data_for_sbml(
+    sbml_path=cleaned_sbml_path,
     sabio_target_folder="examples/common_needed_external_resources",
     bigg_metabolites_json_path=f"{common_input_folder}bigg_models_metabolites.json",
     base_species="Escherichia coli",

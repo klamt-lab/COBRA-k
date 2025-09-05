@@ -585,7 +585,7 @@ def _postprocess_batch(
                 target_cobrak_model,
                 variability_data,
                 error_scenario=correction_config.error_scenario,
-                min_abs_objvalue=var_data_abs_epsilon,
+                abs_epsilon=var_data_abs_epsilon,
             )
 
             active_z_var_changes_sum = 0.0

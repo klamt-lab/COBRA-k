@@ -59653,7 +59653,7 @@
     "reac_enz_separator": "_ENZ_",
     "fwd_suffix": "_fw",
     "rev_suffix": "_bw",
-    "max_conc_sum": 0.3,
+    "max_conc_sum": 0.4,
     "conc_sum_ignore_prefixes": [
         "h2o_",
         "h_"

@@ -43,7 +43,7 @@ def _add_annotation_to_cobra_reaction(
     reac_data: Reaction,
     version: str,
 ) -> None:
-    """Adds annotations from a COBRAk Reaction object to a COBRApy Reaction object.
+    """Adds annotations from a COBRA-k Reaction object to a COBRApy Reaction object.
 
     This function updates the annotation dictionary of the COBRA Reaction object
     with data from the Reaction object, including thermodynamic and kinetic data.
@@ -78,6 +78,9 @@ def _add_annotation_to_cobra_reaction(
         cobra_reaction.annotation[f"cobrak_k_cat_{version}"] = str(
             reac_data.enzyme_reaction_data.k_cat
         )
+        cobra_reaction.annotation[f"cobrak_k_cat_references_{version}"] = str(
+            reac_data.enzyme_reaction_data.k_cat_references
+        )
         cobra_reaction.gene_reaction_rule = " and ".join(
             reac_data.enzyme_reaction_data.identifiers
         )
@@ -85,13 +88,22 @@ def _add_annotation_to_cobra_reaction(
             cobra_reaction.annotation[f"cobrak_k_ms_{version}"] = str(
                 reac_data.enzyme_reaction_data.k_ms
             )
+            cobra_reaction.annotation[f"cobrak_k_m_references_{version}"] = str(
+                reac_data.enzyme_reaction_data.k_m_references
+            )
         if reac_data.enzyme_reaction_data.k_is is not None:
             cobra_reaction.annotation[f"cobrak_k_is_{version}"] = str(
                 reac_data.enzyme_reaction_data.k_is
             )
+            cobra_reaction.annotation[f"cobrak_k_i_references_{version}"] = str(
+                reac_data.enzyme_reaction_data.k_i_references
+            )
         if reac_data.enzyme_reaction_data.k_as is not None:
             cobra_reaction.annotation[f"cobrak_k_as_{version}"] = str(
                 reac_data.enzyme_reaction_data.k_as
+            )
+            cobra_reaction.annotation[f"cobrak_k_a_references_{version}"] = str(
+                reac_data.enzyme_reaction_data.k_a_references
             )
         cobra_reaction.annotation[f"cobrak_special_stoichiometries_{version}"] = str(
             reac_data.enzyme_reaction_data.special_stoichiometries
@@ -818,18 +830,42 @@ def load_annotated_cobrapy_model_as_cobrak_model(
                     identifiers = reaction.gene_reaction_rule.split(" and ")
 
                 k_cat = float(reaction.annotation[f"cobrak_k_cat_{version}"])
+                if f"cobrak_k_cat_references_{version}" in reaction.annotation:
+                    k_cat_references = literal_eval(
+                        reaction.annotation[f"cobrak_k_cat_references_{version}"]
+                    )
+                else:
+                    k_cat_references = None
                 if f"cobrak_k_ms_{version}" in reaction.annotation:
                     k_ms = literal_eval(reaction.annotation[f"cobrak_k_ms_{version}"])
                 else:
                     k_ms = None
+                if f"cobrak_k_m_references_{version}" in reaction.annotation:
+                    k_m_references = literal_eval(
+                        reaction.annotation[f"cobrak_k_m_references_{version}"]
+                    )
+                else:
+                    k_m_references = None
                 if f"cobrak_k_is_{version}" in reaction.annotation:
                     k_is = literal_eval(reaction.annotation[f"cobrak_k_is_{version}"])
                 else:
                     k_is = None
+                if f"cobrak_k_i_references_{version}" in reaction.annotation:
+                    k_i_references = literal_eval(
+                        reaction.annotation[f"cobrak_k_i_references_{version}"]
+                    )
+                else:
+                    k_i_references = None
                 if f"cobrak_k_as_{version}" in reaction.annotation:
                     k_as = literal_eval(reaction.annotation[f"cobrak_k_as_{version}"])
                 else:
                     k_as = None
+                if f"cobrak_k_a_references_{version}" in reaction.annotation:
+                    k_a_references = literal_eval(
+                        reaction.annotation[f"cobrak_k_a_references_{version}"]
+                    )
+                else:
+                    k_a_references = None
                 if f"cobrak_special_stoichiometries_{version}" in reaction.annotation:
                     special_stoichiometries = literal_eval(
                         reaction.annotation[f"cobrak_special_stoichiometries_{version}"]
@@ -839,9 +875,13 @@ def load_annotated_cobrapy_model_as_cobrak_model(
                 enzyme_reaction_data = EnzymeReactionData(
                     identifiers=identifiers,
                     k_cat=k_cat,
+                    k_cat_references=k_cat_references,
                     k_ms=k_ms,
+                    k_m_references=k_m_references,
                     k_is=k_is,
+                    k_i_references=k_i_references,
                     k_as=k_as,
+                    k_a_references=k_a_references,
                     special_stoichiometries=special_stoichiometries,
                 )
             else:
@@ -923,7 +963,7 @@ def load_annotated_sbml_model_as_cobrak_model(
     filepath: str,
 ) -> Model:
     """
-    Load an annotated (and also un-annotated :-) SBML model from a file and convert it into a COBRAk Model.
+    Load an annotated (and also plain un-annotated :-) SBML model from a file and convert it into a COBRAk Model.
 
     This function reads an SBML file containing a metabolic model with specific annotations
     and converts it into a COBRAk Model. It uses the COBRApy library to read the SBML

@@ -231,7 +231,7 @@ def get_nlp_from_cobrak_model(
         if reac_id in ignored_reacs:
             continue
 
-        if reaction.dG0 is not None:
+        if with_gamma and reaction.dG0 is not None:
             model, f_var_name = _add_df_and_dG0_var_for_reaction(
                 model,
                 reac_id,
@@ -273,7 +273,7 @@ def get_nlp_from_cobrak_model(
                     f"bigm_optmdfpathway_1_{reac_id}",
                     Constraint(rule=bigm_optmdfpathway_1_constraint),
                 )
-            elif variability_data[reac_id][1] != 0.0:
+            elif reac_id in variability_data and variability_data[reac_id][1] != 0.0:
                 mdf_constraint = getattr(model, f_var_name) >= getattr(
                     model, MDF_VAR_ID
                 )
@@ -705,7 +705,7 @@ def perform_nlp_reversible_optimization(
         var_data_abs_epsilon,
     )
     nlp_model.obj = get_objective(nlp_model, objective_target, objective_sense)
-    pyomo_solver = get_solver(solver.name, solver.solver_options, solver.solver_attrs)
+    pyomo_solver = get_solver(solver)
 
     if show_variable_count:
         float_vars = [v for v in nlp_model.component_objects(Var) if v.domain == Reals]
@@ -804,7 +804,7 @@ def perform_nlp_irreversible_optimization(
         var_data_abs_epsilon,
     )
     nlp_model.obj = get_objective(nlp_model, objective_target, objective_sense)
-    pyomo_solver = get_solver(solver.name, solver.solver_options, solver.solver_attrs)
+    pyomo_solver = get_solver(solver)
     results = pyomo_solver.solve(nlp_model, tee=verbose, **solver.solve_extra_options)
     mmtfba_dict = get_pyomo_solution_as_dict(nlp_model)
     return add_statuses_to_optimziation_dict(mmtfba_dict, results)

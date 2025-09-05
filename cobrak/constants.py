@@ -49,8 +49,8 @@ EC_PMGS: dict[str, float] = {
 """pMg values (unitless) for E. coli model compartments used here"""
 
 EC_POTENTIAL_DIFFERENCES: dict[tuple[str, str], float] = {
-    ("c", "p"): 0.15,  # Source: eQuilibrator standard
-    ("p", "e"): 0.15,
+    ("c", "p"): -0.15,  # Source: eQuilibrator standard
+    ("p", "e"): -0.15,
 }
 """Potential differences (in V) for E. coli model compartments used here"""
 
