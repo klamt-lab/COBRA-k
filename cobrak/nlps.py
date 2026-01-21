@@ -624,8 +624,10 @@ def get_nlp_from_cobrak_model(
                 cobrak_model.include_mets_in_prot_pool
                 and cobrak_model.metabolites[met_id].molar_mass
             ):
-                conc_sum_expr += cobrak_model.metabolites[met_id].molar_mass * exp(
-                    getattr(model, met_sum_id)
+                conc_sum_expr += (
+                    (1 / cobrak_model.cell_density)
+                    * cobrak_model.metabolites[met_id].molar_mass
+                    * exp(getattr(model, met_sum_id))
                 )
             else:
                 conc_sum_expr += exp(getattr(model, met_sum_id))
@@ -633,9 +635,18 @@ def get_nlp_from_cobrak_model(
         setattr(
             model,
             "met_sum_var",
-            Var(within=Reals, bounds=(1e-5, cobrak_model.max_conc_sum)),
+            Var(
+                within=Reals,
+                bounds=(1e-5, cobrak_model.max_conc_sum)
+                if not cobrak_model.include_mets_in_prot_pool
+                else (1e-5, 1e3),
+            ),
         )
-
+        setattr(
+            model,
+            "met_sum_constraint",
+            Constraint(rule=conc_sum_expr <= getattr(model, "met_sum_var")),
+        )
         if cobrak_model.include_mets_in_prot_pool:
             setattr(
                 model,
@@ -645,12 +656,6 @@ def get_nlp_from_cobrak_model(
                     + getattr(model, "met_sum_var")
                     <= cobrak_model.max_prot_pool
                 ),
-            )
-        else:
-            setattr(
-                model,
-                "met_sum_constraint",
-                Constraint(rule=conc_sum_expr <= getattr(model, "met_sum_var")),
             )
     ################
 

@@ -39,13 +39,27 @@ from cobrak.standard_solvers import BARON, IPOPT, SCIP  # noqa: F401
 side_reac_id = "Glycolysis"
 main_reac_ids = ["Respiration", "Overflow"]
 # Let's add some references to check that they are saved and loaded without isues to/from an SBML
-toy_model.reactions["Respiration"].enzyme_reaction_data.k_cat_references = [ParameterReference()]
-toy_model.reactions["Respiration"].enzyme_reaction_data.k_a_references["ATP"] = [ParameterReference()]
-toy_model.reactions["Respiration"].enzyme_reaction_data.k_i_references["ATP"] = [ParameterReference()]
-toy_model.reactions["Respiration"].enzyme_reaction_data.k_m_references["ATP"] = [ParameterReference()]
-toy_model.reactions["Respiration"].enzyme_reaction_data.hill_coefficient_references.iota["ATP"] = [ParameterReference()]
-toy_model.reactions["Respiration"].enzyme_reaction_data.hill_coefficient_references.kappa["ATP"] = [ParameterReference()]
-toy_model.reactions["Respiration"].enzyme_reaction_data.hill_coefficient_references.alpha["ATP"] = [ParameterReference()]
+toy_model.reactions["Respiration"].enzyme_reaction_data.k_cat_references = [
+    ParameterReference()
+]
+toy_model.reactions["Respiration"].enzyme_reaction_data.k_a_references["ATP"] = [
+    ParameterReference()
+]
+toy_model.reactions["Respiration"].enzyme_reaction_data.k_i_references["ATP"] = [
+    ParameterReference()
+]
+toy_model.reactions["Respiration"].enzyme_reaction_data.k_m_references["ATP"] = [
+    ParameterReference()
+]
+toy_model.reactions[
+    "Respiration"
+].enzyme_reaction_data.hill_coefficient_references.iota["ATP"] = [ParameterReference()]
+toy_model.reactions[
+    "Respiration"
+].enzyme_reaction_data.hill_coefficient_references.kappa["ATP"] = [ParameterReference()]
+toy_model.reactions[
+    "Respiration"
+].enzyme_reaction_data.hill_coefficient_references.alpha["ATP"] = [ParameterReference()]
 save_cobrak_model_as_annotated_sbml_model(
     toy_model, filepath="examples/toymodel/sbml_model.xml"
 )

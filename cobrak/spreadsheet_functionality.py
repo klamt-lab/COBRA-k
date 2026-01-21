@@ -179,6 +179,31 @@ def sum_concs(
     return concsum
 
 
+@validate_call()
+def sum_masses(
+    result: dict[str, float],
+    metabolites: dict[str, Metabolite],
+    conc_sum_include_suffixes: list[str],
+    conc_sum_ignore_prefixes: list[str],
+    cell_density: float,
+) -> float:
+    """Returns the mass of all metabolites in the result."""
+    masssum = 0.0
+    for key, value in result.items():
+        if key.startswith(LNCONC_VAR_PREFIX):
+            met_id = key[len(LNCONC_VAR_PREFIX) :]
+            if any(met_id.startswith(prefix) for prefix in conc_sum_ignore_prefixes):
+                continue
+            if not any(met_id.endswith(suffix) for suffix in conc_sum_include_suffixes):
+                continue
+            if met_id not in metabolites:
+                continue
+            if not metabolites[met_id].molar_mass:
+                continue
+            masssum += (1 / cell_density) * exp(value) * metabolites[met_id].molar_mass
+    return masssum
+
+
 @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def _create_xlsx_from_datadicts(
     path: str,
@@ -642,7 +667,15 @@ def create_cobrak_spreadsheet(
                 ),
             ],
         }
-        statline += 1
+        stats_cells |= {
+            f"{statline + 1}": [
+                SpreadsheetCell(
+                    "Used metabolite mass pool (for metabolites with given mass) [g⋅gDW⁻¹]",
+                    font=FONT_BOLD,
+                ),
+            ],
+        }
+        statline += 2
 
     if has_any_df:
         stats_cells |= {
@@ -792,6 +825,7 @@ def create_cobrak_spreadsheet(
         ]
 
     # Optimization data
+    mass_sums = {}
     for current_dataset_i, (opt_dataset_name, opt_dataset) in enumerate(
         optimization_datasets.items()
     ):
@@ -824,10 +858,22 @@ def create_cobrak_spreadsheet(
                         cobrak_model.conc_sum_ignore_prefixes,
                     )
                 )
-                statline += 1
+                mass_sums[opt_dataset_name] = sum_masses(
+                    opt_dataset.data,
+                    cobrak_model.metabolites,
+                    cobrak_model.conc_sum_include_suffixes,
+                    cobrak_model.conc_sum_ignore_prefixes,
+                    cobrak_model.cell_density,
+                )
+                stats_cells[f"{statline + 1}"].append(
+                    mass_sums[opt_dataset_name],
+                )
+                statline += 2
             else:
+                mass_sums[opt_dataset_name] = None
                 stats_cells[f"{statline}"].append(_get_empty_cell())
-                statline += 1
+                stats_cells[f"{statline + 1}"].append(_get_empty_cell())
+                statline += 2
 
         if opt_dataset.with_df:
             df_stats, _, _, _, _, _ = get_df_and_efficiency_factors_sorted_lists(
@@ -1384,7 +1430,8 @@ def create_cobrak_spreadsheet(
     met_titles: list[Title] = [
         Title("ID", WIDTH_DEFAULT),
         Title("Min set concentration [mmol⋅gDW⁻¹⋅h⁻¹)]", WIDTH_DEFAULT),
-        Title("Max set concentration [mmolgDW⁻¹⋅h⁻¹)]", WIDTH_DEFAULT),
+        Title("Max set concentration [mmol⋅gDW⁻¹⋅h⁻¹)]", WIDTH_DEFAULT),
+        Title("Molar mass [g⋅M⁻¹]", WIDTH_DEFAULT),
         Title("Annotation", WIDTH_DEFAULT),
     ]
     met_cells: dict[str, list[str | float | int | bool | None | SpreadsheetCell]] = {
@@ -1399,6 +1446,8 @@ def create_cobrak_spreadsheet(
         met_cells[met_id].append(exp(met.log_min_conc))
         # Max conc
         met_cells[met_id].append(exp(met.log_max_conc))
+        # Molar mass
+        met_cells[met_id].append(met.molar_mass)
         # Annotation
         met_cells[met_id].append(str(met.annotation))
 
@@ -1426,11 +1475,11 @@ def create_cobrak_spreadsheet(
             )
         missing_met_var_ids = set(all_met_var_ids) - set(var_dataset.data.keys())
         for missing_met_var_id in missing_met_var_ids:
-            met_cells[_get_met_id_from_met_var_id(missing_met_var_id)].append(
-                _get_empty_cell()
-            )
-            met_cells[_get_met_id_from_met_var_id(missing_met_var_id)].append(
-                _get_empty_cell()
+            met_cells[_get_met_id_from_met_var_id(missing_met_var_id)].extend(
+                (
+                    _get_empty_cell(),
+                    _get_empty_cell(),
+                )
             )
 
     # Optimization data
@@ -1443,6 +1492,13 @@ def create_cobrak_spreadsheet(
                 Title("Production [mmol⋅gDW⁻¹⋅h⁻¹]", WIDTH_DEFAULT),
             )
         )
+        if cobrak_model.include_mets_in_prot_pool and mass_sums[opt_dataset_name]:
+            met_titles.extend(
+                (
+                    Title("Mass usage [g⋅gDW⁻¹]", WIDTH_DEFAULT),
+                    Title("Mass pool %", WIDTH_DEFAULT),
+                )
+            )
         opt_met_ids = set(all_met_var_ids) & set(opt_dataset.data.keys())
         for met_var_id in opt_met_ids:
             conc = exp(opt_dataset.data[met_var_id])
@@ -1450,15 +1506,47 @@ def create_cobrak_spreadsheet(
                 cobrak_model, _get_met_id_from_met_var_id(met_var_id), opt_dataset.data
             )
             bg_color = _get_optimization_bg_color(consumption)
-            met_cells[_get_met_id_from_met_var_id(met_var_id)].append(
-                SpreadsheetCell(conc, bg_color=bg_color, border=BORDER_BLACK_LEFT)
+            met_cells[_get_met_id_from_met_var_id(met_var_id)].extend(
+                (
+                    SpreadsheetCell(conc, bg_color=bg_color, border=BORDER_BLACK_LEFT),
+                    SpreadsheetCell(consumption, bg_color=bg_color),
+                    SpreadsheetCell(production, bg_color=bg_color),
+                )
             )
-            met_cells[_get_met_id_from_met_var_id(met_var_id)].append(
-                SpreadsheetCell(consumption, bg_color=bg_color)
-            )
-            met_cells[_get_met_id_from_met_var_id(met_var_id)].append(
-                SpreadsheetCell(production, bg_color=bg_color)
-            )
+            if cobrak_model.include_mets_in_prot_pool and mass_sums[opt_dataset_name]:
+                met_id = _get_met_id_from_met_var_id(met_var_id)
+                eligible_metabolite = (
+                    True if cobrak_model.metabolites[met_id].molar_mass else False
+                )
+                if any(
+                    met_id.startswith(prefix)
+                    for prefix in cobrak_model.conc_sum_ignore_prefixes
+                ):
+                    eligible_metabolite = False
+                if not any(
+                    met_id.endswith(suffix)
+                    for suffix in cobrak_model.conc_sum_include_suffixes
+                ):
+                    eligible_metabolite = False
+                if eligible_metabolite:
+                    mass = (
+                        (1 / cobrak_model.cell_density)
+                        * cobrak_model.metabolites[met_id].molar_mass
+                        * exp(opt_dataset.data[met_var_id])
+                    )
+                    met_cells[met_id].append(SpreadsheetCell(mass, bg_color=bg_color))
+                    met_cells[met_id].append(
+                        SpreadsheetCell(
+                            100 * mass / mass_sums[opt_dataset_name], bg_color=bg_color
+                        )
+                    )
+                else:
+                    met_cells[met_id].extend(
+                        (
+                            _get_empty_cell(),
+                            _get_empty_cell(),
+                        )
+                    )
         missing_met_ids = set(all_met_var_ids) - set(opt_dataset.data.keys())
         for missing_met_id in missing_met_ids:
             for _ in range(3):

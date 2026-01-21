@@ -225,8 +225,10 @@ def _add_conc_sum_constraints(
             cobrak_model.include_mets_in_prot_pool
             and cobrak_model.metabolites[met_id].molar_mass
         ):
-            conc_sum_expr += cobrak_model.metabolites[met_id].molar_mass * getattr(
-                model, f"exp_{met_sum_id}"
+            conc_sum_expr += (
+                (1 / cobrak_model.cell_density)
+                * cobrak_model.metabolites[met_id].molar_mass
+                * getattr(model, f"exp_{met_sum_id}")
             )
         else:
             conc_sum_expr += getattr(model, f"exp_{met_sum_id}")

@@ -17,7 +17,7 @@ from pyomo.environ import Binary, Constraint, Reals, Var
 from .constants import ALL_OK_KEY, BIG_M, OBJECTIVE_VAR_NAME, Z_VAR_PREFIX
 from .dataclasses import CorrectionConfig, ExtraLinearConstraint, Model, Solver
 from .genetic import COBRAKGENETIC
-from .io import json_load, json_write
+from .io import ensure_folder_existence, json_load, json_write, json_zip_write
 from .lps import (
     get_lp_from_cobrak_model,
     perform_lp_optimization,
@@ -39,6 +39,7 @@ from .utilities import (
     get_pyomo_solution_as_dict,
     get_stoichiometrically_coupled_reactions,
     is_objsense_maximization,
+    sort_dict_keys,
     split_list,
     standardize_folder,
 )
@@ -549,231 +550,214 @@ def _postprocess_batch(
         if onlytested and (not any(onlytested in reac_id for reac_id in target_couple)):
             continue
 
-        for at_maximum in (False,):
-            target_cobrak_model = deepcopy(cobrak_model)
-            variability_data = deepcopy(original_var_data)
-            if target_type == "deac":
-                print(
-                    f"DEACTIVATING {target_couple} {at_maximum}, max changes: {max_allowed_changes}"
-                )
-                for reac_id in target_couple:
-                    del target_cobrak_model.reactions[reac_id]
-                target_cobrak_model = delete_orphaned_metabolites_and_enzymes(
-                    target_cobrak_model
-                )
-            else:
-                print(
-                    f"ACTIVATING {target_couple} {at_maximum}, max changes: {max_allowed_changes}"
-                )
-                variability_data[target_couple[0]] = (
-                    1e-5,
-                    variability_data[target_couple[0]][1],
-                )
-
-            baselp = get_lp_from_cobrak_model(
-                cobrak_model=target_cobrak_model,
-                with_enzyme_constraints=True,
-                with_thermodynamic_constraints=True,
-                with_loop_constraints=False,
-                with_flux_sum_var=False,
-                add_extra_linear_constraints=True,
-                correction_config=correction_config,
-                ignore_nonlinear_terms=ignore_nonlinear_extra_terms_in_ectfbas,
+        target_cobrak_model = deepcopy(cobrak_model)
+        variability_data = deepcopy(original_var_data)
+        if target_type == "deac":
+            print(f"DEACTIVATING {target_couple} max changes: {max_allowed_changes}")
+            for reac_id in target_couple:
+                del target_cobrak_model.reactions[reac_id]
+            target_cobrak_model = delete_orphaned_metabolites_and_enzymes(
+                target_cobrak_model
             )
-            baselp = apply_variability_dict(
-                baselp,
-                target_cobrak_model,
-                variability_data,
-                error_scenario=correction_config.error_scenario,
-                abs_epsilon=var_data_abs_epsilon,
+        else:
+            print(f"ACTIVATING {target_couple} max changes: {max_allowed_changes}")
+            variability_data[target_couple[0]] = (
+                1e-5,
+                variability_data[target_couple[0]][1],
             )
 
-            active_z_var_changes_sum = 0.0
-            for active_reac in active_reacs:
-                if (
-                    active_reac in target_couple
-                    or target_cobrak_model.reactions[active_reac].dG0 is None
-                ):
-                    continue
-                z_var_id = f"{Z_VAR_PREFIX}{active_reac}"
-                z_var_change_id = f"{z_var_id}_change"
-                setattr(baselp, z_var_change_id, Var(within=Binary))
-                setattr(
-                    baselp,
-                    f"fix_{z_var_id}",
-                    Constraint(
-                        expr=getattr(baselp, z_var_id)
-                        == 1.0 - getattr(baselp, z_var_change_id)
-                    ),
-                )
-                active_z_var_changes_sum += getattr(baselp, z_var_change_id)
-            max_z_var_changes_id = "max_active_z_var_changes"
+        baselp = get_lp_from_cobrak_model(
+            cobrak_model=target_cobrak_model,
+            with_enzyme_constraints=True,
+            with_thermodynamic_constraints=True,
+            with_loop_constraints=False,
+            with_flux_sum_var=False,
+            add_extra_linear_constraints=True,
+            correction_config=correction_config,
+            ignore_nonlinear_terms=ignore_nonlinear_extra_terms_in_ectfbas,
+        )
+        baselp = apply_variability_dict(
+            baselp,
+            target_cobrak_model,
+            variability_data,
+            error_scenario=correction_config.error_scenario,
+            abs_epsilon=var_data_abs_epsilon,
+        )
+
+        active_z_var_changes_sum = 0.0
+        for active_reac in active_reacs:
+            if (
+                active_reac in target_couple
+                or target_cobrak_model.reactions[active_reac].dG0 is None
+            ):
+                continue
+            z_var_id = f"{Z_VAR_PREFIX}{active_reac}"
+            z_var_change_id = f"{z_var_id}_change"
+            setattr(baselp, z_var_change_id, Var(within=Binary))
             setattr(
                 baselp,
-                max_z_var_changes_id,
-                Var(within=Reals),
-            )
-            getattr(baselp, max_z_var_changes_id).lb = 0.0
-            getattr(baselp, max_z_var_changes_id).ub = max_allowed_changes
-            setattr(
-                baselp,
-                "active_original_z_vars_sum",
+                f"fix_{z_var_id}",
                 Constraint(
-                    expr=active_z_var_changes_sum
-                    <= getattr(baselp, max_z_var_changes_id)
+                    expr=getattr(baselp, z_var_id)
+                    == 1.0 - getattr(baselp, z_var_change_id)
+                ),
+            )
+            active_z_var_changes_sum += getattr(baselp, z_var_change_id)
+        max_z_var_changes_id = "max_active_z_var_changes"
+        setattr(
+            baselp,
+            max_z_var_changes_id,
+            Var(within=Reals),
+        )
+        getattr(baselp, max_z_var_changes_id).lb = 0.0
+        getattr(baselp, max_z_var_changes_id).ub = max_allowed_changes
+        setattr(
+            baselp,
+            "active_original_z_vars_sum",
+            Constraint(
+                expr=active_z_var_changes_sum <= getattr(baselp, max_z_var_changes_id)
+            ),
+        )
+
+        baselp = add_objective_to_model(
+            baselp,
+            objective_target,
+            objective_sense,
+            "ORIGINAL_OBJ",
+            "ORIGINAL_OBJ_VAR",
+        )
+        results = pyomo_lp_solver.solve(
+            baselp, tee=verbose, **lp_solver.solve_extra_options
+        )
+        lp_resultdict = add_statuses_to_optimziation_dict(
+            get_pyomo_solution_as_dict(baselp), results
+        )
+        if not lp_resultdict[ALL_OK_KEY]:
+            continue
+        new_active_reacs = get_active_reacs_from_optimization_dict(
+            target_cobrak_model, lp_resultdict
+        )
+        getattr(baselp, "ORIGINAL_OBJ").deactivate()
+
+        for active_reac in new_active_reacs:
+            if (
+                active_reac in target_couple
+                or target_cobrak_model.reactions[active_reac].dG0 is None
+            ):
+                continue
+            if active_reac in active_reacs:
+                continue
+            getattr(baselp, f"{Z_VAR_PREFIX}{active_reac}").lb = 1.0
+
+        EXTRAZ_PREFIX = "extra_z_var_"
+        extraz_names: list[str] = []
+        for reac_couple in reac_couples:
+            if target_couple == reac_couple:
+                continue
+            if reac_couple[0] in active_reacs:
+                continue
+            if all(
+                target_cobrak_model.reactions[reac_id].enzyme_reaction_data is None
+                and target_cobrak_model.reactions[reac_id].dG0 is None
+                for reac_id in reac_couple
+            ):
+                continue
+            if variability_data[reac_couple[0]][1] == 0.0:
+                continue
+
+            extraz_names.append(f"{EXTRAZ_PREFIX}_of_couple_of_{reac_couple[0]}")
+            setattr(
+                baselp,
+                extraz_names[-1],
+                Var(
+                    within=Binary,
+                ),
+            )
+            setattr(
+                baselp,
+                f"{EXTRAZ_PREFIX}_constraint_of_couple_of_{reac_couple[0]}",
+                Constraint(
+                    expr=getattr(baselp, reac_couple[0])
+                    <= BIG_M * getattr(baselp, extraz_names[-1])
+                ),
+            )
+            couple_reacs_with_dG0 = [
+                reac_id
+                for reac_id in target_cobrak_model.reactions
+                if target_cobrak_model.reactions[reac_id].dG0 is not None
+            ]
+            if len(couple_reacs_with_dG0) == 0:
+                continue
+            setattr(
+                baselp,
+                f"{EXTRAZ_PREFIX}_z_var_constraint_of_couple_of_{reac_couple[0]}",
+                Constraint(
+                    expr=getattr(baselp, f"{Z_VAR_PREFIX}{couple_reacs_with_dG0[0]}")
+                    >= getattr(baselp, extraz_names[-1])
                 ),
             )
 
+        extraz_objective = dict.fromkeys(extraz_names, 1.0)
+
+        for extraz_objective_sense in (-1, +1):
             baselp = add_objective_to_model(
                 baselp,
-                objective_target,
-                objective_sense,
-                "ORIGINAL_OBJ",
-                "ORIGINAL_OBJ_VAR",
+                extraz_objective,
+                extraz_objective_sense,
+                f"postprocess_obj_{extraz_objective_sense}",
+                f"postprocess_obj_var_{extraz_objective_sense}",
             )
-            results = pyomo_lp_solver.solve(
-                baselp, tee=verbose, **lp_solver.solve_extra_options
-            )
-            lp_resultdict = add_statuses_to_optimziation_dict(
-                get_pyomo_solution_as_dict(baselp), results
-            )
+            getattr(baselp, f"postprocess_obj_{extraz_objective_sense}").deactivate()
+
+        for extraz_objective_sense in (-1, +1):
+            getattr(baselp, f"postprocess_obj_{extraz_objective_sense}").activate()
+            try:
+                results = pyomo_lp_solver.solve(
+                    baselp, tee=verbose, **lp_solver.solve_extra_options
+                )
+                lp_resultdict = add_statuses_to_optimziation_dict(
+                    get_pyomo_solution_as_dict(baselp), results
+                )
+            except (ApplicationError, AttributeError, ValueError):
+                lp_resultdict = {ALL_OK_KEY: False}
+            getattr(baselp, f"postprocess_obj_{extraz_objective_sense}").deactivate()
             if not lp_resultdict[ALL_OK_KEY]:
                 continue
-            new_active_reacs = get_active_reacs_from_optimization_dict(
-                target_cobrak_model, lp_resultdict
-            )
-            getattr(baselp, "ORIGINAL_OBJ").deactivate()
-            if at_maximum:
-                getattr(baselp, "ORIGINAL_OBJ_VAR").lb = (
-                    getattr(baselp, "ORIGINAL_OBJ_VAR").value - 1e-6
-                )
 
-            for active_reac in new_active_reacs:
-                if (
-                    active_reac in target_couple
-                    or target_cobrak_model.reactions[active_reac].dG0 is None
-                ):
-                    continue
-                if active_reac in active_reacs:
-                    continue
-                getattr(baselp, f"{Z_VAR_PREFIX}{active_reac}").lb = 1.0
-
-            EXTRAZ_PREFIX = "extra_z_var_"
-            extraz_names: list[str] = []
-            for reac_couple in reac_couples:
-                if target_couple == reac_couple:
-                    continue
-                if reac_couple[0] in active_reacs:
-                    continue
-                if all(
-                    target_cobrak_model.reactions[reac_id].enzyme_reaction_data is None
-                    and target_cobrak_model.reactions[reac_id].dG0 is None
-                    for reac_id in reac_couple
-                ):
-                    continue
-                if variability_data[reac_couple[0]][1] == 0.0:
-                    continue
-
-                extraz_names.append(f"{EXTRAZ_PREFIX}_of_couple_of_{reac_couple[0]}")
-                setattr(
-                    baselp,
-                    extraz_names[-1],
-                    Var(
-                        within=Binary,
-                    ),
-                )
-                setattr(
-                    baselp,
-                    f"{EXTRAZ_PREFIX}_constraint_of_couple_of_{reac_couple[0]}",
-                    Constraint(
-                        expr=getattr(baselp, reac_couple[0])
-                        <= BIG_M * getattr(baselp, extraz_names[-1])
-                    ),
-                )
-                couple_reacs_with_dG0 = [
-                    reac_id
-                    for reac_id in target_cobrak_model.reactions
-                    if target_cobrak_model.reactions[reac_id].dG0 is not None
-                ]
-                if len(couple_reacs_with_dG0) == 0:
-                    continue
-                setattr(
-                    baselp,
-                    f"{EXTRAZ_PREFIX}_z_var_constraint_of_couple_of_{reac_couple[0]}",
-                    Constraint(
-                        expr=getattr(
-                            baselp, f"{Z_VAR_PREFIX}{couple_reacs_with_dG0[0]}"
-                        )
-                        >= getattr(baselp, extraz_names[-1])
-                    ),
-                )
-
-            extraz_objective = dict.fromkeys(extraz_names, 1.0)
-
-            for extraz_objective_sense in (-1, +1):
-                baselp = add_objective_to_model(
-                    baselp,
-                    extraz_objective,
-                    extraz_objective_sense,
-                    f"postprocess_obj_{extraz_objective_sense}",
-                    f"postprocess_obj_var_{extraz_objective_sense}",
-                )
-                getattr(
-                    baselp, f"postprocess_obj_{extraz_objective_sense}"
-                ).deactivate()
-
-            for extraz_objective_sense in (-1, +1):
-                getattr(baselp, f"postprocess_obj_{extraz_objective_sense}").activate()
-                try:
-                    results = pyomo_lp_solver.solve(
-                        baselp, tee=verbose, **lp_solver.solve_extra_options
+            try:
+                nlp_resultdict = (
+                    perform_nlp_irreversible_optimization_with_active_reacs_only(
+                        cobrak_model=target_cobrak_model,
+                        objective_target=objective_target,
+                        objective_sense=objective_sense,
+                        optimization_dict=deepcopy(lp_resultdict),
+                        variability_dict=deepcopy(variability_data),
+                        with_kappa=with_kappa,
+                        with_gamma=with_gamma,
+                        with_iota=with_iota,
+                        with_alpha=with_alpha,
+                        solver=nlp_solver,
+                        correction_config=correction_config,
+                        strict_mode=nlp_strict_mode,
+                        single_strict_reacs=nlp_single_strict_reacs,
                     )
-                    lp_resultdict = add_statuses_to_optimziation_dict(
-                        get_pyomo_solution_as_dict(baselp), results
+                )
+                if nlp_resultdict[ALL_OK_KEY]:
+                    feasible_switches.append(
+                        [
+                            target_couple,
+                            tuple(
+                                extraz_var
+                                for extraz_var, value in lp_resultdict.items()
+                                if extraz_var.startswith(EXTRAZ_PREFIX) and value > 0.1
+                            ),
+                            nlp_resultdict,
+                            f"{target_type}{False}",
+                            max_allowed_changes,
+                        ],
                     )
-                except (ApplicationError, AttributeError, ValueError):
-                    lp_resultdict = {ALL_OK_KEY: False}
-                getattr(
-                    baselp, f"postprocess_obj_{extraz_objective_sense}"
-                ).deactivate()
-                if not lp_resultdict[ALL_OK_KEY]:
-                    continue
-
-                try:
-                    nlp_resultdict = (
-                        perform_nlp_irreversible_optimization_with_active_reacs_only(
-                            cobrak_model=target_cobrak_model,
-                            objective_target=objective_target,
-                            objective_sense=objective_sense,
-                            optimization_dict=deepcopy(lp_resultdict),
-                            variability_dict=deepcopy(variability_data),
-                            with_kappa=with_kappa,
-                            with_gamma=with_gamma,
-                            with_iota=with_iota,
-                            with_alpha=with_alpha,
-                            solver=nlp_solver,
-                            correction_config=correction_config,
-                            strict_mode=nlp_strict_mode,
-                            single_strict_reacs=nlp_single_strict_reacs,
-                        )
-                    )
-                    if nlp_resultdict[ALL_OK_KEY]:
-                        feasible_switches.append(
-                            [
-                                target_couple,
-                                tuple(
-                                    extraz_var
-                                    for extraz_var, value in lp_resultdict.items()
-                                    if extraz_var.startswith(EXTRAZ_PREFIX)
-                                    and value > 0.1
-                                ),
-                                nlp_resultdict,
-                                f"{target_type}{at_maximum}",
-                                max_allowed_changes,
-                            ],
-                        )
-                except (ApplicationError, AttributeError, ValueError):
-                    pass
+            except (ApplicationError, AttributeError, ValueError):
+                pass
     return feasible_switches
 
 
@@ -795,6 +779,7 @@ def postprocess(
     correction_config: CorrectionConfig = CorrectionConfig(),
     onlytested: str = "",
     ignore_nonlinear_extra_terms_in_ectfbas: bool = True,
+    max_allowed_changes: tuple[int, ...] = (0, 5),
 ) -> tuple[float, list[float | int]]:
     """Postprocesses the optimization results to find feasible switches.
 
@@ -817,7 +802,10 @@ def postprocess(
         correction_config (CorrectionConfig, optional): Configuration for corrections during optimization. Defaults to CorrectionConfig().
         onlytested (str, optional): Specific reactions to test during postprocessing. Defaults to "".
         ignore_nonlinear_extra_terms_in_ectfbas: (bool, optional): Whether or not non-linear watches/constraints shall be ignored in ecTFBAs.
-
+        max_allowed_changes: (tuple[int, ...]): The numbers of maximally allowed off-reaction changes (e.g. if reaction A is deactivated, how many other reactions
+            may be activated or inactivated in a resulting solution?). Defaults to (0, 5), i.e. either no (0) or 5 changes are allowed. Note: The number of
+            calculations run by this method increases the longer the length of max_allowed_changes is. E.g., with (0, 5), *all* tested reactions are tested four times:
+            1) activation with 0 changes, 2) activation with 5 changes, 3) inactivtion with 0 changes, 4 inactivation with 5 changes.
     Returns:
         tuple[float, list[float | int]]: Best result and a list of feasible switches.
     """
@@ -872,9 +860,9 @@ def postprocess(
         and variability_data[reac_couple[0]][1] > 0.0
     ]
     targets = []
-    for max_target_num in (0, 5):
-        targets += [("deac", x, max_target_num) for x in active_reac_couples]
-        targets += [("ac", x, max_target_num) for x in inactive_reac_couples]
+    for max_allowed_changes_num in max_allowed_changes:
+        targets += [("deac", x, max_allowed_changes_num) for x in active_reac_couples]
+        targets += [("ac", x, max_allowed_changes_num) for x in inactive_reac_couples]
     all_feasible_switches_metalist = Parallel(n_jobs=-1, verbose=10)(
         delayed(_postprocess_batch)(
             reac_couples,
@@ -1054,6 +1042,10 @@ def perform_nlp_evolutionary_optimization(
     pop_size: int | None = None,
     working_results: list[dict[str, float]] = [],
     ignore_nonlinear_extra_terms_in_ectfbas: bool = True,
+    run_postprocessing: bool = False,
+    postprocessing_max_allowed_changes: tuple[int, ...] = (0, 5),
+    postprocessing_json_results_path: str = "",
+    postprocessing_max_rounds: int = 1e6,
 ) -> dict[float, list[dict[str, float]]]:
     """Performs NLP evolutionary optimization on the given COBRA-k model.
 
@@ -1219,4 +1211,62 @@ def perform_nlp_evolutionary_optimization(
         nlp_single_strict_reacs=nlp_single_strict_reacs,
     )
 
-    return problem.optimize()
+    evolution_result = problem.optimize()
+
+    if run_postprocessing:
+        evolution_best_result = evolution_result[list(evolution_result.keys())[0]][0]
+        if postprocessing_json_results_path:
+            postprocessing_json_results_path = standardize_folder(
+                postprocessing_json_results_path
+            )
+            ensure_folder_existence(postprocessing_json_results_path)
+            json_zip_write(
+                f"{postprocessing_json_results_path}pre_postprocessing_evolution_result.json",
+                evolution_result,
+            )
+            json_write(
+                f"{postprocessing_json_results_path}pre_postprocessing_best_result.json",
+                evolution_best_result,
+            )
+        last_result = evolution_best_result
+        postprocess_round = 0
+        while postprocess_round < postprocessing_max_rounds:
+            postprocess_results, best_postprocess_result = postprocess(
+                cobrak_model=cobrak_model,
+                opt_dict=last_result,
+                objective_target=objective_target,
+                objective_sense=objective_sense,
+                variability_data=variability_dict,
+                lp_solver=lp_solver,
+                nlp_solver=nlp_solver,
+                with_kappa=with_kappa,
+                with_gamma=with_gamma,
+                with_iota=with_iota,
+                with_alpha=with_alpha,
+                nlp_strict_mode=nlp_strict_mode,
+                nlp_single_strict_reacs=nlp_single_strict_reacs,
+                ignore_nonlinear_extra_terms_in_ectfbas=ignore_nonlinear_extra_terms_in_ectfbas,
+                max_allowed_changes=postprocessing_max_allowed_changes,
+            )
+
+            for nlp_result in [x[2] for x in postprocess_results]:
+                obj_value = nlp_result[OBJECTIVE_VAR_NAME]
+                if str(obj_value) not in evolution_result:
+                    evolution_result[obj_value] = []
+                evolution_result[obj_value].append(nlp_result)
+            if postprocessing_json_results_path:
+                json_zip_write(
+                    f"{postprocessing_json_results_path}postprocess_round{postprocess_round}_full_result.json",
+                    postprocess_results,
+                )
+                json_write(
+                    f"{postprocessing_json_results_path}postprocess_round{postprocess_round}_best_result.json",
+                    best_postprocess_result,
+                )
+            if len(postprocess_results) == 0:
+                break
+            last_result = best_postprocess_result
+            postprocess_round += 1
+        evolution_result = sort_dict_keys(evolution_result, reverse=True)
+
+    return evolution_result
