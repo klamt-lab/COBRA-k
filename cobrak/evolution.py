@@ -17,7 +17,7 @@ from pyomo.environ import Binary, Constraint, Reals, Var
 from .constants import ALL_OK_KEY, BIG_M, OBJECTIVE_VAR_NAME, Z_VAR_PREFIX
 from .dataclasses import CorrectionConfig, ExtraLinearConstraint, Model, Solver
 from .genetic import COBRAKGENETIC
-from .io import ensure_folder_existence, json_load, json_write, json_zip_write
+from .io import json_load, json_write
 from .lps import (
     get_lp_from_cobrak_model,
     perform_lp_optimization,
@@ -39,7 +39,6 @@ from .utilities import (
     get_pyomo_solution_as_dict,
     get_stoichiometrically_coupled_reactions,
     is_objsense_maximization,
-    sort_dict_keys,
     split_list,
     standardize_folder,
 )
@@ -1019,7 +1018,7 @@ def perform_nlp_evolutionary_optimization(
     cobrak_model: Model,
     objective_target: str | dict[str, float],
     objective_sense: int,
-    variability_dict: dict[str, tuple[float, float]] = {},
+    variability_dict: dict[str, tuple[float, float]],
     with_kappa: bool = True,
     with_gamma: bool = True,
     with_iota: bool = False,
@@ -1042,10 +1041,6 @@ def perform_nlp_evolutionary_optimization(
     pop_size: int | None = None,
     working_results: list[dict[str, float]] = [],
     ignore_nonlinear_extra_terms_in_ectfbas: bool = True,
-    run_postprocessing: bool = False,
-    postprocessing_max_allowed_changes: tuple[int, ...] = (0, 5),
-    postprocessing_json_results_path: str = "",
-    postprocessing_max_rounds: int = 1e6,
 ) -> dict[float, list[dict[str, float]]]:
     """Performs NLP evolutionary optimization on the given COBRA-k model.
 
@@ -1053,7 +1048,7 @@ def perform_nlp_evolutionary_optimization(
         cobrak_model (Model): The COBRA-k model to optimize.
         objective_target (str | dict[str, float]): Target value(s) for the objective function.
         objective_sense (int): Sense of the objective function (1 for maximization, -1 for minimization).
-        variability_dict (dict[str, tuple[float, float]], optional): Variability data for each reaction. Defaults to {}.
+        variability_dict (dict[str, tuple[float, float]]): Variability data for each reaction.
         with_kappa (bool, optional): Whether to use kappa parameter. Defaults to True.
         with_gamma (bool, optional): Whether to use gamma parameter. Defaults to True.
         with_iota (bool, optional): Whether to use iota parameter. Defaults to False.
@@ -1081,17 +1076,7 @@ def perform_nlp_evolutionary_optimization(
     Returns:
         dict[float, list[dict[str, float]]]: Dictionary of objective values and corresponding solutions.
     """
-    if variability_dict == {}:
-        variability_dict = perform_lp_variability_analysis(
-            cobrak_model=cobrak_model,
-            with_enzyme_constraints=True,
-            with_thermodynamic_constraints=True,
-            active_reactions=[],
-            solver=lp_solver,
-            ignore_nonlinear_terms=ignore_nonlinear_extra_terms_in_ectfbas,
-        )
-    else:
-        variability_dict = deepcopy(variability_dict)
+    variability_dict = deepcopy(variability_dict)
 
     # Initial sampling
     if isinstance(objective_target, str):
@@ -1211,62 +1196,4 @@ def perform_nlp_evolutionary_optimization(
         nlp_single_strict_reacs=nlp_single_strict_reacs,
     )
 
-    evolution_result = problem.optimize()
-
-    if run_postprocessing:
-        evolution_best_result = evolution_result[list(evolution_result.keys())[0]][0]
-        if postprocessing_json_results_path:
-            postprocessing_json_results_path = standardize_folder(
-                postprocessing_json_results_path
-            )
-            ensure_folder_existence(postprocessing_json_results_path)
-            json_zip_write(
-                f"{postprocessing_json_results_path}pre_postprocessing_evolution_result.json",
-                evolution_result,
-            )
-            json_write(
-                f"{postprocessing_json_results_path}pre_postprocessing_best_result.json",
-                evolution_best_result,
-            )
-        last_result = evolution_best_result
-        postprocess_round = 0
-        while postprocess_round < postprocessing_max_rounds:
-            postprocess_results, best_postprocess_result = postprocess(
-                cobrak_model=cobrak_model,
-                opt_dict=last_result,
-                objective_target=objective_target,
-                objective_sense=objective_sense,
-                variability_data=variability_dict,
-                lp_solver=lp_solver,
-                nlp_solver=nlp_solver,
-                with_kappa=with_kappa,
-                with_gamma=with_gamma,
-                with_iota=with_iota,
-                with_alpha=with_alpha,
-                nlp_strict_mode=nlp_strict_mode,
-                nlp_single_strict_reacs=nlp_single_strict_reacs,
-                ignore_nonlinear_extra_terms_in_ectfbas=ignore_nonlinear_extra_terms_in_ectfbas,
-                max_allowed_changes=postprocessing_max_allowed_changes,
-            )
-
-            for nlp_result in [x[2] for x in postprocess_results]:
-                obj_value = nlp_result[OBJECTIVE_VAR_NAME]
-                if str(obj_value) not in evolution_result:
-                    evolution_result[obj_value] = []
-                evolution_result[obj_value].append(nlp_result)
-            if postprocessing_json_results_path:
-                json_zip_write(
-                    f"{postprocessing_json_results_path}postprocess_round{postprocess_round}_full_result.json",
-                    postprocess_results,
-                )
-                json_write(
-                    f"{postprocessing_json_results_path}postprocess_round{postprocess_round}_best_result.json",
-                    best_postprocess_result,
-                )
-            if len(postprocess_results) == 0:
-                break
-            last_result = best_postprocess_result
-            postprocess_round += 1
-        evolution_result = sort_dict_keys(evolution_result, reverse=True)
-
-    return evolution_result
+    return problem.optimize()
