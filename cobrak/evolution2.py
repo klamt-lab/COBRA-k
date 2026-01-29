@@ -1,5 +1,4 @@
 """"""
-from copy import deepcopy
 from dataclasses import dataclass, field
 from pyomo.common.errors import ApplicationError
 from cobrak.constants import ALL_OK_KEY, OBJECTIVE_VAR_NAME, Z_VAR_PREFIX
@@ -39,7 +38,7 @@ def _get_binaries_from_opt_result(
 
 @validate_call(validate_return=True)
 def _ectfba_block(
-    cobrak_model_with_deletions: Model,
+    cobrak_model: Model,
     objective_target: str | dict[str, float],
     objective_sense: int,
     variability_dict: dict[str, tuple[float, float]],
@@ -47,22 +46,30 @@ def _ectfba_block(
     correction_config: CorrectionConfig,
     ignore_nonlinear_extra_terms_in_ectfbas: bool,
     binaries: tuple[int, ...],
+    reac_couples_list: list[tuple[str, ...]],
+    do_reac_deletions: bool = True,
 ) -> tuple[dict[str, float | None], tuple[int, ...]]:
-    try:
-        ectfba_dict: dict[str, int | float] = perform_lp_optimization(
-            cobrak_model=cobrak_model_with_deletions,
-            objective_target=objective_target,
-            objective_sense=objective_sense,
-            with_enzyme_constraints=True,
-            with_thermodynamic_constraints=True,
-            with_loop_constraints=True,
-            variability_dict=variability_dict,
-            solver=lp_solver,
-            correction_config=correction_config,
-            ignore_nonlinear_terms=ignore_nonlinear_extra_terms_in_ectfbas,
-        )
-    except (ApplicationError, AttributeError, ValueError):
-        return {}, binaries
+    with cobrak_model as cobrak_model_with_deletions:
+        if do_reac_deletions:
+            for couple_idx, binary in enumerate(binaries):
+                if binary == 0:
+                    for reac_id in reac_couples_list[couple_idx]:
+                        del cobrak_model_with_deletions.reactions[reac_id]
+        try:
+            ectfba_dict: dict[str, int | float] = perform_lp_optimization(
+                cobrak_model=cobrak_model_with_deletions,
+                objective_target=objective_target,
+                objective_sense=objective_sense,
+                with_enzyme_constraints=True,
+                with_thermodynamic_constraints=True,
+                with_loop_constraints=True,
+                variability_dict=variability_dict,
+                solver=lp_solver,
+                correction_config=correction_config,
+                ignore_nonlinear_terms=ignore_nonlinear_extra_terms_in_ectfbas,
+            )
+        except (ApplicationError, AttributeError, ValueError):
+            return {}, binaries
     if not ectfba_dict[ALL_OK_KEY] or None in ectfba_dict.values():
         return {}, binaries
     return ectfba_dict, binaries  # ty:ignore[invalid-return-type]
@@ -107,7 +114,7 @@ def _nlp_block(
 
 @validate_call(validate_return=True)
 def _ectfba_nlp_block(
-    cobrak_model_with_deletions: Model,
+    cobrak_model: Model,
     binaries: tuple[int, ...],
     reac_couples_list: list[tuple[str, ...]],
     lp_objective_target: str | dict[str, float],
@@ -128,7 +135,11 @@ def _ectfba_nlp_block(
     ignore_nonlinear_extra_terms_in_ectfbas: bool,
     delete_nonthermodynamic_reacs_for_nlp: bool,
 ) -> LpNlpBlockResult:
-    with cobrak_model_with_deletions as cobrak_model_with_deletions_and_extra_constraints:
+    with cobrak_model as cobrak_model_with_deletions_and_extra_constraints:
+        for couple_idx, binary in enumerate(binaries):
+            if binary == 0:
+                for reac_id in reac_couples_list[couple_idx]:
+                    del cobrak_model_with_deletions_and_extra_constraints.reactions[reac_id]
         cobrak_model_with_deletions_and_extra_constraints.extra_linear_constraints += lp_extra_linear_constraints
         if lp_objective_target == "MAXZ":
             lp_objective_target = {
@@ -138,7 +149,7 @@ def _ectfba_nlp_block(
                 and (variability_dict[reac_id][1] > 0.0)
             }
         ectfba_dict: dict[str, float | None] = _ectfba_block(
-            cobrak_model_with_deletions=cobrak_model_with_deletions_and_extra_constraints,
+            cobrak_model=cobrak_model_with_deletions_and_extra_constraints,
             objective_target=lp_objective_target,
             objective_sense=lp_objective_sense,
             variability_dict=variability_dict,
@@ -146,13 +157,15 @@ def _ectfba_nlp_block(
             correction_config=correction_config,
             ignore_nonlinear_extra_terms_in_ectfbas=ignore_nonlinear_extra_terms_in_ectfbas,
             binaries=binaries,
+            reac_couples_list=reac_couples_list,
+            do_reac_deletions=False,
         )[0]
     error_target_missing: bool = any(errortarget not in ectfba_dict for errortarget in correction_config.error_scenario)
     if not ectfba_dict or not ectfba_dict[ALL_OK_KEY] or error_target_missing or None in ectfba_dict.values():
         return LpNlpBlockResult(original_binaries=binaries, lp_binaries=(), nlp_binaries=())
 
     nlp_result: dict[str, float | None] = _nlp_block(
-        cobrak_model_with_deletions=delete_unused_reactions_in_optimization_dict(cobrak_model_with_deletions, ectfba_dict, delete_nonthermodynamic_reacs=delete_nonthermodynamic_reacs_for_nlp),
+        cobrak_model_with_deletions=delete_unused_reactions_in_optimization_dict(cobrak_model, ectfba_dict, delete_nonthermodynamic_reacs=delete_nonthermodynamic_reacs_for_nlp),
         objective_target=nlp_objective_target,
         objective_sense=nlp_objective_sense,
         variability_dict=variability_dict,
@@ -180,18 +193,6 @@ def _ectfba_nlp_block(
         nlp_result=nlp_result,
         nlp_binaries=_get_binaries_from_opt_result(nlp_result, reac_couples_list)
     )
-
-@validate_call(validate_return=True)
-def _get_cobrak_model_with_deleted_binary_zero_reacs(
-    cobrak_model: Model,
-    binaries: tuple[int, ...],
-    reac_couples_list: list[tuple[str, ...]],
-) -> Model:
-    model_with_deletions: Model = deepcopy(cobrak_model)
-    for couple_idx, binary in enumerate(binaries):
-        if binary == 0:
-            del model_with_deletions.reactions[reac_couples_list[couple_idx][0]]
-    return model_with_deletions
 
 
 @validate_call(validate_return=True)
@@ -393,11 +394,7 @@ def _evolution(
 
         ectfba_results: list[dict[str, float]] = Parallel(n_jobs=-1, verbose=0)(
             delayed(_ectfba_block)(
-                _get_cobrak_model_with_deleted_binary_zero_reacs(
-                    cobrak_model=cobrak_model,
-                    binaries=tested_binary,
-                    reac_couples_list=reac_couples_list,
-                ),
+                cobrak_model,
                 objective_target,
                 objective_sense,
                 variability_dict,
@@ -405,6 +402,7 @@ def _evolution(
                 correction_config,
                 ignore_nonlinear_extra_terms_in_lps,
                 tested_binary,
+                reac_couples_list,
             )
             for tested_binary in tested_binaries
         )
@@ -414,13 +412,9 @@ def _evolution(
                 evolution_results[original_binaries] = None
             elif original_binaries not in evolution_results:
                 eligible_binaries_with_objvalue[original_binaries] = ectfba_result[OBJECTIVE_VAR_NAME]
-        results: list[LpNlpBlockResult] = Parallel(n_jobs=1, verbose=0)(
+        results: list[LpNlpBlockResult] = Parallel(n_jobs=-1, verbose=0)(
             delayed(_ectfba_nlp_block)(
-                _get_cobrak_model_with_deleted_binary_zero_reacs(
-                    cobrak_model=cobrak_model,
-                    binaries=eligible_binary,
-                    reac_couples_list=reac_couples_list,
-                ),
+                cobrak_model,
                 eligible_binary,
                 reac_couples_list,
                 "MAXZ",

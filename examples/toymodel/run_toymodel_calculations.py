@@ -265,5 +265,6 @@ x = perform_nlp_evolutionary_optimization_2(
     population_size=10,
 )
 t1 = time.time()
+print(x[1])
 print(x[0][OBJECTIVE_VAR_NAME])
 print("TIME FOR COBRA-k evolutionary algorithm 2:", t1 - t0)
