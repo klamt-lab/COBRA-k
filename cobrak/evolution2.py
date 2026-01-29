@@ -1,6 +1,6 @@
 """"""
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from os import cpu_count
 from pyomo.common.errors import ApplicationError
 from cobrak.constants import ALL_OK_KEY, OBJECTIVE_VAR_NAME, Z_VAR_PREFIX
@@ -9,7 +9,7 @@ from cobrak.evolution import is_objsense_maximization
 from cobrak.lps import perform_lp_optimization
 from cobrak.nlps import delete_unused_reactions_in_optimization_dict, perform_nlp_irreversible_optimization
 from cobrak.standard_solvers import SCIP, IPOPT
-from pydantic import validate_call
+from pydantic import validate_call, Field
 from joblib import Parallel, delayed
 from cobrak.utilities import get_stoichiometrically_coupled_reactions
 from random import randint, shuffle, choices, choice
@@ -18,10 +18,10 @@ from random import randint, shuffle, choices, choice
 class LpNlpBlockResult:
     """"""
     original_binaries: tuple[int, ...]
-    lp_result: dict[str, float] = {}
     lp_binaries: tuple[int, ...]
-    nlp_result: dict[str, float] = {}
     nlp_binaries: tuple[int, ...]
+    lp_result: dict[str, float] = field(default_factory=dict)
+    nlp_result: dict[str, float] = field(default_factory=dict)
 
 
 ######## PRIVATE FUNCTIONS ########
@@ -46,10 +46,10 @@ def _ectfba_block(
     lp_solver: Solver,
     correction_config: CorrectionConfig,
     ignore_nonlinear_extra_terms_in_ectfbas: bool,
-    binaries: tuple[int],
-) -> tuple[dict[str, float], tuple[int, ...]]:
+    binaries: tuple[int, ...],
+) -> tuple[dict[str, float | None], tuple[int, ...]]:
     try:
-        ectfba_dict = perform_lp_optimization(
+        ectfba_dict: dict[str, int | float] = perform_lp_optimization(
             cobrak_model=cobrak_model_with_deletions,
             objective_target=objective_target,
             objective_sense=objective_sense,
@@ -63,9 +63,9 @@ def _ectfba_block(
         )
     except (ApplicationError, AttributeError, ValueError):
         return {}, binaries
-    if not ectfba_dict[ALL_OK_KEY]:
+    if not ectfba_dict[ALL_OK_KEY] or None in ectfba_dict.values():
         return {}, binaries
-    return ectfba_dict, binaries
+    return ectfba_dict, binaries  # ty:ignore[invalid-return-type]
 
 
 @validate_call(validate_return=True)
@@ -82,9 +82,9 @@ def _nlp_block(
     nlp_strict_mode: bool,
     nlp_single_strict_reacs: list[str],
     correction_config: CorrectionConfig,
-) -> dict[str, float]:
+) -> dict[str, float | None]:
     try:
-        nlp_result: dict[str, float] = perform_nlp_irreversible_optimization(
+        nlp_result: dict[str, float | None] = perform_nlp_irreversible_optimization(
             cobrak_model=cobrak_model_with_deletions,
             objective_target=objective_target,
             objective_sense=objective_sense,
@@ -108,7 +108,7 @@ def _nlp_block(
 @validate_call(validate_return=True)
 def _ectfba_nlp_block(
     cobrak_model_with_deletions: Model,
-    binaries: tuple[int],
+    binaries: tuple[int, ...],
     reac_couples_list: list[tuple[str, ...]],
     lp_objective_target: str | dict[str, float],
     lp_objective_sense: int,
@@ -126,6 +126,7 @@ def _ectfba_nlp_block(
     nlp_single_strict_reacs: list[str],
     correction_config: CorrectionConfig,
     ignore_nonlinear_extra_terms_in_ectfbas: bool,
+    delete_nonthermodynamic_reacs_for_nlp: bool,
 ) -> LpNlpBlockResult:
     with cobrak_model_with_deletions as cobrak_model_with_deletions_and_extra_constraints:
         cobrak_model_with_deletions_and_extra_constraints.extra_linear_constraints += lp_extra_linear_constraints
@@ -136,7 +137,7 @@ def _ectfba_nlp_block(
                 if (reac_data.dG0 is not None)
                 and (variability_dict[reac_id][1] > 0.0)
             }
-        ectfba_dict: dict[str, float] = _ectfba_block(
+        ectfba_dict: dict[str, float | None] = _ectfba_block(
             cobrak_model_with_deletions=cobrak_model_with_deletions_and_extra_constraints,
             objective_target=lp_objective_target,
             objective_sense=lp_objective_sense,
@@ -145,13 +146,13 @@ def _ectfba_nlp_block(
             correction_config=correction_config,
             ignore_nonlinear_extra_terms_in_ectfbas=ignore_nonlinear_extra_terms_in_ectfbas,
             binaries=binaries,
-        )[1]
+        )[0]
     error_target_missing: bool = any(errortarget not in ectfba_dict for errortarget in correction_config.error_scenario)
-    if not ectfba_dict or not ectfba_dict[ALL_OK_KEY] or error_target_missing:
+    if not ectfba_dict or not ectfba_dict[ALL_OK_KEY] or error_target_missing or None in ectfba_dict.values():
         return LpNlpBlockResult(original_binaries=binaries, lp_binaries=(), nlp_binaries=())
 
-    nlp_result: dict[str, float] = _nlp_block(
-        cobrak_model_with_deletions=delete_unused_reactions_in_optimization_dict(cobrak_model_with_deletions, ectfba_dict),
+    nlp_result: dict[str, float | None] = _nlp_block(
+        cobrak_model_with_deletions=delete_unused_reactions_in_optimization_dict(cobrak_model_with_deletions, ectfba_dict, delete_nonthermodynamic_reacs=delete_nonthermodynamic_reacs_for_nlp),
         objective_target=nlp_objective_target,
         objective_sense=nlp_objective_sense,
         variability_dict=variability_dict,
@@ -167,23 +168,23 @@ def _ectfba_nlp_block(
     if not nlp_result or not nlp_result[ALL_OK_KEY]:
         return LpNlpBlockResult(
             original_binaries=binaries,
-            lp_result=ectfba_dict,
+            lp_result=ectfba_dict,  # ty:ignore[invalid-argument-type]
             lp_binaries=_get_binaries_from_opt_result(ectfba_dict, reac_couples_list),
             nlp_binaries=(),
         )
 
     return LpNlpBlockResult(
         original_binaries=binaries,
-        lp_result=ectfba_dict,
+        lp_result=ectfba_dict,  # ty:ignore[invalid-argument-type]
         lp_binaries=_get_binaries_from_opt_result(ectfba_dict, reac_couples_list),
-        nlp_result=nlp_result,
+        nlp_result=nlp_result,  # ty:ignore[invalid-argument-type]
         nlp_binaries=_get_binaries_from_opt_result(nlp_result, reac_couples_list)
     )
 
 @validate_call(validate_return=True)
 def _get_cobrak_model_with_deleted_binary_zero_reacs(
     cobrak_model: Model,
-    binaries: tuple[int],
+    binaries: tuple[int, ...],
     reac_couples_list: list[tuple[str, ...]],
 ) -> Model:
     model_with_deletions: Model = deepcopy(cobrak_model)
@@ -199,6 +200,7 @@ def _add_eligible_binaries_and_get_best_nlp_solution(
     lpnlpblock_results: list[LpNlpBlockResult],
     binary_results: dict[tuple[int, ...], float | None],
     is_maximization: bool,
+    add_nlp_result_only: bool,
 ) -> tuple[dict[str, float], dict[tuple[int, ...], float | None]]:
     for result in lpnlpblock_results:
         if not result.lp_result:
@@ -208,8 +210,9 @@ def _add_eligible_binaries_and_get_best_nlp_solution(
             binary_results[result.original_binaries] = None
             binary_results[result.lp_binaries] = None
             continue
-        binary_results[result.original_binaries] = result.nlp_result[OBJECTIVE_VAR_NAME]
-        binary_results[result.lp_binaries] = result.nlp_result[OBJECTIVE_VAR_NAME]
+        if not add_nlp_result_only:
+            binary_results[result.original_binaries] = result.nlp_result[OBJECTIVE_VAR_NAME]
+            binary_results[result.lp_binaries] = result.nlp_result[OBJECTIVE_VAR_NAME]
         binary_results[result.nlp_binaries] = result.nlp_result[OBJECTIVE_VAR_NAME]
 
         if not best_nlp_solution or\
@@ -241,15 +244,15 @@ def _sampling(
     max_calculations: int = 50,
     num_wished_starts: int = 3,
 ) -> dict[tuple[int, ...], float | None]:
-    num_reacs = len(cobrak_model.reactions)
+    num_reac_couples = len(reac_couples_list)
     samples: dict[tuple[int, ...], float | None] = {}
     best_nlp_solution: dict[str, float] = {}
     num_calculations = 0
     while num_calculations < max_calculations:
         binary_scenarios: list[tuple[int, ...]] = []
         for _ in range(num_cpus):
-            num_zeroes: int = randint(0, min(num_reacs, max_targeted_reacs))
-            zero_one_mix: list[int] = [1] * (num_reacs - num_zeroes) + [0] * num_zeroes
+            num_zeroes: int = randint(0, min(num_reac_couples, max_targeted_reacs))
+            zero_one_mix: list[int] = [1] * (num_reac_couples - num_zeroes) + [0] * num_zeroes
             shuffle(zero_one_mix)
             binary_scenarios.append(
                 tuple(zero_one_mix)
@@ -260,7 +263,7 @@ def _sampling(
                 _get_cobrak_model_with_deleted_binary_zero_reacs(
                     cobrak_model,
                     binary_scenario,
-                    reac_couples_list
+                    reac_couples_list,
                 ),
                 binary_scenario,
                 reac_couples_list,
@@ -280,6 +283,7 @@ def _sampling(
                 nlp_single_strict_reacs,
                 correction_config,
                 ignore_nonlinear_extra_terms_in_lps,
+                True,
             )
             for binary_scenario in binary_scenarios
         )
@@ -288,11 +292,13 @@ def _sampling(
             lpnlpblock_results=results,
             binary_results=samples,
             is_maximization=is_objsense_maximization(objective_sense),
+            add_nlp_result_only=True,
         )
 
         if len(samples) >= num_wished_starts:
             break
         num_calculations += num_cpus
+
     return samples
 
 
@@ -302,6 +308,7 @@ def _get_binaries_according_to_selection(
     selection_method: str
 ) -> tuple[int, ...]:
     binaries: tuple[int, ...]
+    keylist: list[tuple[int, ...]] = list(sorted_results.keys())
     match selection_method:
         case "weighted":
             binaries = deepcopy(choices(
@@ -310,9 +317,9 @@ def _get_binaries_according_to_selection(
                 k=1,
             )[0])
         case "elite":
-            binaries = deepcopy(choice(list(sorted_results.keys())[:9]))
+            binaries = deepcopy(choice(keylist[:9]))
         case "random":
-            binaries = deepcopy(choice(list(sorted_results.keys())))
+            binaries = deepcopy(choice(keylist))
         case _:
             raise ValueError
     return binaries
@@ -322,7 +329,7 @@ def _get_binaries_according_to_selection(
 def _get_evolution_binaries(
     population_size: int,
     num_reac_couples: int,
-    evolution_results: dict[tuple[int, ...], float],
+    evolution_results: dict[tuple[int, ...], float | None],
     fractions_genetic_method: dict[str, float],
     fractions_population_selection: dict[str, float],
     is_maximization: bool,
@@ -360,9 +367,9 @@ def _get_evolution_binaries(
             case "neighborhood":
                 num_tries = 0
                 while first_binaries in sorted_results:
-                    flip_location = randint(0, num_reac_couples-1)
-                    first_binaries[flip_location] = tuple(
-                        list(first_binaries[:flip_location]) + [int(not binaries[-1][flip_location])] + list(first_binaries[flip_location+1:])
+                    flip_location: int = randint(0, num_reac_couples-1)
+                    first_binaries: tuple[int, ...] = tuple(
+                        list(first_binaries[:flip_location]) + [int(not first_binaries[flip_location])] + list(first_binaries[flip_location+1:])
                     )
                     num_tries += 1
                     if num_tries == 100:
@@ -378,8 +385,8 @@ def _get_evolution_binaries(
                 while first_binaries in sorted_results:
                     flip_locations: list[int] = [randint(0, num_reac_couples-1) for _ in range(3)]
                     for flip_location in flip_locations:
-                        first_binaries[flip_location] = tuple(
-                            list(first_binaries[:flip_location]) + [int(not binaries[-1][flip_location])] + list(first_binaries[flip_location+1:])
+                        first_binaries = tuple(
+                            list(first_binaries[:flip_location]) + [int(not first_binaries[flip_location])] + list(first_binaries[flip_location+1:])
                         )
                     num_tries += 1
                     if num_tries == 100:
@@ -438,7 +445,7 @@ def _evolution(
     best_nlp_solution: dict[str, float] = {}
     current_best_objvalue: float = opt_selector([value for value in evolution_results.values() if value is not None])
     num_rounds_with_same_objvalue = 0
-    for _ in range(num_gens):
+    for current_round in range(num_gens):
         tested_binaries = _get_evolution_binaries(
             population_size=population_size,
             num_reac_couples=len(reac_couples_list),
@@ -457,7 +464,7 @@ def _evolution(
             is_maximization=is_objsense_maximization(objective_sense),
         )
 
-        ectfba_results: list[dict[str, float]] = Parallel(n_jobs=-1, verbose=10)(
+        ectfba_results: list[dict[str, float]] = Parallel(n_jobs=-1, verbose=0)(
             delayed(_ectfba_block)(
                 _get_cobrak_model_with_deleted_binary_zero_reacs(
                     cobrak_model=cobrak_model,
@@ -474,14 +481,13 @@ def _evolution(
             )
             for tested_binary in tested_binaries
         )
-        eligible_binaries_with_objvalue: list[tuple[tuple[int, ...], float]] = []
-        for (original_binaries, ectfba_result) in ectfba_results:
+        eligible_binaries_with_objvalue: dict[tuple[int, ...], float] = {}
+        for (ectfba_result, original_binaries) in ectfba_results:
             if not ectfba_result or not ectfba_result[ALL_OK_KEY]:
                 evolution_results[original_binaries] = None
-            else:
-                eligible_binaries_with_objvalue.append((_get_binaries_from_opt_result(ectfba_result), ectfba_results[OBJECTIVE_VAR_NAME]))
-
-        results: list[LpNlpBlockResult] = Parallel(n_jobs=-1, verbose=10)(
+            elif original_binaries not in evolution_results:
+                eligible_binaries_with_objvalue[original_binaries] = ectfba_result[OBJECTIVE_VAR_NAME]
+        results: list[LpNlpBlockResult] = Parallel(n_jobs=1, verbose=0)(
             delayed(_ectfba_nlp_block)(
                 _get_cobrak_model_with_deleted_binary_zero_reacs(
                     cobrak_model=cobrak_model,
@@ -489,9 +495,9 @@ def _evolution(
                     reac_couples_list=reac_couples_list,
                 ),
                 eligible_binary,
+                reac_couples_list,
                 "MAXZ",
-                objective_sense,
-                objective_target,
+                +1,
                 [
                     ExtraLinearConstraint(
                         stoichiometries=objective_target_as_dict,
@@ -499,6 +505,7 @@ def _evolution(
                         upper_value=objvalue + 1e-9,
                     )
                 ],
+                objective_target,
                 objective_sense,
                 variability_dict,
                 with_kappa,
@@ -507,24 +514,30 @@ def _evolution(
                 with_alpha,
                 lp_solver,
                 nlp_solver,
-                nlp_strict_mode,
+                False,
                 nlp_single_strict_reacs,
                 correction_config,
                 ignore_nonlinear_extra_terms_in_lps,
+                False,
             )
-            for (eligible_binary, objvalue) in eligible_binaries_with_objvalue
+            for eligible_binary, objvalue in eligible_binaries_with_objvalue.items() # [((1, 1, 1), 84.0)]
         )
         best_nlp_solution, evolution_results = _add_eligible_binaries_and_get_best_nlp_solution(
             best_nlp_solution=best_nlp_solution,
             lpnlpblock_results=results,
             binary_results=evolution_results,
             is_maximization=is_objsense_maximization(objective_sense),
+            add_nlp_result_only=False,
         )
 
-        gen_best_objvalue = opt_selector(evolution_results.values())
-        if gen_best_objvalue != current_best_objvalue:
-            current_best_objvalue = gen_best_objvalue
-            num_rounds_with_same_objvalue = 0
+        non_none_objvalues = [value for value in evolution_results.values() if value is not None]
+        if len(non_none_objvalues) > 0:
+            gen_best_objvalue = opt_selector(non_none_objvalues)
+            if gen_best_objvalue != current_best_objvalue:
+                current_best_objvalue = gen_best_objvalue
+                num_rounds_with_same_objvalue = 0
+            else:
+                num_rounds_with_same_objvalue += 1
         else:
             num_rounds_with_same_objvalue += 1
         if num_rounds_with_same_objvalue >= max_rounds_same_objvalue:
@@ -550,10 +563,11 @@ def _get_idx_to_reac_ids(
         if any(
             variability_dict[reac_id][1] <= 0.0 or
             variability_dict[reac_id][0] > 0.0 or
-            (not cobrak_model.reactions[reac_id].dG0 and not cobrak_model.reactions[reac_id].enzyme_reaction_data) or
             reac_id in error_scenario
             for reac_id in reac_ids
         ):
+            continue
+        if all(not cobrak_model.reactions[reac_id].dG0 and not cobrak_model.reactions[reac_id].enzyme_reaction_data for reac_id in reac_ids):
             continue
         # Discard couple with objective target(s)
         objective_target_strlist: list[str]
@@ -564,7 +578,6 @@ def _get_idx_to_reac_ids(
         if any(objective_target in reac_ids for objective_target in objective_target_strlist):
             continue
         reac_couples_list.append(tuple(reac_ids))
-
     return tuple(reac_couples_list)
 
 
