@@ -218,7 +218,7 @@ def _add_eligible_binaries_and_get_best_nlp_solution(
         if not best_nlp_solution or\
            (is_maximization and result.nlp_result[OBJECTIVE_VAR_NAME] > best_nlp_solution[OBJECTIVE_VAR_NAME]) or\
            (not is_maximization and result.nlp_result[OBJECTIVE_VAR_NAME] < best_nlp_solution[OBJECTIVE_VAR_NAME]):
-            best_nlp_solution = deepcopy(result.nlp_result)
+            best_nlp_solution = result.nlp_result
 
     return best_nlp_solution, binary_results
 
@@ -228,22 +228,20 @@ def _get_binaries_according_to_selection(
     sorted_results: dict[tuple[int, ...], float],
     selection_method: str
 ) -> tuple[int, ...]:
-    binaries: tuple[int, ...]
     keylist: list[tuple[int, ...]] = list(sorted_results.keys())
     match selection_method:
         case "weighted":
-            binaries = deepcopy(choices(
+            return choices(
                 population=list(sorted_results.keys()),
                 weights=list(sorted_results.values()),
                 k=1,
-            )[0])
+            )[0]
         case "elite":
-            binaries = deepcopy(choice(keylist[:9]))
+            return choice(keylist[:9])
         case "random":
-            binaries = deepcopy(choice(keylist))
+            return choice(keylist)
         case _:
             raise ValueError
-    return binaries
 
 
 @validate_call(validate_return=True)
@@ -347,7 +345,7 @@ def _evolution(
     objective_target: str | dict[str, float],
     objective_sense: int,
     variability_dict: dict[str, tuple[float, float]],
-    pre_results: dict[tuple[int, ...], float | None],
+    evolution_results: dict[tuple[int, ...], float | None],
     with_kappa: bool,
     with_gamma: bool,
     with_iota: bool,
@@ -363,7 +361,6 @@ def _evolution(
     max_rounds_same_objvalue: float = float("inf"),
 ) -> tuple[dict[str, float], dict[tuple[int, ...], float | None]]:
     opt_selector = max if is_objsense_maximization(objective_sense) else min
-    evolution_results: dict[tuple[int, ...], float | None] = deepcopy(pre_results)
     if type(objective_target) is str:
         objective_target_as_dict: dict[str, int | float] = {objective_target: 1.0}
     elif type(objective_target) is dict:
@@ -459,6 +456,7 @@ def _evolution(
             is_maximization=is_objsense_maximization(objective_sense),
             add_nlp_result_only=False,
         )
+        # print(f"ROUND {current_round}: {evolution_results}")
 
         non_none_objvalues = [value for value in evolution_results.values() if value is not None]
         if len(non_none_objvalues) > 0:
@@ -531,7 +529,7 @@ def perform_nlp_evolutionary_optimization(
     nlp_single_strict_reacs: list[str] = [],
     max_rounds_same_objvalue: float = float("inf"),
     ignore_nonlinear_extra_terms_in_lps: bool = True,
-    existing_evolution_result: dict[float, list[dict[str, float]]] = {},
+    existing_evolution_results: dict[float, list[dict[str, float]]] = {},
 ) -> tuple[dict[str, float], dict[tuple[int, ...], float | None]]:
     """"""
     # PHASE 1: BUILD INDEX TO REAC COUPLES DATA, AND CPU DATA
@@ -549,7 +547,7 @@ def perform_nlp_evolutionary_optimization(
         objective_target=objective_target,
         objective_sense=objective_sense,
         variability_dict=variability_dict,
-        pre_results=existing_evolution_result,
+        evolution_results=existing_evolution_results,
         with_kappa=with_kappa,
         with_gamma=with_gamma,
         with_iota=with_iota,

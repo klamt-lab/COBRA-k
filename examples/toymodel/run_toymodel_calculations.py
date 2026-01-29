@@ -251,6 +251,7 @@ print("=========")
 print("=========")
 print("=========")
 
+t0 = time.time()
 x = perform_nlp_evolutionary_optimization_2(
     cobrak_model=toy_model,
     objective_target="ATP_Consumption",
@@ -261,6 +262,8 @@ x = perform_nlp_evolutionary_optimization_2(
     with_alpha=False,
     with_iota=False,
     num_gens=10,
-    population_size=30,
+    population_size=10,
 )
-print(x)
+t1 = time.time()
+print(x[0][OBJECTIVE_VAR_NAME])
+print("TIME FOR COBRA-k evolutionary algorithm 2:", t1 - t0)
