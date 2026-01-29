@@ -1,7 +1,6 @@
 """"""
 from copy import deepcopy
 from dataclasses import dataclass, field
-from os import cpu_count
 from pyomo.common.errors import ApplicationError
 from cobrak.constants import ALL_OK_KEY, OBJECTIVE_VAR_NAME, Z_VAR_PREFIX
 from cobrak.dataclasses import ExtraLinearConstraint, Model, Solver, CorrectionConfig
@@ -9,10 +8,11 @@ from cobrak.evolution import is_objsense_maximization
 from cobrak.lps import perform_lp_optimization
 from cobrak.nlps import delete_unused_reactions_in_optimization_dict, perform_nlp_irreversible_optimization
 from cobrak.standard_solvers import SCIP, IPOPT
-from pydantic import validate_call, Field
+from pydantic import validate_call
 from joblib import Parallel, delayed
 from cobrak.utilities import get_stoichiometrically_coupled_reactions
-from random import randint, shuffle, choices, choice
+from random import randint, choices, choice
+
 
 @dataclass
 class LpNlpBlockResult:
@@ -168,16 +168,16 @@ def _ectfba_nlp_block(
     if not nlp_result or not nlp_result[ALL_OK_KEY]:
         return LpNlpBlockResult(
             original_binaries=binaries,
-            lp_result=ectfba_dict,  # ty:ignore[invalid-argument-type]
+            lp_result=ectfba_dict,
             lp_binaries=_get_binaries_from_opt_result(ectfba_dict, reac_couples_list),
             nlp_binaries=(),
         )
 
     return LpNlpBlockResult(
         original_binaries=binaries,
-        lp_result=ectfba_dict,  # ty:ignore[invalid-argument-type]
+        lp_result=ectfba_dict,
         lp_binaries=_get_binaries_from_opt_result(ectfba_dict, reac_couples_list),
-        nlp_result=nlp_result,  # ty:ignore[invalid-argument-type]
+        nlp_result=nlp_result,
         nlp_binaries=_get_binaries_from_opt_result(nlp_result, reac_couples_list)
     )
 
@@ -222,85 +222,6 @@ def _add_eligible_binaries_and_get_best_nlp_solution(
 
     return best_nlp_solution, binary_results
 
-@validate_call(validate_return=True)
-def _sampling(
-    cobrak_model: Model,
-    reac_couples_list: list[tuple[str, ...]],
-    objective_target: str | dict[str, float],
-    objective_sense: int,
-    variability_dict: dict[str, tuple[float, float]],
-    with_kappa: bool,
-    with_gamma: bool,
-    with_iota: bool,
-    with_alpha: bool,
-    correction_config: CorrectionConfig,
-    lp_solver: Solver,
-    nlp_solver: Solver,
-    nlp_strict_mode: bool,
-    nlp_single_strict_reacs: list[str],
-    ignore_nonlinear_extra_terms_in_lps: bool,
-    num_cpus: int = 1,
-    max_targeted_reacs: int = 5,
-    max_calculations: int = 50,
-    num_wished_starts: int = 3,
-) -> dict[tuple[int, ...], float | None]:
-    num_reac_couples = len(reac_couples_list)
-    samples: dict[tuple[int, ...], float | None] = {}
-    best_nlp_solution: dict[str, float] = {}
-    num_calculations = 0
-    while num_calculations < max_calculations:
-        binary_scenarios: list[tuple[int, ...]] = []
-        for _ in range(num_cpus):
-            num_zeroes: int = randint(0, min(num_reac_couples, max_targeted_reacs))
-            zero_one_mix: list[int] = [1] * (num_reac_couples - num_zeroes) + [0] * num_zeroes
-            shuffle(zero_one_mix)
-            binary_scenarios.append(
-                tuple(zero_one_mix)
-            )
-        binary_scenarios = [scenario for scenario in binary_scenarios if scenario not in samples]
-        results: list[LpNlpBlockResult] = Parallel(n_jobs=-1, verbose=10)(
-            delayed(_ectfba_nlp_block)(
-                _get_cobrak_model_with_deleted_binary_zero_reacs(
-                    cobrak_model,
-                    binary_scenario,
-                    reac_couples_list,
-                ),
-                binary_scenario,
-                reac_couples_list,
-                objective_target,
-                objective_sense,
-                [],
-                objective_target,
-                objective_sense,
-                variability_dict,
-                with_kappa,
-                with_gamma,
-                with_iota,
-                with_alpha,
-                lp_solver,
-                nlp_solver,
-                nlp_strict_mode,
-                nlp_single_strict_reacs,
-                correction_config,
-                ignore_nonlinear_extra_terms_in_lps,
-                True,
-            )
-            for binary_scenario in binary_scenarios
-        )
-        best_nlp_solution, samples = _add_eligible_binaries_and_get_best_nlp_solution(
-            best_nlp_solution=best_nlp_solution,
-            lpnlpblock_results=results,
-            binary_results=samples,
-            is_maximization=is_objsense_maximization(objective_sense),
-            add_nlp_result_only=True,
-        )
-
-        if len(samples) >= num_wished_starts:
-            break
-        num_calculations += num_cpus
-
-    return samples
-
 
 @validate_call(validate_return=True)
 def _get_binaries_according_to_selection(
@@ -334,6 +255,12 @@ def _get_evolution_binaries(
     fractions_population_selection: dict[str, float],
     is_maximization: bool,
 ) -> list[tuple[int, ...]]:
+    if not evolution_results:
+        return [
+            tuple([randint(0, 1) for _ in range(num_reac_couples)])
+            for _ in range(population_size)
+        ]
+
     non_na_evolution_results: dict[tuple[int, ...], float] = {
         key: value
         for key, value in evolution_results.items()
@@ -443,7 +370,10 @@ def _evolution(
         objective_target_as_dict: dict[str, int | float] = objective_target
 
     best_nlp_solution: dict[str, float] = {}
-    current_best_objvalue: float = opt_selector([value for value in evolution_results.values() if value is not None])
+    if evolution_results:
+        current_best_objvalue: float = opt_selector([value for value in evolution_results.values() if value is not None])
+    else:
+        current_best_objvalue: float = -float("inf") if is_objsense_maximization(objective_sense) else float("inf")
     num_rounds_with_same_objvalue = 0
     for current_round in range(num_gens):
         tested_binaries = _get_evolution_binaries(
@@ -514,13 +444,13 @@ def _evolution(
                 with_alpha,
                 lp_solver,
                 nlp_solver,
-                False,
+                nlp_strict_mode,
                 nlp_single_strict_reacs,
                 correction_config,
                 ignore_nonlinear_extra_terms_in_lps,
                 False,
             )
-            for eligible_binary, objvalue in eligible_binaries_with_objvalue.items() # [((1, 1, 1), 84.0)]
+            for eligible_binary, objvalue in eligible_binaries_with_objvalue.items()
         )
         best_nlp_solution, evolution_results = _add_eligible_binaries_and_get_best_nlp_solution(
             best_nlp_solution=best_nlp_solution,
@@ -611,38 +541,8 @@ def perform_nlp_evolutionary_optimization(
         variability_dict=variability_dict,
         error_scenario=correction_config.error_scenario,
     )
-    num_cpus_raw: int | None = cpu_count()
-    num_cpus: int = 1 if num_cpus_raw is None else num_cpus_raw
 
-    # PHASE 2: SAMPLING (IF NO EXISTING SOLUTION GIVEN)
-    if not existing_evolution_result:
-        sampling_solutions = _sampling(
-            cobrak_model=cobrak_model,
-            reac_couples_list=reac_couples_list,
-            objective_target=objective_target,
-            objective_sense=objective_sense,
-            variability_dict=variability_dict,
-            with_kappa=with_kappa,
-            with_gamma=with_gamma,
-            with_iota=with_iota,
-            with_alpha=with_alpha,
-            correction_config=correction_config,
-            lp_solver=lp_solver,
-            nlp_solver=nlp_solver,
-            nlp_strict_mode=nlp_strict_mode,
-            nlp_single_strict_reacs=nlp_single_strict_reacs,
-            ignore_nonlinear_extra_terms_in_lps=ignore_nonlinear_extra_terms_in_lps,
-            num_cpus=num_cpus,
-            max_targeted_reacs=5,
-            max_calculations=50,
-            num_wished_starts=3,
-        )
-        if all(result is None for result in sampling_solutions.values()):
-            print("ERROR: No working result given or found in sampling or given solutions")
-            raise ValueError
-        existing_evolution_result = sampling_solutions
-
-    # PHASE 3: ACTUAL EVOLUTION ALGORITHM (USING GIVEN OR SAMPLED RESULTS AS STARTING POINTS)
+    # PHASE 2: ACTUAL EVOLUTION ALGORITHM (USING GIVEN OR SAMPLED RESULTS AS STARTING POINTS)
     return _evolution(
         cobrak_model=cobrak_model,
         reac_couples_list=reac_couples_list,
