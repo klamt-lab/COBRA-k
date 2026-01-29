@@ -35,6 +35,7 @@ from cobrak.printing import (
     print_variability_result,
 )
 from cobrak.standard_solvers import BARON, IPOPT, SCIP  # noqa: F401
+from cobrak.evolution2 import perform_nlp_evolutionary_optimization as perform_nlp_evolutionary_optimization_2
 
 side_reac_id = "Glycolysis"
 main_reac_ids = ["Respiration", "Overflow"]
@@ -243,3 +244,23 @@ print(
     f"max(ATP_Consumption) from evolutionary algorithm under EX_S <= 14: {list(result.keys())[0]}"
 )
 print("TIME FOR COBRA-k evolutionary algorithm:", t1 - t0)
+
+print("=========")
+print("=========")
+print("=========")
+print("=========")
+print("=========")
+
+x = perform_nlp_evolutionary_optimization_2(
+    cobrak_model=toy_model,
+    objective_target="ATP_Consumption",
+    objective_sense=+1,
+    variability_dict=variability_dict,
+    with_kappa=True,
+    with_gamma=True,
+    with_alpha=False,
+    with_iota=False,
+    num_gens=10,
+    population_size=30,
+)
+print(x)

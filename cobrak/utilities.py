@@ -854,6 +854,7 @@ def delete_unused_reactions_in_optimization_dict(
     delete_missing_reactions: bool = True,
     min_abs_flux: NonNegativeFloat = 1e-15,
     do_not_delete_with_z_var_one: bool = True,
+    delete_nonthermodynamic_reacs: bool = True,
 ) -> Model:
     """Delete unused reactions in a COBRAk model based on an optimization dictionary.
 
@@ -888,9 +889,12 @@ def delete_unused_reactions_in_optimization_dict(
                 ):
                     to_delete = True
                 else:
-                    to_delete = True
+                    to_delete = False
             else:
-                to_delete = True
+                if not delete_nonthermodynamic_reacs and cobrak_model.reactions[reac_id].dG0 is None:
+                    to_delete = False
+                else:
+                    to_delete = True
         if to_delete:
             reacs_to_delete.append(reac_id)
     for reac_to_delete in reacs_to_delete:
