@@ -1,16 +1,18 @@
 """"""
+import random
+from ast import literal_eval
 from dataclasses import dataclass, field
 from pyomo.common.errors import ApplicationError
-from cobrak.constants import ALL_OK_KEY, OBJECTIVE_VAR_NAME, Z_VAR_PREFIX
-from cobrak.dataclasses import ExtraLinearConstraint, Model, Solver, CorrectionConfig
-from cobrak.evolution import is_objsense_maximization
-from cobrak.lps import perform_lp_optimization
-from cobrak.nlps import delete_unused_reactions_in_optimization_dict, perform_nlp_irreversible_optimization
-from cobrak.standard_solvers import SCIP, IPOPT
-from pydantic import validate_call
+from .constants import ALL_OK_KEY, OBJECTIVE_VAR_NAME, Z_VAR_PREFIX
+from .dataclasses import ExtraLinearConstraint, Model, Solver, CorrectionConfig
+from .evolution import is_objsense_maximization
+from .lps import perform_lp_optimization
+from .nlps import delete_unused_reactions_in_optimization_dict, perform_nlp_irreversible_optimization
+from .standard_solvers import SCIP, IPOPT
+from pydantic import validate_call, PositiveInt, NonNegativeFloat, PositiveFloat
 from joblib import Parallel, delayed
-from cobrak.utilities import get_stoichiometrically_coupled_reactions
-from random import randint, choices, choice
+from .utilities import get_stoichiometrically_coupled_reactions
+from random import randint, choices, choice, sample
 
 
 @dataclass
@@ -202,6 +204,7 @@ def _add_eligible_binaries_and_get_best_nlp_solution(
     binary_results: dict[tuple[int, ...], float | None],
     is_maximization: bool,
     add_nlp_result_only: bool,
+    min_abs_objvalue: float,
 ) -> tuple[dict[str, float], dict[tuple[int, ...], float | None]]:
     for result in lpnlpblock_results:
         if not result.lp_result:
@@ -210,6 +213,11 @@ def _add_eligible_binaries_and_get_best_nlp_solution(
         if not result.nlp_result:
             binary_results[result.original_binaries] = None
             binary_results[result.lp_binaries] = None
+            continue
+        if abs(result.nlp_result[OBJECTIVE_VAR_NAME]) < min_abs_objvalue:
+            binary_results[result.original_binaries] = None
+            binary_results[result.lp_binaries] = None
+            binary_results[result.nlp_binaries] = None
             continue
         if not add_nlp_result_only:
             binary_results[result.original_binaries] = result.nlp_result[OBJECTIVE_VAR_NAME]
@@ -252,13 +260,28 @@ def _get_evolution_binaries(
     evolution_results: dict[tuple[int, ...], float | None],
     fractions_genetic_method: dict[str, float],
     fractions_population_selection: dict[str, float],
+    sampling_p_random: float,
+    sampling_max_knockouts: int,
+    sampling_start_solutions: int,
     is_maximization: bool,
 ) -> list[tuple[int, ...]]:
-    if not evolution_results:
-        return [
-            tuple([randint(0, 1) for _ in range(num_reac_couples)])
-            for _ in range(population_size)
-        ]
+    if not evolution_results or len([value for value in evolution_results.values() if value is not None]) < sampling_start_solutions:
+        sampling_binaries = []
+        for _ in range(population_size):
+            if not random.random() < sampling_p_random:
+                # Completely random
+                sampling_binaries.append(tuple([randint(0, 1) for _ in range(num_reac_couples)]))
+            else:
+                # max. 5 deletions
+                sampling_binary: list[int] = [1] * num_reac_couples
+                zero_indices: list[int] = sample(
+                    range(num_reac_couples),
+                    randint(0, min(num_reac_couples, sampling_max_knockouts))
+                )
+                for zero_index in zero_indices:
+                    sampling_binary[zero_index] = 0
+                sampling_binaries.append(tuple(sampling_binary))
+        return sampling_binaries
 
     non_na_evolution_results: dict[tuple[int, ...], float] = {
         key: value
@@ -342,7 +365,7 @@ def _get_evolution_binaries(
 @validate_call(validate_return=True)
 def _evolution(
     cobrak_model: Model,
-    reac_couples_list: list[tuple[str, ...]],
+    reac_couples_list: tuple[tuple[str, ...], ...],
     objective_target: str | dict[str, float],
     objective_sense: int,
     variability_dict: dict[str, tuple[float, float]],
@@ -359,7 +382,13 @@ def _evolution(
     num_gens: int,
     population_size: int,
     ignore_nonlinear_extra_terms_in_lps: bool,
-    max_rounds_same_objvalue: float = float("inf"),
+    fractions_genetic_method: dict[str, float],
+    fractions_population_selection: dict[str, float],
+    sampling_p_random: float,
+    sampling_max_knockouts: int,
+    sampling_start_solutions: int,
+    min_abs_objvalue: float,
+    max_rounds_same_objvalue: int,
 ) -> tuple[dict[str, float], dict[tuple[int, ...], float | None]]:
     opt_selector = max if is_objsense_maximization(objective_sense) else min
     if type(objective_target) is str:
@@ -378,17 +407,11 @@ def _evolution(
             population_size=population_size,
             num_reac_couples=len(reac_couples_list),
             evolution_results=evolution_results,
-            fractions_genetic_method={
-                "neighborhood": 1/8,
-                "random": 1/8,
-                "multimutation": 1/4,
-                "crossover": 1/2,
-            },
-            fractions_population_selection={
-                "weighted": 1/2,
-                "elite": 1/4,
-                "random": 1/4,
-            },
+            fractions_genetic_method=fractions_genetic_method,
+            fractions_population_selection=fractions_population_selection,
+            sampling_p_random=sampling_p_random,
+            sampling_max_knockouts=sampling_max_knockouts,
+            sampling_start_solutions=sampling_start_solutions,
             is_maximization=is_objsense_maximization(objective_sense),
         )
 
@@ -449,8 +472,9 @@ def _evolution(
             binary_results=evolution_results,
             is_maximization=is_objsense_maximization(objective_sense),
             add_nlp_result_only=False,
+            min_abs_objvalue=min_abs_objvalue,
         )
-        # print(f"ROUND {current_round}: {evolution_results}")
+        print(f"ROUND {current_round}: {set(list(evolution_results.values()))}")
 
         non_none_objvalues = [value for value in evolution_results.values() if value is not None]
         if len(non_none_objvalues) > 0:
@@ -521,13 +545,28 @@ def perform_nlp_evolutionary_optimization(
     nlp_solver: Solver = IPOPT,
     nlp_strict_mode: bool = False,
     nlp_single_strict_reacs: list[str] = [],
-    max_rounds_same_objvalue: float = float("inf"),
     ignore_nonlinear_extra_terms_in_lps: bool = True,
-    existing_evolution_results: dict[float, list[dict[str, float]]] = {},
-) -> tuple[dict[str, float], dict[tuple[int, ...], float | None]]:
+    existing_evolution_results: dict[str, float | None] = {},
+    fractions_genetic_method: dict[str, NonNegativeFloat] = {
+        "neighborhood": 1/8,
+        "random": 1/8,
+        "multimutation": 1/4,
+        "crossover": 1/2,
+    },
+    fractions_population_selection: dict[str, NonNegativeFloat] = {
+        "weighted": 1/2,
+        "elite": 1/4,
+        "random": 1/4,
+    },
+    sampling_p_random: NonNegativeFloat = 0.33,
+    sampling_max_knockouts: PositiveInt = 5,
+    sampling_start_solutions: PositiveInt = 2,
+    min_abs_objvalue: PositiveFloat = 1e-8,
+    max_rounds_same_objvalue: PositiveInt = 1_000_000,
+) -> tuple[dict[str, float], dict[str, float | None]]:
     """"""
     # PHASE 1: BUILD INDEX TO REAC COUPLES DATA, AND CPU DATA
-    reac_couples_list = _get_idx_to_reac_ids(
+    reac_couples_list: tuple[tuple[str, ...], ...] = _get_idx_to_reac_ids(
         cobrak_model=cobrak_model,
         objective_target=objective_target,
         variability_dict=variability_dict,
@@ -535,13 +574,16 @@ def perform_nlp_evolutionary_optimization(
     )
 
     # PHASE 2: ACTUAL EVOLUTION ALGORITHM (USING GIVEN OR SAMPLED RESULTS AS STARTING POINTS)
-    return _evolution(
+    best_result, binary_results = _evolution(
         cobrak_model=cobrak_model,
         reac_couples_list=reac_couples_list,
         objective_target=objective_target,
         objective_sense=objective_sense,
         variability_dict=variability_dict,
-        evolution_results=existing_evolution_results,
+        evolution_results={
+            literal_eval(key): value
+            for key, value in existing_evolution_results.items()
+        },
         with_kappa=with_kappa,
         with_gamma=with_gamma,
         with_iota=with_iota,
@@ -554,5 +596,13 @@ def perform_nlp_evolutionary_optimization(
         nlp_strict_mode=nlp_strict_mode,
         nlp_single_strict_reacs=nlp_single_strict_reacs,
         ignore_nonlinear_extra_terms_in_lps=ignore_nonlinear_extra_terms_in_lps,
+        fractions_genetic_method=fractions_genetic_method,
+        fractions_population_selection=fractions_population_selection,
+        sampling_p_random=sampling_p_random,
+        sampling_max_knockouts=sampling_max_knockouts,
+        sampling_start_solutions=sampling_start_solutions,
+        min_abs_objvalue=min_abs_objvalue,
         max_rounds_same_objvalue=max_rounds_same_objvalue,
     )
+
+    return best_result, {str(key): value for key, value in binary_results.items()}
