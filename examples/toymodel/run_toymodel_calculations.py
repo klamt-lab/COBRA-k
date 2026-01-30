@@ -263,6 +263,8 @@ x = perform_nlp_evolutionary_optimization_2(
     with_iota=False,
     num_gens=10,
     population_size=10,
+    verbose=True,
+    round_result_json_path="examples/toymodel/round_results.json",
 )
 t1 = time.time()
 print(x[1])

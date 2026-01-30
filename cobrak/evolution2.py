@@ -1,17 +1,18 @@
 """"""
+from cobrak.io import json_write
 import random
 from ast import literal_eval
 from dataclasses import dataclass, field
 from pyomo.common.errors import ApplicationError
-from .constants import ALL_OK_KEY, OBJECTIVE_VAR_NAME, Z_VAR_PREFIX
-from .dataclasses import ExtraLinearConstraint, Model, Solver, CorrectionConfig
-from .evolution import is_objsense_maximization
-from .lps import perform_lp_optimization
-from .nlps import delete_unused_reactions_in_optimization_dict, perform_nlp_irreversible_optimization
-from .standard_solvers import SCIP, IPOPT
+from cobrak.constants import ALL_OK_KEY, OBJECTIVE_VAR_NAME, Z_VAR_PREFIX
+from cobrak.dataclasses import ExtraLinearConstraint, Model, Solver, CorrectionConfig
+from cobrak.evolution import is_objsense_maximization
+from cobrak.lps import perform_lp_optimization
+from cobrak.nlps import delete_unused_reactions_in_optimization_dict, perform_nlp_irreversible_optimization
+from cobrak.standard_solvers import SCIP, IPOPT
 from pydantic import validate_call, PositiveInt, NonNegativeFloat, PositiveFloat
 from joblib import Parallel, delayed
-from .utilities import get_stoichiometrically_coupled_reactions
+from cobrak.utilities import get_stoichiometrically_coupled_reactions
 from random import randint, choices, choice, sample
 
 
@@ -143,7 +144,8 @@ def _ectfba_nlp_block(
                 for reac_id in reac_couples_list[couple_idx]:
                     del cobrak_model_with_deletions_and_extra_constraints.reactions[reac_id]
         cobrak_model_with_deletions_and_extra_constraints.extra_linear_constraints += lp_extra_linear_constraints
-        if lp_objective_target == "MAXZ":
+        if lp_objective_target == "MAXZ" or lp_objective_target == "MINZ":
+            lp_objective_sense = +1 if lp_objective_target == "MAXZ" else -1
             lp_objective_target = {
                 f"{Z_VAR_PREFIX}{reac_id}": 1.0
                 for (reac_id, reac_data) in cobrak_model_with_deletions_and_extra_constraints.reactions.items()
@@ -388,7 +390,10 @@ def _evolution(
     sampling_max_knockouts: int,
     sampling_start_solutions: int,
     min_abs_objvalue: float,
+    inner_lp_objectives: tuple[str, ...],
     max_rounds_same_objvalue: int,
+    verbose: bool,
+    round_result_json_path: str,
 ) -> tuple[dict[str, float], dict[tuple[int, ...], float | None]]:
     opt_selector = max if is_objsense_maximization(objective_sense) else min
     if type(objective_target) is str:
@@ -440,7 +445,7 @@ def _evolution(
                 cobrak_model,
                 eligible_binary,
                 reac_couples_list,
-                "MAXZ",
+                inner_lp_objective,
                 +1,
                 [
                     ExtraLinearConstraint(
@@ -465,6 +470,7 @@ def _evolution(
                 False,
             )
             for eligible_binary, objvalue in eligible_binaries_with_objvalue.items()
+            for inner_lp_objective in inner_lp_objectives
         )
         best_nlp_solution, evolution_results = _add_eligible_binaries_and_get_best_nlp_solution(
             best_nlp_solution=best_nlp_solution,
@@ -474,7 +480,10 @@ def _evolution(
             add_nlp_result_only=False,
             min_abs_objvalue=min_abs_objvalue,
         )
-        print(f"ROUND {current_round}: {set(list(evolution_results.values()))}")
+        if verbose:
+            print(f"ROUND {current_round} NON-NONE OBJECTIVE VALUES: {sorted(x for x in set(evolution_results.values()) if x is not None)}")
+        if round_result_json_path:
+            json_write(round_result_json_path, [best_nlp_solution, {str(key): value for key, value in evolution_results.items()}])
 
         non_none_objvalues = [value for value in evolution_results.values() if value is not None]
         if len(non_none_objvalues) > 0:
@@ -562,7 +571,10 @@ def perform_nlp_evolutionary_optimization(
     sampling_max_knockouts: PositiveInt = 5,
     sampling_start_solutions: PositiveInt = 2,
     min_abs_objvalue: PositiveFloat = 1e-8,
+    inner_lp_objectives: tuple[str, ...] = ("MAXZ",),
     max_rounds_same_objvalue: PositiveInt = 1_000_000,
+    verbose: bool = False,
+    round_result_json_path: str = "",
 ) -> tuple[dict[str, float], dict[str, float | None]]:
     """"""
     # PHASE 1: BUILD INDEX TO REAC COUPLES DATA, AND CPU DATA
@@ -602,7 +614,10 @@ def perform_nlp_evolutionary_optimization(
         sampling_max_knockouts=sampling_max_knockouts,
         sampling_start_solutions=sampling_start_solutions,
         min_abs_objvalue=min_abs_objvalue,
+        inner_lp_objectives=inner_lp_objectives,
         max_rounds_same_objvalue=max_rounds_same_objvalue,
+        verbose=verbose,
+        round_result_json_path=round_result_json_path,
     )
 
     return best_result, {str(key): value for key, value in binary_results.items()}
