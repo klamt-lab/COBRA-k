@@ -8,12 +8,12 @@ from cobrak.constants import ALL_OK_KEY, OBJECTIVE_VAR_NAME, Z_VAR_PREFIX
 from cobrak.dataclasses import ExtraLinearConstraint, Model, Solver, CorrectionConfig
 from cobrak.evolution import is_objsense_maximization
 from cobrak.lps import perform_lp_optimization
-from cobrak.nlps import delete_unused_reactions_in_optimization_dict, perform_nlp_irreversible_optimization
+from cobrak.nlps import perform_nlp_irreversible_optimization
 from cobrak.standard_solvers import SCIP, IPOPT
 from pydantic import validate_call, PositiveInt, NonNegativeFloat, PositiveFloat
 from joblib import Parallel, delayed
-from cobrak.utilities import get_stoichiometrically_coupled_reactions
-from random import randint, choices, choice, sample
+from cobrak.utilities import get_stoichiometrically_coupled_reactions, delete_orphaned_metabolites_and_enzymes, delete_unused_reactions_in_optimization_dict
+from random import randint, choices, choice, sample, uniform
 
 
 @dataclass
@@ -189,7 +189,8 @@ def _ectfba_nlp_block(
             lp_binaries=_get_binaries_from_opt_result(ectfba_dict, reac_couples_list),
             nlp_binaries=(),
         )
-
+    print("++++", lp_objective_sense, nlp_result[OBJECTIVE_VAR_NAME])
+    print("++++++")
     return LpNlpBlockResult(
         original_binaries=binaries,
         lp_result=ectfba_dict,
@@ -212,7 +213,7 @@ def _add_eligible_binaries_and_get_best_nlp_solution(
         if not result.lp_result:
             binary_results[result.original_binaries] = None
             continue
-        if not result.nlp_result:
+        if not result.nlp_result or (None in result.nlp_result.values()):
             binary_results[result.original_binaries] = None
             binary_results[result.lp_binaries] = None
             continue
@@ -221,10 +222,16 @@ def _add_eligible_binaries_and_get_best_nlp_solution(
             binary_results[result.lp_binaries] = None
             binary_results[result.nlp_binaries] = None
             continue
+        keys_to_update = [result.nlp_binaries]
         if not add_nlp_result_only:
-            binary_results[result.original_binaries] = result.nlp_result[OBJECTIVE_VAR_NAME]
-            binary_results[result.lp_binaries] = result.nlp_result[OBJECTIVE_VAR_NAME]
-        binary_results[result.nlp_binaries] = result.nlp_result[OBJECTIVE_VAR_NAME]
+            keys_to_update.extend([result.lp_binaries])
+        compare = max if is_maximization else min
+        nlp_objvalue = result.nlp_result[OBJECTIVE_VAR_NAME]
+        for key in keys_to_update:
+            if key in binary_results and binary_results[key] is None:
+                binary_results[key] = nlp_objvalue
+            else:
+                binary_results[key] = compare(binary_results[key], nlp_objvalue) if key in binary_results else nlp_objvalue  # ty:ignore[invalid-argument-type]
 
         if not best_nlp_solution or\
            (is_maximization and result.nlp_result[OBJECTIVE_VAR_NAME] > best_nlp_solution[OBJECTIVE_VAR_NAME]) or\
@@ -247,8 +254,12 @@ def _get_binaries_according_to_selection(
                 weights=list(sorted_results.values()),
                 k=1,
             )[0]
-        case "elite":
-            return choice(keylist[:9])
+        case "worst_75_pct":
+            return choice(keylist[int(len(keylist) * .25):])
+        case "top_25_pct":
+            return choice(keylist[:int(len(keylist) * .25)])
+        case "top_3":
+            return choice(keylist[:6])
         case "random":
             return choice(keylist)
         case _:
@@ -266,6 +277,7 @@ def _get_evolution_binaries(
     sampling_max_knockouts: int,
     sampling_start_solutions: int,
     is_maximization: bool,
+    num_rounds_with_same_objvalue: int,
 ) -> list[tuple[int, ...]]:
     if not evolution_results or len([value for value in evolution_results.values() if value is not None]) < sampling_start_solutions:
         sampling_binaries = []
@@ -309,12 +321,53 @@ def _get_evolution_binaries(
             selection_method=selection_method,
         )
 
+        min_change_p = 0.1 * 0.95**num_rounds_with_same_objvalue
+        max_change_p = 0.1 * 1.05**num_rounds_with_same_objvalue
+        change_p = uniform(min_change_p, max_change_p)
+        change_p = max(0.001, change_p)
+        change_p = min(0.999, change_p)
         genetic_method: str  = choices(
             population=list(fractions_genetic_method.keys()),
             weights=list(fractions_genetic_method.values()),
             k=1,
         )[0]
         match genetic_method:
+            case "extend":
+                mutated_x = []
+                for x in first_binaries:
+                    if x == 1:
+                        mutated_x.append(1)
+                        continue
+                    if uniform(0.0, 1.0) < change_p:
+                        mutated_x.append(1)
+                    else:
+                        mutated_x.append(x)
+                binaries.append(tuple(mutated_x))
+            case "decrease":
+                mutated_x = []
+                for x in first_binaries:
+                    if x == 0:
+                        mutated_x.append(0)
+                        continue
+                    if uniform(0.0, 1.0) < change_p:
+                        mutated_x.append(0)
+                    else:
+                        mutated_x.append(x)
+                binaries.append(tuple(mutated_x))
+            case "extend_and_decrease":
+                mutated_x = []
+                for x in first_binaries:
+                    if x == 1:
+                        if uniform(0.0, 1.0) < change_p:
+                            mutated_x.append(0)
+                        else:
+                            mutated_x.append(x)
+                    else:
+                        if uniform(0.0, 1.0) < change_p:
+                            mutated_x.append(1)
+                        else:
+                            mutated_x.append(x)
+                binaries.append(tuple(mutated_x))
             case "neighborhood":
                 num_tries = 0
                 while first_binaries in sorted_results:
@@ -350,7 +403,7 @@ def _get_evolution_binaries(
                     selection_method=selection_method,
                 )
                 num_tries = 0
-                crossed_over_binaries: list[int]
+                crossed_over_binaries: tuple[int, ...]
                 while first_binaries in sorted_results:
                     crossover_point = randint(0, num_reac_couples-1)
                     crossed_over_binaries = first_binaries[:crossover_point] + second_binaries[crossover_point:]
@@ -394,6 +447,7 @@ def _evolution(
     max_rounds_same_objvalue: int,
     verbose: bool,
     round_result_json_path: str,
+    do_sampling_only: bool,
 ) -> tuple[dict[str, float], dict[tuple[int, ...], float | None]]:
     opt_selector = max if is_objsense_maximization(objective_sense) else min
     if type(objective_target) is str:
@@ -408,6 +462,9 @@ def _evolution(
         current_best_objvalue: float = -float("inf") if is_objsense_maximization(objective_sense) else float("inf")
     num_rounds_with_same_objvalue = 0
     for current_round in range(num_gens):
+        if do_sampling_only and len([value for value in evolution_results.values() if value is not None]) >= sampling_start_solutions:
+            print("ENDING SAMPLING (do_sampling_only argument is set to True)")
+            break
         tested_binaries = _get_evolution_binaries(
             population_size=population_size,
             num_reac_couples=len(reac_couples_list),
@@ -418,6 +475,7 @@ def _evolution(
             sampling_max_knockouts=sampling_max_knockouts,
             sampling_start_solutions=sampling_start_solutions,
             is_maximization=is_objsense_maximization(objective_sense),
+            num_rounds_with_same_objvalue=num_rounds_with_same_objvalue,
         )
 
         ectfba_results: list[dict[str, float]] = Parallel(n_jobs=-1, verbose=0)(
@@ -450,8 +508,8 @@ def _evolution(
                 [
                     ExtraLinearConstraint(
                         stoichiometries=objective_target_as_dict,
-                        lower_value=objvalue - 1e-9,
-                        upper_value=objvalue + 1e-9,
+                        lower_value=objvalue - 1e-8,
+                        upper_value=objvalue + 1e-8,
                     )
                 ],
                 objective_target,
@@ -557,15 +615,20 @@ def perform_nlp_evolutionary_optimization(
     ignore_nonlinear_extra_terms_in_lps: bool = True,
     existing_evolution_results: dict[str, float | None] = {},
     fractions_genetic_method: dict[str, NonNegativeFloat] = {
-        "neighborhood": 1/8,
-        "random": 1/8,
-        "multimutation": 1/4,
-        "crossover": 1/2,
+        # "neighborhood": 0.0,
+        # "random": 1/2,
+        # "multimutation": 1/2,
+        "crossover": 1/4,
+        "extend": 1/4,
+        "decrease": 1/4,
+        "extend_and_decrease": 1/4,
     },
     fractions_population_selection: dict[str, NonNegativeFloat] = {
-        "weighted": 1/2,
-        "elite": 1/4,
-        "random": 1/4,
+        # "weighted": 1/4,
+        # "random": 1/4,
+        "top_3": 1/4,
+        "top_25_pct": 1/2,
+        "worst_75_pct": 1/4,
     },
     sampling_p_random: NonNegativeFloat = 0.33,
     sampling_max_knockouts: PositiveInt = 5,
@@ -575,6 +638,7 @@ def perform_nlp_evolutionary_optimization(
     max_rounds_same_objvalue: PositiveInt = 1_000_000,
     verbose: bool = False,
     round_result_json_path: str = "",
+    do_sampling_only: bool = False,
 ) -> tuple[dict[str, float], dict[str, float | None]]:
     """"""
     # PHASE 1: BUILD INDEX TO REAC COUPLES DATA, AND CPU DATA
@@ -618,6 +682,7 @@ def perform_nlp_evolutionary_optimization(
         max_rounds_same_objvalue=max_rounds_same_objvalue,
         verbose=verbose,
         round_result_json_path=round_result_json_path,
+        do_sampling_only=do_sampling_only,
     )
 
     return best_result, {str(key): value for key, value in binary_results.items()}
