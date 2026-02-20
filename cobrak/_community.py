@@ -1,6 +1,6 @@
 from copy import deepcopy
 from cobrak.io import ExtraLinearWatch, ExtraNonlinearConstraint
-from .dataclasses import Model, Reaction, Metabolite, Enzyme, ExtraNonlinearWatch, ExtraLinearConstraint
+from .dataclasses import Model, Reaction, Metabolite, Enzyme, ExtraNonlinearWatch, ExtraLinearConstraint, CommunitySpeciesSetting
 
 
 def create_multiplied_model(
@@ -19,6 +19,26 @@ def create_multiplied_model(
             metabolites[f"{met_id}_{model_id}"] = deepcopy(metabolite)
         for reac_id, reaction in model.reactions.items():
             reactions[f"{reac_id}_{model_id}"] = deepcopy(reaction)
+            reactions[f"{reac_id}_{model_id}"].stoichiometries = {
+                f"{key}_{model_id}": value
+                for key, value in reaction.stoichiometries.items()
+            }
+            if reaction.enzyme_reaction_data:
+                reactions[f"{reac_id}_{model_id}"].enzyme_reaction_data.identifiers = [
+                    f"{identifier}_{model_id}" for identifier in reactions[f"{reac_id}_{model_id}"].enzyme_reaction_data.identifiers
+                ]
+                reactions[f"{reac_id}_{model_id}"].enzyme_reaction_data.k_ms = {
+                    f"{key}_{model_id}": value
+                    for key, value in reaction.enzyme_reaction_data.k_ms.items()
+                }
+                reactions[f"{reac_id}_{model_id}"].enzyme_reaction_data.k_is = {
+                    f"{key}_{model_id}": value
+                    for key, value in reaction.enzyme_reaction_data.k_is.items()
+                }
+                reactions[f"{reac_id}_{model_id}"].enzyme_reaction_data.k_as = {
+                    f"{key}_{model_id}": value
+                    for key, value in reaction.enzyme_reaction_data.k_as.items()
+                }
         for enzyme_id, enzyme in model.enzymes.items():
             enzymes[f"{enzyme_id}_{model_id}"] = deepcopy(enzyme)
         for extra_linear_constraint in model.extra_linear_constraints:
@@ -80,6 +100,14 @@ def create_multiplied_model(
         conc_sum_include_suffixes=first_model.conc_sum_include_suffixes,
         conc_sum_max_rel_error=first_model.conc_sum_max_rel_error,
         conc_sum_min_abs_error=first_model.conc_sum_min_abs_error,
+        community_species_settings={
+            species_id: CommunitySpeciesSetting(
+                max_prot_pool=species_model.max_prot_pool,
+                max_conc_sum=species_model.max_conc_sum,
+                include_mets_in_prot_pool=species_model.include_mets_in_prot_pool,
+            )
+            for species_id, species_model in models.items()
+        }
     )
 
 
@@ -139,7 +167,7 @@ def create_community_model_with_fixed_growth(
     growth_rate: float,
     community_growth_reac_id: str = "GROWTH",
     community_growth_met_id: str = "BIOMASS",
-    max_considered_flux: float = 1_000.0,
+    max_considered_flux: float = 1000.0,
 ) -> Model:
     models: dict[str, Model] = {
         key: value[0]
@@ -165,6 +193,7 @@ def create_community_model_with_fixed_growth(
     )
     for biomass_reac_id in biomass_reac_ids:
         community_model.reactions[biomass_reac_id].stoichiometries[community_growth_met_id] = 1.0
+        community_model.kinetic_ignored_metabolites.append(community_growth_met_id)
 
     # Inhomogenous constraint handling
     for model_id, (model, biomass_reac_id) in models_and_biomass_reacs.items():
@@ -179,7 +208,8 @@ def create_community_model_with_fixed_growth(
                     min_flux=0.0,
                     max_flux=max_considered_flux,
                 )
-            if reaction.min_flux < max_considered_flux:
+                community_model.kinetic_ignored_metabolites.append(pseudo_met_id)
+            if reaction.max_flux < max_considered_flux:
                 pseudo_met_id = f"Rsnake_UPPER_{reac_id}_{model_id}"
                 community_model.metabolites[pseudo_met_id] = Metabolite()
                 community_model.reactions[f"{reac_id}_{model_id}"].stoichiometries[pseudo_met_id] = 1.0
@@ -189,6 +219,7 @@ def create_community_model_with_fixed_growth(
                     min_flux=0.0,
                     max_flux=max_considered_flux,
                 )
+                community_model.kinetic_ignored_metabolites.append(pseudo_met_id)
 
     return community_model
 
@@ -247,3 +278,13 @@ def create_community_model_with_no_growth(
         single_models=models,
         community_model=community_model,
     )
+
+
+def remove_community_suffix(
+    community_suffixes: list[str],
+    var_id: str,
+) -> str:
+    for community_suffix in community_suffixes:
+        if var_id.endswith(f"_{community_suffix}"):
+            return var_id[:-len(f"_{community_suffix}")]
+    return var_id

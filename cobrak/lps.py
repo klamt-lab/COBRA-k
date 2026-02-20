@@ -33,7 +33,8 @@ from pyomo.environ import (
     value,
 )
 
-from cobrak.pyomo_functionality import add_linear_approximation_to_pyomo_model
+from .pyomo_functionality import add_linear_approximation_to_pyomo_model
+from ._community import remove_community_suffix
 
 from .constants import (
     ALL_OK_KEY,
@@ -208,6 +209,12 @@ def _add_conc_sum_constraints(
         met_sum_ids.append(var_id)
 
     conc_sum_expr = 0.0
+    metsumconstrained_community_species_ids: list[str] = [
+        species_id
+        for species_id, settings in cobrak_model.community_species_settings.items()
+        if settings.max_conc_sum < float("inf") or settings.include_mets_in_prot_pool
+    ]
+    community_conc_sum_exprs = dict.fromkeys(metsumconstrained_community_species_ids, 0.0)
     for met_sum_id in met_sum_ids:
         add_linear_approximation_to_pyomo_model(
             model=model,
@@ -232,12 +239,31 @@ def _add_conc_sum_constraints(
             )
         else:
             conc_sum_expr += getattr(model, f"exp_{met_sum_id}")
+        for species_id in community_conc_sum_exprs:
+            if not met_id.endswith(species_id):
+                if (
+                    cobrak_model.include_mets_in_prot_pool
+                    and cobrak_model.metabolites[met_id].molar_mass
+                ):
+                    community_conc_sum_exprs[species_id] += (
+                        (1 / cobrak_model.cell_density)
+                        * cobrak_model.metabolites[met_id].molar_mass
+                        * getattr(model, f"exp_{met_sum_id}")
+                    )
+                else:
+                    community_conc_sum_exprs[species_id] += getattr(model, f"exp_{met_sum_id}")
 
     setattr(
         model,
         "met_sum_var",
         Var(within=Reals, bounds=(1e-12, cobrak_model.max_conc_sum)),
     )
+    for species_id in community_conc_sum_exprs:
+        setattr(
+            model,
+            f"met_sum_var_{species_id}",
+            Var(within=Reals, bounds=(1e-12, cobrak_model.community_species_settings[species_id].max_conc_sum)),
+        )
 
     if cobrak_model.include_mets_in_prot_pool:
         setattr(
@@ -254,6 +280,22 @@ def _add_conc_sum_constraints(
             "met_sum_constraint",
             Constraint(rule=conc_sum_expr <= getattr(model, "met_sum_var")),
         )
+    for species_id in community_conc_sum_exprs:
+        if cobrak_model.include_mets_in_prot_pool:
+            setattr(
+                model,
+                f"{GENERALIZED_SUM_CONSTRAINT_NAME}_{species_id}",
+                Constraint(
+                    rule=getattr(model, f"{PROT_POOL_REAC_NAME}_{species_id}") + getattr(model, f"met_sum_var_{species_id}")
+                    <= cobrak_model.community_species_settings[species_id].max_prot_pool
+                ),
+            )
+        else:
+            setattr(
+                model,
+                f"met_sum_constraint_{species_id}",
+                Constraint(rule=conc_sum_expr <= getattr(model, f"met_sum_var_{species_id}")),
+            )
 
     return model
 
@@ -312,12 +354,13 @@ def _add_df_and_dG0_var_for_reaction(
     # <=> RT*ln([S]) + RT*ln([T]) - 2*RT*ln([A]) - RT*ln([B])
     f_expression_lhs = -getattr(model, dG0_var_name)
     if add_error_term:
-        error_var_id = f"{ERROR_VAR_PREFIX}_dG0_{reac_id}"
-        setattr(
-            model,
-            error_var_id,
-            Var(within=Reals, bounds=(0.0, max_abs_dG0_correction)),
-        )
+        error_var_id = remove_community_suffix(cobrak_model.community_species_settings.keys(), f"{ERROR_VAR_PREFIX}_dG0_{reac_id}")
+        if not hasattr(model, error_var_id):
+            setattr(
+                model,
+                error_var_id,
+                Var(within=Reals, bounds=(0.0, max_abs_dG0_correction)),
+            )
         f_expression_lhs += getattr(model, error_var_id)
         f_bound_correction_var_id = f"{ERROR_BOUND_UPPER_CHANGE_PREFIX}{f_var_name}"
         setattr(model, f_bound_correction_var_id, Var())
@@ -671,6 +714,17 @@ def _add_enzyme_constraints_to_lp(
         PROT_POOL_REAC_NAME,
         Var(within=Reals, bounds=(0.0, cobrak_model.max_prot_pool)),
     )
+    protconstrained_community_species_ids: list[str] = [
+        species_id
+        for species_id, settings in cobrak_model.community_species_settings.items()
+        if settings.max_prot_pool < float("inf")
+    ]
+    for protconstrained_community_species_id in protconstrained_community_species_ids:
+        setattr(
+            model,
+            f"{PROT_POOL_REAC_NAME}_{protconstrained_community_species_id}",
+            Var(within=Reals, bounds=(0.0, cobrak_model.community_species_settings[protconstrained_community_species_id].max_prot_pool)),
+        )
 
     # Collect all kcats and get error-eligible reactions
     if add_error_term:
@@ -681,6 +735,8 @@ def _add_enzyme_constraints_to_lp(
 
     # Expression for the sum which describes thee used protein pool (in [g/gDW])
     prot_pool_sum = 0.0
+    # Expression for the protein pool sum in the single community species
+    species_prot_pool_sums = dict.fromkeys(protconstrained_community_species_ids, 0.0)
     # Go through each reaction, checking for the inclusion of enzyme constraints
     for reac_id, reaction in cobrak_model.reactions.items():
         # Ignore reactions where the user specifically said that no enzyme constraints
@@ -748,12 +804,13 @@ def _add_enzyme_constraints_to_lp(
                 / get_full_enzyme_mw(cobrak_model, reaction)
             )
             if max_k_cat_times_e <= max_kcat_times_e_lowbound:
-                kcat_times_e_error_var_id = f"{ERROR_VAR_PREFIX}_kcat_times_e_{reac_id}"
-                setattr(
-                    model,
-                    kcat_times_e_error_var_id,
-                    Var(within=Reals, bounds=(0.0, QUASI_INF)),
-                )
+                kcat_times_e_error_var_id = remove_community_suffix(cobrak_model.community_species_settings.keys(), f"{ERROR_VAR_PREFIX}_kcat_times_e_{reac_id}")
+                if not hasattr(kcat_times_e_error_var_id):
+                    setattr(
+                        model,
+                        kcat_times_e_error_var_id,
+                        Var(within=Reals, bounds=(0.0, QUASI_INF)),
+                    )
                 enzyme_constraint_expr: Expression = getattr(model, reac_id) <= getattr(
                     model, full_enzyme_id
                 ) * k_cat + getattr(model, kcat_times_e_error_var_id)
@@ -782,6 +839,9 @@ def _add_enzyme_constraints_to_lp(
 
         # Add current enzyme usage to total enzyme pool
         prot_pool_sum += full_enzyme_mw * getattr(model, full_enzyme_id)
+        for species_id in species_prot_pool_sums:
+            if full_enzyme_id.endswith(species_id):
+                species_prot_pool_sums[species_id] += full_enzyme_mw * getattr(model, full_enzyme_id)
 
     # Finally, set the protein pool
     setattr(
@@ -789,6 +849,12 @@ def _add_enzyme_constraints_to_lp(
         f"{PROT_POOL_REAC_NAME}_constraint",
         Constraint(expr=getattr(model, PROT_POOL_REAC_NAME) >= prot_pool_sum),
     )
+    for species_id, species_prot_pool_sum in species_prot_pool_sums.items():
+        setattr(
+            model,
+            f"{PROT_POOL_REAC_NAME}_{species_id}_constraint",
+            Constraint(expr=getattr(model, f"{PROT_POOL_REAC_NAME}_{species_id}") >= species_prot_pool_sum),
+        )
 
     return model
 
@@ -872,23 +938,25 @@ def _add_kappa_substrates_and_products_vars(
             kappa_products_sum -= stoichiometry * log(k_m)
 
             if add_error_term and k_m <= kms_lowbound:
-                km_product_error_var_id = (
+                km_product_error_var_id = remove_community_suffix(
+                    cobrak_model.community_species_settings.keys(),
                     f"{ERROR_VAR_PREFIX}_{reac_id}____{reac_met_id}_product"
                 )
                 max_product_change = abs(
                     log(k_m) - log((1 + max_rel_km_correction) * k_m)
                 )
-                setattr(
-                    model,
-                    km_product_error_var_id,
-                    Var(
-                        within=Reals,
-                        bounds=(
-                            0.0,
-                            max_product_change,
+                if not hasattr(model, km_product_error_var_id):
+                    setattr(
+                        model,
+                        km_product_error_var_id,
+                        Var(
+                            within=Reals,
+                            bounds=(
+                                0.0,
+                                max_product_change,
+                            ),
                         ),
-                    ),
-                )
+                    )
                 kappa_products_sum -= abs(stoichiometry) * getattr(
                     model, km_product_error_var_id
                 )
@@ -900,23 +968,25 @@ def _add_kappa_substrates_and_products_vars(
             kappa_substrates_sum -= abs(stoichiometry) * log(k_m)
 
             if add_error_term and k_m >= kms_highbound:
-                km_substrate_error_var_id = (
-                    f"{ERROR_VAR_PREFIX}_{reac_id}____{reac_met_id}_substrate"
+                km_substrate_error_var_id = remove_community_suffix(
+                    cobrak_model.community_species_settings.keys(),
+                    f"{ERROR_VAR_PREFIX}_{reac_id}____{reac_met_id}_substrate",
                 )
                 max_substrate_change = abs(
                     log(k_m) - log((1 - max_rel_km_correction) * k_m)
                 )
-                setattr(
-                    model,
-                    km_substrate_error_var_id,
-                    Var(
-                        within=Reals,
-                        bounds=(
-                            0.0,
-                            max_substrate_change,
+                if not hasattr(model, km_substrate_error_var_id):
+                    setattr(
+                        model,
+                        km_substrate_error_var_id,
+                        Var(
+                            within=Reals,
+                            bounds=(
+                                0.0,
+                                max_substrate_change,
+                            ),
                         ),
-                    ),
-                )
+                    )
                 kappa_substrates_sum += abs(stoichiometry) * getattr(
                     model, km_substrate_error_var_id
                 )

@@ -327,6 +327,13 @@ class Reaction:
 
 
 @dataclass
+class CommunitySpeciesSetting:
+    max_prot_pool: float = float("inf")
+    max_conc_sum: float = float("inf")
+    include_mets_in_prot_pool: bool = False
+
+
+@dataclass
 class Model:
     """Represents a metabolic model in COBRAk.
 
@@ -381,6 +388,10 @@ class Model:
     """[Optional and only works with MILPs with thermodynamic constraints] Maximal absolute concentration sum approximation error"""
     include_mets_in_prot_pool: bool = False
     """[Experimental! Optional and only works with MILPs with enzyme and thermodynamic constraints] Whether or not metabolite masses are included in the protein (now generalized mass) pool (makes the problem non-linear!)"""
+    cell_density: float = 330
+    """[Experimental! Optional and only works with MINLPs with enzyme and thermodynamic constraints] The cell density used if include_mets_in_prot_pool is True. Default is 330 g⋅l⁻¹."""
+    community_species_settings: dict[str, CommunitySpeciesSetting] = Field(default_factory=dict)
+    """[Experimental!] Add a list of community species suffixes"""
 
     def __enter__(self):  # noqa: ANN204
         """Method called when entering 'with' blocks"""
