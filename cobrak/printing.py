@@ -593,7 +593,7 @@ def print_optimization_result(
         for met_id, metabolite in sort_dict_keys(cobrak_model.metabolites).items():
             met_var_id = f"{LNCONC_VAR_PREFIX}{met_id}"
 
-            consumption, production = get_metabolite_consumption_and_production(
+            consumption, production, _, _ = get_metabolite_consumption_and_production(
                 cobrak_model, met_id, optimization_dict
             )
 

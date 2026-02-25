@@ -1,6 +1,7 @@
 """Functions for generating spreadsheet overviews of variability/optimization results"""
 
 # IMPORT SECTION #
+from openpyxl.styles.alignment import Alignment
 from dataclasses import dataclass, field
 from math import exp, log
 from statistics import mean, median
@@ -141,14 +142,12 @@ EMPTY_CELL = SpreadsheetCell(None)
 
 @dataclass
 class Title:
-    """Represents a title or metatitle used in visualizations."""
+    """Represents a title used in visualizations."""
 
     text: str
     """Title text content"""
     width: float
     """With of column"""
-    is_metatitle: bool = field(default=False)
-    """If True, the title is shown *under* a the major title line in a second line. Defaults to False."""
 
 
 @dataclass
@@ -235,31 +234,22 @@ def _create_xlsx_from_datadicts(
         wb.create_sheet(sheet_name)
         sheet = wb[sheet_name]
         titles = titles_and_data[0]
-        has_metatitles = bool(sum(title.is_metatitle for title in titles))
         current_column = 1
 
         # Set sheet titles
         for title in titles:
             cell = SpreadsheetCell(title.text)
-            if title.is_metatitle:
-                cell.font = FONT_ITALIC
-                _set_cell(sheet, 1, current_column, cell)
-                continue
             cell.font = FONT_BOLD
-            line = 2 if has_metatitles else 1
-            _set_cell(sheet, line, current_column, cell)
+            _set_cell(sheet, 1, current_column, cell)
             current_column += 1
 
         # Freeze spreadsheet rows according to title height
         datadict = titles_and_data[1]
         if titles == []:
             start_line = 1
-        elif not has_metatitles:
+        else:
             start_line = 2
             sheet.freeze_panes = "B2"
-        else:
-            start_line = 3
-            sheet.freeze_panes = "B3"
 
         current_line = start_line
 
@@ -420,7 +410,6 @@ def _set_cell(
         openpyxl_cell.font = cell.font
     if cell.border is not None:
         openpyxl_cell.border = cell.border
-
 
 # "PUBLIC" FUNCTIONS SECTION #
 @validate_call
@@ -1118,8 +1107,7 @@ def create_cobrak_spreadsheet(
     for var_dataset_name, var_dataset in variability_datasets.items():
         reac_titles.extend(
             (
-                Title(var_dataset_name, WIDTH_DEFAULT, is_metatitle=True),
-                Title("Min flux [mmol⋅gDW⁻¹⋅h⁻¹]", WIDTH_DEFAULT),
+                Title(f"→{var_dataset_name}: Min flux [mmol⋅gDW⁻¹⋅h⁻¹]", WIDTH_DEFAULT),
                 Title("Max flux [mmol⋅gDW⁻¹⋅h⁻¹]", WIDTH_DEFAULT),
             )
         )
@@ -1165,8 +1153,7 @@ def create_cobrak_spreadsheet(
     for opt_dataset_name, opt_dataset in optimization_datasets.items():
         reac_titles.extend(
             (
-                Title(opt_dataset_name, WIDTH_DEFAULT, is_metatitle=True),
-                Title("Flux", WIDTH_DEFAULT),
+                Title(f"→{opt_dataset_name}: Flux", WIDTH_DEFAULT),
             )
         )
         if opt_dataset.with_df:
@@ -1404,8 +1391,7 @@ def create_cobrak_spreadsheet(
     for var_dataset_name, var_dataset in variability_datasets.items():
         enzcomplex_titles.extend(
             (
-                Title(var_dataset_name, WIDTH_DEFAULT, is_metatitle=True),
-                Title("Min conc. [mmol⋅gDW⁻¹]", WIDTH_DEFAULT),
+                Title(f"→{var_dataset_name}: Min conc. [mmol⋅gDW⁻¹]", WIDTH_DEFAULT),
                 Title("Max conc. [mmolgDW⁻¹]", WIDTH_DEFAULT),
             )
         )
@@ -1431,8 +1417,7 @@ def create_cobrak_spreadsheet(
     for opt_dataset_name, opt_dataset in optimization_datasets.items():
         enzcomplex_titles.extend(
             (
-                Title(opt_dataset_name, WIDTH_DEFAULT, is_metatitle=True),
-                Title("Concentration [mmol⋅gDW⁻¹]", WIDTH_DEFAULT),
+                Title(f"→{opt_dataset_name} Concentration [mmol⋅gDW⁻¹]", WIDTH_DEFAULT),
                 Title("% of pool", WIDTH_DEFAULT),
             )
         )
@@ -1492,8 +1477,7 @@ def create_cobrak_spreadsheet(
     for var_dataset_name, var_dataset in variability_datasets.items():
         met_titles.extend(
             (
-                Title(var_dataset_name, WIDTH_DEFAULT, is_metatitle=True),
-                Title("Min concentration [mmol⋅gDW⁻¹⋅h⁻¹)]", WIDTH_DEFAULT),
+                Title(f"→{var_dataset_name} Min concentration [mmol⋅gDW⁻¹⋅h⁻¹)]", WIDTH_DEFAULT),
                 Title("Max concentration [mmol⋅gDW⁻¹⋅h⁻¹)]", WIDTH_DEFAULT),
             )
         )
@@ -1523,8 +1507,7 @@ def create_cobrak_spreadsheet(
     for opt_dataset_name, opt_dataset in optimization_datasets.items():
         met_titles.extend(
             (
-                Title(opt_dataset_name, WIDTH_DEFAULT, is_metatitle=True),
-                Title("Concentration [M]", WIDTH_DEFAULT),
+                Title(f"→{opt_dataset_name} Concentration [M]", WIDTH_DEFAULT),
                 Title("Consumption [mmol⋅gDW⁻¹⋅h⁻¹]", WIDTH_DEFAULT),
                 Title("Production [mmol⋅gDW⁻¹⋅h⁻¹]", WIDTH_DEFAULT),
             )
@@ -1539,15 +1522,15 @@ def create_cobrak_spreadsheet(
         opt_met_ids = set(all_met_var_ids) & set(opt_dataset.data.keys())
         for met_var_id in opt_met_ids:
             conc = exp(opt_dataset.data[met_var_id])
-            consumption, production = get_metabolite_consumption_and_production(
+            consumption, production, consumption_dict, production_dict = get_metabolite_consumption_and_production(
                 cobrak_model, _get_met_id_from_met_var_id(met_var_id), opt_dataset.data
             )
             bg_color = _get_optimization_bg_color(consumption)
             met_cells[_get_met_id_from_met_var_id(met_var_id)].extend(
                 (
                     SpreadsheetCell(conc, bg_color=bg_color, border=BORDER_BLACK_LEFT),
-                    SpreadsheetCell(consumption, bg_color=bg_color),
-                    SpreadsheetCell(production, bg_color=bg_color),
+                    SpreadsheetCell(f"{consumption} → {consumption_dict}", bg_color=bg_color),
+                    SpreadsheetCell(f"{production} → {production_dict}", bg_color=bg_color),
                 )
             )
             if cobrak_model.include_mets_in_prot_pool and mass_sums[opt_dataset_name]:
@@ -1590,17 +1573,20 @@ def create_cobrak_spreadsheet(
                 met_cells[_get_met_id_from_met_var_id(missing_met_id)].append(
                     _get_empty_cell()
                 )
+    for met_cell in met_cells.values():
+        met_cell.append(
+            " "
+        )
 
     # κ and γ statistics
-    kgstats_titles: list[Title] = [Title("Rank", WIDTH_DEFAULT, is_metatitle=False)]
+    kgstats_titles: list[Title] = [Title("Rank", WIDTH_DEFAULT)]
     kgstats_cells: dict[
         str, list[str | float | int | bool | None | SpreadsheetCell]
     ] = {str(i): [i + 1] for i in range(len(cobrak_model.reactions))}
     for opt_dataset_name, opt_dataset in optimization_datasets.items():
         kgstats_titles.extend(
             (
-                Title(opt_dataset_name, WIDTH_DEFAULT, is_metatitle=True),
-                Title("Reaction ID", WIDTH_DEFAULT),
+                Title(f"→{opt_dataset_name}: Reaction ID", WIDTH_DEFAULT),
                 Title("κ", WIDTH_DEFAULT),
                 Title("Reaction ID", WIDTH_DEFAULT),
                 Title("γ", WIDTH_DEFAULT),
