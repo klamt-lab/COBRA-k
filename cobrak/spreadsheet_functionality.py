@@ -113,6 +113,8 @@ class OptimizationDataset:
     """Shall differences between NLP fluxes and 'real' fluxes from kinetics be shown in the spreadsheet?"""
     with_error_corrections: bool = False
     """Shall error corrections be shown as their own sheet?"""
+    with_efficiency_coefficient: bool = False
+    """Shall the efficiency coefficient be shown?"""
 
 
 @dataclass
@@ -1055,6 +1057,7 @@ def create_cobrak_spreadsheet(
     # Reaction sheet
     reac_titles: list[Title] = [
         Title("ID", WIDTH_DEFAULT),
+        Title("Name", WIDTH_DEFAULT),
         Title("String", WIDTH_DEFAULT),
         Title("ΔG'° [kJ⋅mol⁻¹]", WIDTH_DEFAULT),
         Title("Enzyme(s)", WIDTH_DEFAULT),
@@ -1075,6 +1078,8 @@ def create_cobrak_spreadsheet(
         reaction = cobrak_model.reactions[reac_id]
         # Reac ID
         reac_cells[reac_id].append(reac_id)
+        # Reac name
+        reac_cells[reac_id].append(cobrak_model.reactions[reac_id].name)
         # Reac string
         reac_cells[reac_id].append(get_reaction_string(cobrak_model, reac_id))
         # Reac ΔG'°
@@ -1176,6 +1181,8 @@ def create_cobrak_spreadsheet(
             reac_titles.append(Title("ι [0,1]", WIDTH_DEFAULT))
         if opt_dataset.with_alpha:
             reac_titles.append(Title("α [0,1]", WIDTH_DEFAULT))
+        if opt_dataset.with_efficiency_coefficient:
+            reac_titles.append(Title(f"Protein pool saving (in %) @ 10% better {'κ' if opt_dataset.with_kappa else ''}{'γ' if opt_dataset.with_gamma else ''}{'ι' if opt_dataset.with_iota else ''}{'α' if opt_dataset.with_kappa else ''}", WIDTH_DEFAULT))
         if opt_dataset.with_kinetic_differences:
             reac_titles.append(Title('"Real" flux', WIDTH_DEFAULT))
             unoptimized_reactions = get_unoptimized_reactions_in_nlp_solution(
@@ -1264,6 +1271,29 @@ def create_cobrak_spreadsheet(
                 reac_cells[reac_id].append(
                     SpreadsheetCell(alpha_value, bg_color=bg_color)
                 )
+            if opt_dataset.with_efficiency_coefficient:
+                enzyme_var_id = get_reaction_enzyme_var_id(reac_id, cobrak_model.reactions[reac_id])
+                if enzyme_var_id in opt_dataset.data:
+                    enzyme_mw = get_full_enzyme_mw(cobrak_model, reaction)
+                    enzyme_conc = opt_dataset.data[enzyme_var_id]
+                    coefficients_product = 1.0
+                    if opt_dataset.with_kappa and kappa_var_id in opt_dataset.data:
+                        coefficients_product *= opt_dataset.data[kappa_var_id]
+                    if opt_dataset.with_gamma and gamma_var_id in opt_dataset.data:
+                        coefficients_product *= opt_dataset.data[gamma_var_id]
+                    if opt_dataset.with_iota and iota_var_id in opt_dataset.data:
+                        coefficients_product *= opt_dataset.data[iota_var_id]
+                    if opt_dataset.with_alpha and alpha_var_id in opt_dataset.data:
+                        coefficients_product *= opt_dataset.data[alpha_var_id]
+                    efficiency_coefficient = 100 * (enzyme_mw * enzyme_conc * ( 1 - (coefficients_product) / (min(1.0, 0.1 + coefficients_product)))) / opt_dataset.data[PROT_POOL_REAC_NAME]
+                    reac_cells[reac_id].append(
+                        SpreadsheetCell(efficiency_coefficient, bg_color=bg_color)
+                    )
+                else:
+                    reac_cells[reac_id].append(
+                        SpreadsheetCell(" ", bg_color=bg_color)
+                    )
+
             if opt_dataset.with_kinetic_differences:
                 if reac_id in unoptimized_reactions and (
                     round(
@@ -1294,6 +1324,7 @@ def create_cobrak_spreadsheet(
                     opt_dataset.with_gamma,
                     opt_dataset.with_iota,
                     opt_dataset.with_alpha,
+                    opt_dataset.with_efficiency_coefficient,
                     opt_dataset.with_kinetic_differences,
                 ]
             )
@@ -1303,6 +1334,7 @@ def create_cobrak_spreadsheet(
     # Single enzyme sheet
     enzyme_titles: list[Title] = [
         Title("ID", WIDTH_DEFAULT),
+        Title("Name", WIDTH_DEFAULT),
         Title("MW", WIDTH_DEFAULT),
         Title("Conc. range [mmol⋅gDW⁻¹]", WIDTH_DEFAULT),
     ]
@@ -1314,6 +1346,8 @@ def create_cobrak_spreadsheet(
         enzyme: Enzyme = cobrak_model.enzymes[enzyme_id]
         # Enzyme ID
         enzyme_cells[enzyme_id].append(enzyme_id)
+        # Enzyme name
+        enzyme_cells[enzyme_id].append(enzyme.name)
         # Enzyme MW
         enzyme_cells[enzyme_id].append(enzyme.molecular_weight)
         # Enzyme concentration range
@@ -1429,6 +1463,7 @@ def create_cobrak_spreadsheet(
     # Metabolite sheet
     met_titles: list[Title] = [
         Title("ID", WIDTH_DEFAULT),
+        Title("Name", WIDTH_DEFAULT),
         Title("Min set concentration [mmol⋅gDW⁻¹⋅h⁻¹)]", WIDTH_DEFAULT),
         Title("Max set concentration [mmol⋅gDW⁻¹⋅h⁻¹)]", WIDTH_DEFAULT),
         Title("Molar mass [g⋅M⁻¹]", WIDTH_DEFAULT),
@@ -1442,6 +1477,8 @@ def create_cobrak_spreadsheet(
         met: Metabolite = cobrak_model.metabolites[met_id]
         # Met ID
         met_cells[met_id].append(met_id)
+        # Met name
+        met_cells[met_id].append(met.name)
         # Min conc
         met_cells[met_id].append(exp(met.log_min_conc))
         # Max conc
@@ -1516,7 +1553,7 @@ def create_cobrak_spreadsheet(
             if cobrak_model.include_mets_in_prot_pool and mass_sums[opt_dataset_name]:
                 met_id = _get_met_id_from_met_var_id(met_var_id)
                 eligible_metabolite = (
-                    True if cobrak_model.metabolites[met_id].molar_mass else False
+                    bool(cobrak_model.metabolites[met_id].molar_mass)
                 )
                 if any(
                     met_id.startswith(prefix)
