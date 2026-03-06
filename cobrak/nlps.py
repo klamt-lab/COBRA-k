@@ -60,7 +60,7 @@ from .standard_solvers import IPOPT, SCIP
 from .utilities import (
     add_statuses_to_optimziation_dict,
     apply_variability_dict,
-    delete_unused_reactions_in_optimization_dict,
+    delete_orphaned_metabolites_and_enzymes,
     get_full_enzyme_id,
     get_model_kas,
     get_model_kis,
@@ -74,6 +74,60 @@ from .utilities import (
 
 
 # FUNCTIONS SECTION #
+@validate_call(validate_return=True)
+def delete_unused_reactions_in_optimization_dict(
+    cobrak_model: Model,
+    optimization_dict: dict[str, float],
+    exception_prefix: str = "",
+    delete_missing_reactions: bool = True,
+    min_abs_flux: NonNegativeFloat = 1e-15,
+    do_not_delete_with_z_var_one: bool = True,
+) -> Model:
+    """Delete unused reactions in a COBRAk model based on an optimization dictionary.
+
+    This function creates a deep copy of the provided COBRAk model and removes reactions that are either not present
+    in the optimization dictionary or have flux values below a specified threshold. Optionally,
+    reactions with a specific prefix can be excluded from deletion.
+    Additionally, orphaned metabolites (those not used in any remaining reactions) are also removed.
+
+    Args:
+        cobrak_model (Model): COBRAk model containing reactions and metabolites.
+        optimization_dict (dict[str, float]): Dictionary mapping reaction IDs to their optimized flux values.
+        exception_prefix (str, optional): A prefix for reaction IDs that should not be deleted. Defaults to "".
+        delete_missing_reactions (bool, optional): Whether to delete reactions not present in the optimization dictionary. Defaults to True.
+        min_abs_flux (float, optional): The minimum absolute flux value below which reactions are considered unused. Defaults to 1e-10.
+
+    Returns:
+        Model: A new COBRAk model with unused reactions and orphaned metabolites removed.
+    """
+    cobrak_model = deepcopy(cobrak_model)
+    reacs_to_delete: list[str] = []
+    for reac_id in cobrak_model.reactions:
+        to_delete = False
+        if (reac_id not in optimization_dict) and delete_missing_reactions:
+            to_delete = True
+        elif (reac_id in optimization_dict) and abs(
+            optimization_dict[reac_id]
+        ) <= min_abs_flux:
+            z_var_id = f"{Z_VAR_PREFIX}{reac_id}"
+            if z_var_id in optimization_dict:
+                if do_not_delete_with_z_var_one and (
+                    optimization_dict[z_var_id] <= 1e-6
+                ):
+                    to_delete = True
+                else:
+                    to_delete = True
+            else:
+                to_delete = True
+        if to_delete:
+            reacs_to_delete.append(reac_id)
+    for reac_to_delete in reacs_to_delete:
+        if (exception_prefix) and (reac_to_delete.startswith(exception_prefix)):
+            continue
+        del cobrak_model.reactions[reac_to_delete]
+    return delete_orphaned_metabolites_and_enzymes(cobrak_model)
+
+
 @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
 def add_loop_constraints_to_nlp(
     model: ConcreteModel,
