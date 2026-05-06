@@ -141,7 +141,7 @@ class SabioThread(threading.Thread):
         try:
             t0 = time()
             request = requests.post(
-                "http://sabiork.h-its.org/sabioRestWebServices/kineticlawsExportTsv",
+                "https://sabiork.h-its.org/sabioRestWebServices/kineticlawsExportTsv",
                 params=query,
                 timeout=120,
             )
