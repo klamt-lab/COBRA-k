@@ -290,7 +290,7 @@ def _get_sabio_tsv_str(target_folder: str) -> str:
         ]
         for thread in threads:
             thread.start()
-            sleep(2.0)
+            sleep(1.5)  # A little above SABIO-RK rate limit of 60 requests à minute à IP address
         for thread in threads:
             thread.join()
 
@@ -441,6 +441,7 @@ def sabio_select_enzyme_kinetic_data_for_sbml(
     ncbi_parsed_json_path: str,
     bigg_metabolites_json_path: str,
     kinetic_ignored_metabolites: list[str] = [],
+    kinetic_ignored_metabolite_exceptions: list[tuple[str, str]] = [],
     kinetic_ignored_enzyme_ids: list[str] = [],
     custom_enzyme_kinetic_data: dict[str, EnzymeReactionData | None] = {},
     min_ph: float = -float("inf"),
@@ -686,7 +687,7 @@ def sabio_select_enzyme_kinetic_data_for_sbml(
                     case _:
                         raise ValueError
                 for met in cobra_model.metabolites:
-                    if met.id in kinetic_ignored_metabolites:
+                    if met.id in kinetic_ignored_metabolites and ((reaction.id, met.id) not in kinetic_ignored_metabolite_exceptions):
                         continue
                     if (entries_type == "km") and met not in reaction.metabolites:
                         continue
@@ -763,7 +764,7 @@ def sabio_select_enzyme_kinetic_data_for_sbml(
         elif (
             (reaction.id not in kcat_overwrite) and (kcat_overwrite != {})
         ) or not k_cat_per_tax_score:
-            continue
+            k_cat = 1e20
         else:
             min_k_cat_tax_score = min(k_cat_per_tax_score.keys())
             k_cat = median(k_cat_per_tax_score[min_k_cat_tax_score])
@@ -809,23 +810,24 @@ def sabio_select_enzyme_kinetic_data_for_sbml(
                 min(hills_per_tax_score.keys())
             ]
 
-        enzyme_reaction_data[reaction.id] = EnzymeReactionData(
-            identifiers=enzyme_identifiers,
-            k_cat=k_cat,
-            k_cat_references=k_cat_references,
-            k_ms=k_ms,
-            k_m_references=k_m_references,
-            k_is=k_is,
-            k_i_references=k_i_references,
-            k_as=k_as,
-            k_a_references=k_a_references,
-            hill_coefficients=hills,
-            hill_coefficient_references=HillParameterReferences(
-                kappa=hill_references,
-                iota=hill_references,
-                alpha=hill_references,
-            ),
-        )
+        if k_cat < 1e20 and (k_ms or k_is or k_as or hills):
+            enzyme_reaction_data[reaction.id] = EnzymeReactionData(
+                identifiers=enzyme_identifiers,
+                k_cat=k_cat,
+                k_cat_references=k_cat_references,
+                k_ms=k_ms,
+                k_m_references=k_m_references,
+                k_is=k_is,
+                k_i_references=k_i_references,
+                k_as=k_as,
+                k_a_references=k_a_references,
+                hill_coefficients=hills,
+                hill_coefficient_references=HillParameterReferences(
+                    kappa=hill_references,
+                    iota=hill_references,
+                    alpha=hill_references,
+                ),
+            )
 
     enzyme_reaction_data = {**enzyme_reaction_data, **custom_enzyme_kinetic_data}
 

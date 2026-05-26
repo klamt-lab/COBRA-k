@@ -193,6 +193,7 @@ toy_model = Model(
         )
     ],  # Keep in mind that this is a list as multiple extra flux constraints are possible
     kinetic_ignored_metabolites=[],
+    kinetic_ignored_metabolite_exceptions=[],
     R=STANDARD_R,
     T=STANDARD_T,
     max_conc_sum=float("inf"),

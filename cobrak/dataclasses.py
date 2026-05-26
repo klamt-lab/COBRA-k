@@ -363,7 +363,9 @@ class Model:
     )
     """[Optional] Extra non-linear constraints"""
     kinetic_ignored_metabolites: list[str] = Field(default_factory=list)
-    """[Optional and only works with saturation term constraints] Metabolite IDs for which no k_m is neccessary"""
+    """[Optional and only works with saturation term constraints] Metabolite IDs for which no k_m is neccessary and whill will have no influence on κ (useful e.g. for H⁺ and H₂O)"""
+    kinetic_ignored_metabolite_exceptions: list[tuple[str, str]] = Field(default_factory=list)
+    """[Optional] Exceptions for the kinetic ignored metabolites given in ```kinetic_ignored_metabolites```, 1ˢᵗ tuple element is the reaction ID, 2ⁿᵈ the unignored metabolite"""
     R: PositiveFloat = Field(default=STANDARD_R)
     """[Optional and only works with thermodynamic constraints] Gas constant reference for dG'° in kJ⋅K⁻¹⋅mol⁻¹; default is STANDARD_R"""
     T: PositiveFloat = Field(default=STANDARD_T)

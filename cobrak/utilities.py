@@ -408,10 +408,11 @@ def combine_enzyme_reaction_datasets(
             if enzyme_reaction_data is None:
                 continue
 
-            if (reac_id not in combined_data) or (
-                combined_data[reac_id].k_cat_references[0].tax_distance
-                > enzyme_reaction_data.k_cat_references[0].tax_distance
-            ):
+            if (reac_id not in combined_data):
+                combined_data[reac_id] = EnzymeReactionData(identifiers=enzyme_reaction_data.identifiers,)
+
+            if not combined_data[reac_id].k_cat_references or (enzyme_reaction_data.k_cat < 1e20 and (combined_data[reac_id].k_cat_references[0].tax_distance
+                > enzyme_reaction_data.k_cat_references[0].tax_distance)):
                 combined_data[reac_id] = EnzymeReactionData(
                     identifiers=enzyme_reaction_data.identifiers,
                     k_cat=enzyme_reaction_data.k_cat,
@@ -2859,7 +2860,7 @@ def get_unoptimized_reactions_in_nlp_solution(
 
 @validate_call(validate_return=True)
 def have_all_unignored_km(
-    reaction: Reaction, kinetic_ignored_metabolites: list[str]
+    reaction: Reaction, kinetic_ignored_metabolites: list[str], reac_id: str = "", kinetic_ignored_metabolite_exceptions: list[tuple[str, str]]=[],
 ) -> bool:
     """Check if all non-ignored metabolites in a reaction have associated Michaelis-Menten constants (k_m).
 
@@ -2876,24 +2877,24 @@ def have_all_unignored_km(
     if reaction.enzyme_reaction_data is None:
         return False
 
-    eligible_mets = [
+    mets_needing_km = [
         met_id
-        for met_id, stoichiometry in reaction.stoichiometries.items()
-        if met_id not in kinetic_ignored_metabolites
+        for met_id in reaction.stoichiometries
+        if (met_id not in kinetic_ignored_metabolites) and ((reac_id, met_id) not in kinetic_ignored_metabolite_exceptions)
     ]
-    for eligible_met in eligible_mets:
-        if eligible_met not in reaction.enzyme_reaction_data.k_ms:
+    for met_needing_km in mets_needing_km:
+        if met_needing_km not in reaction.enzyme_reaction_data.k_ms:
             return False
 
     substrates_with_km = [
         met_id
-        for met_id in eligible_mets
+        for met_id in mets_needing_km
         if (met_id in reaction.enzyme_reaction_data.k_ms)
         and (reaction.stoichiometries[met_id] < 0)
     ]
     products_with_km = [
         met_id
-        for met_id in eligible_mets
+        for met_id in mets_needing_km
         if (met_id in reaction.enzyme_reaction_data.k_ms)
         and (reaction.stoichiometries[met_id] > 0)
     ]

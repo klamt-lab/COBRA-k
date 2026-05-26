@@ -110,7 +110,7 @@ def _brenda_get_all_enzyme_kinetic_data_for_model(
 
         if (ec_number not in brenda_kinetics_database_original) or entry_error:
             eligible_ec_number_entries: list[dict[str, Any]] = []
-            for wildcard_level in range(1, 5):
+            for wildcard_level in (0,):
                 for database_ec_number in list(
                     brenda_kinetics_database_original.keys()
                 ):
@@ -399,10 +399,7 @@ def _brenda_parse_full_json(
                             + "..."
                             + str(ref_num_to_pub[ref_number]["year"])
                         )
-                organisms = [
-                    ec_data["protein"][protein_num]["organism"]
-                    for protein_num in kinetics_entry["proteins"]
-                ]
+
                 substrates_list = []
                 if "substrates_products" in ec_data:
                     for natural_products_entry in ec_data["substrates_products"]:
@@ -414,6 +411,8 @@ def _brenda_parse_full_json(
                         if "?" in reac_string:
                             continue
                         substrates_list = reac_string.split(" = ")[0].split(" + ")
+                        if "value" in kinetics_entry and "{" in kinetics_entry["value"] and "}" in kinetics_entry["value"]:
+                            substrates_list = [kinetics_entry["value"].split("{")[1].split("}")[0]]
                         for substrate_id in substrates_list.copy():
                             bigg_id = _search_metname_in_bigg_ids(
                                 substrate_id.lower(),
@@ -422,8 +421,12 @@ def _brenda_parse_full_json(
                                 name_to_bigg_id_dict=name_to_bigg_id_dict,
                             )
                             if bigg_id:
-                                substrates_list.append(substrate_id)
+                                substrates_list.append(bigg_id)
 
+                organisms = [
+                    ec_data["protein"][protein_num]["organism"]
+                    for protein_num in kinetics_entry["proteins"]
+                ]
                 for organism in organisms:
                     if organism not in result_json[ec_number][substrate]:
                         result_json[ec_number][substrate][organism] = []
@@ -434,7 +437,7 @@ def _brenda_parse_full_json(
                             read_references,
                             kinetics_entry.get("comment", ""),
                             kinetics_entry.get("value", ""),
-                            set(substrates_list),
+                            list(substrates_list),
                         ]
                     )
     return result_json
@@ -484,6 +487,7 @@ def brenda_select_enzyme_kinetic_data_for_sbml(
     transfered_ec_number_json: str = "",
     max_taxonomy_level: NonNegativeInt = 1e9,
     kis_and_kas_only_for_same_compartments: bool = True,
+    kinetic_ignored_metabolite_exceptions: list[tuple[str, str]] = [],
 ) -> dict[str, EnzymeReactionData | None]:
     """Select and assign enzyme kinetic data for each reaction in an SBML model based on BRENDA
     database entries and taxonomic similarity.
@@ -655,7 +659,7 @@ def brenda_select_enzyme_kinetic_data_for_sbml(
         for metabolite in cobra_model.metabolites:
             idx_last_underscore = metabolite.id.rfind("_")
             met_id = metabolite.id[:idx_last_underscore]
-            if metabolite.id in kinetic_ignored_metabolites:
+            if (metabolite.id in kinetic_ignored_metabolites) and ((reaction.id, metabolite.id) not in kinetic_ignored_metabolite_exceptions):
                 continue
             if met_id not in metabolite_entries:
                 continue
@@ -827,8 +831,11 @@ def brenda_select_enzyme_kinetic_data_for_sbml(
                 has_found_ignored_enzyme = True
                 break
 
-        if (len(taxonomically_best_kcats) > 0) and (not has_found_ignored_enzyme):
-            reaction_kcat = median(taxonomically_best_kcats)  # or max(), min(), ...
+        if taxonomically_best_kcats or reaction_kms or reaction_kis and not has_found_ignored_enzyme:
+            if (len(taxonomically_best_kcats) > 0):
+                reaction_kcat = median(taxonomically_best_kcats)  # or max(), min(), ...
+            else:
+                reaction_kcat = 1e20
             enzyme_reaction_data[reaction.id] = EnzymeReactionData(
                 identifiers=enzyme_identifiers,
                 k_cat=reaction_kcat,

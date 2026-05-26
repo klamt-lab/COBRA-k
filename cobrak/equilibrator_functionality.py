@@ -28,6 +28,7 @@ def equilibrator_get_model_dG0_and_uncertainty_values_for_sbml(
     max_uncertainty: float = 1_000.0,
     calculate_multicompartmental: bool = True,
     ignored_metabolites: list[str] = [],
+    inclusion_prefixes: list[str] = [],
 ) -> tuple[dict[str, float], dict[str, float]]:
     """Cobrapy model wrapper for the ΔG'° determination of reactions using the eQuilibrator-API.
 
@@ -63,6 +64,8 @@ def equilibrator_get_model_dG0_and_uncertainty_values_for_sbml(
     for reaction_x in cobra_model.reactions:
         reaction: cobra.Reaction = reaction_x
 
+        if not any(reaction.id.startswith(x) for x in inclusion_prefixes):
+            continue
         stop = False
         for exclusion_prefix in exclusion_prefixes:
             if reaction.id.startswith(exclusion_prefix):

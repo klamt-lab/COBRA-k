@@ -119,10 +119,11 @@ def _add_concentration_vars_and_constraints(
 
         # Check if metabolite occurs in at least one reaction with ΔG'°
         is_met_in_reac_with_concentration_constraints = False
-        for reaction in cobrak_model.reactions.values():
+        for reac_id, reaction in cobrak_model.reactions.items():
             has_kappa = (reaction.enzyme_reaction_data is not None) and (
                 have_all_unignored_km(
-                    reaction, cobrak_model.kinetic_ignored_metabolites
+                    reaction, cobrak_model.kinetic_ignored_metabolites,
+                    reac_id, cobrak_model.kinetic_ignored_metabolite_exceptions,
                 )
             )
             has_gamma = reaction.dG0 is not None
@@ -690,6 +691,7 @@ def _add_enzyme_constraints_to_lp(
     add_error_term: bool = False,
     error_cutoff: float = 0.1,
     max_rel_correction: float = QUASI_INF,
+    add_upper_enzyme_constraint: bool = True,
 ) -> ConcreteModel:
     """Add MOMENT [1]-like enzyme constraint to (N/MI)LP.
 
@@ -797,45 +799,46 @@ def _add_enzyme_constraints_to_lp(
             Var(within=Reals, bounds=(min_enzyme_conc, max_enzyme_conc)),
         )
         # Add enzyme concentration constraint
-        if add_error_term:
-            max_k_cat_times_e: float = (
-                k_cat
-                * cobrak_model.max_prot_pool
-                / get_full_enzyme_mw(cobrak_model, reaction)
-            )
-            if max_k_cat_times_e <= max_kcat_times_e_lowbound:
-                kcat_times_e_error_var_id = remove_community_suffix(list(cobrak_model.community_species_settings.keys()), f"{ERROR_VAR_PREFIX}_kcat_times_e_{reac_id}")
-                if not hasattr(model, kcat_times_e_error_var_id):
+        if add_upper_enzyme_constraint:
+            if add_error_term:
+                max_k_cat_times_e: float = (
+                    k_cat
+                    * cobrak_model.max_prot_pool
+                    / get_full_enzyme_mw(cobrak_model, reaction)
+                )
+                if max_k_cat_times_e <= max_kcat_times_e_lowbound:
+                    kcat_times_e_error_var_id = remove_community_suffix(list(cobrak_model.community_species_settings.keys()), f"{ERROR_VAR_PREFIX}_kcat_times_e_{reac_id}")
+                    if not hasattr(model, kcat_times_e_error_var_id):
+                        setattr(
+                            model,
+                            kcat_times_e_error_var_id,
+                            Var(within=Reals, bounds=(0.0, QUASI_INF)),
+                        )
+                    enzyme_constraint_expr: Expression = getattr(model, reac_id) <= getattr(
+                        model, full_enzyme_id
+                    ) * k_cat + getattr(model, kcat_times_e_error_var_id)
+
                     setattr(
                         model,
-                        kcat_times_e_error_var_id,
-                        Var(within=Reals, bounds=(0.0, QUASI_INF)),
+                        f"enzyme_error_bound_constraint_{reac_id}",
+                        Constraint(
+                            expr=getattr(model, kcat_times_e_error_var_id)
+                            <= max_rel_correction * getattr(model, full_enzyme_id) * k_cat
+                        ),
                     )
-                enzyme_constraint_expr: Expression = getattr(model, reac_id) <= getattr(
-                    model, full_enzyme_id
-                ) * k_cat + getattr(model, kcat_times_e_error_var_id)
-
-                setattr(
-                    model,
-                    f"enzyme_error_bound_constraint_{reac_id}",
-                    Constraint(
-                        expr=getattr(model, kcat_times_e_error_var_id)
-                        <= max_rel_correction * getattr(model, full_enzyme_id) * k_cat
-                    ),
-                )
+                else:
+                    enzyme_constraint_expr: Expression = (
+                        getattr(model, reac_id) <= getattr(model, full_enzyme_id) * k_cat
+                    )
             else:
                 enzyme_constraint_expr: Expression = (
                     getattr(model, reac_id) <= getattr(model, full_enzyme_id) * k_cat
                 )
-        else:
-            enzyme_constraint_expr: Expression = (
-                getattr(model, reac_id) <= getattr(model, full_enzyme_id) * k_cat
+            setattr(
+                model,
+                f"enzyme_constraint_{reac_id}",
+                Constraint(expr=enzyme_constraint_expr),
             )
-        setattr(
-            model,
-            f"enzyme_constraint_{reac_id}",
-            Constraint(expr=enzyme_constraint_expr),
-        )
 
         # Add current enzyme usage to total enzyme pool
         prot_pool_sum += full_enzyme_mw * getattr(model, full_enzyme_id)
@@ -920,7 +923,7 @@ def _add_kappa_substrates_and_products_vars(
     kappa_products_lhs: Expression = -1.0 * getattr(model, kappa_products_var_id)
     kappa_products_sum = 0.0
     for reac_met_id, raw_stoichiometry in reaction.stoichiometries.items():
-        if reac_met_id in cobrak_model.kinetic_ignored_metabolites:
+        if (reac_met_id in cobrak_model.kinetic_ignored_metabolites) and ((reac_id, reac_met_id) not in cobrak_model.kinetic_ignored_metabolite_exceptions):
             continue
         if reac_met_id.startswith(ENZYME_VAR_PREFIX):
             continue
@@ -1087,7 +1090,8 @@ def _add_thermodynamic_constraints_to_lp(
         has_kappa = True
         if (reaction.enzyme_reaction_data is None) or (
             not have_all_unignored_km(
-                reaction, cobrak_model.kinetic_ignored_metabolites
+                reaction, cobrak_model.kinetic_ignored_metabolites,
+                reac_id, cobrak_model.kinetic_ignored_metabolite_exceptions,
             )
         ):
             has_kappa = False
@@ -1549,6 +1553,7 @@ def get_lp_from_cobrak_model(
     add_extra_linear_constraints: bool = True,
     correction_config: CorrectionConfig = CorrectionConfig(),
     ignore_nonlinear_terms: bool = False,
+    add_upper_enzyme_constraint: bool = True,
 ) -> ConcreteModel:
     """Construct a linear programming (LP) model from a COBRAk model with various constraints and configurations.
 
@@ -1623,6 +1628,7 @@ def get_lp_from_cobrak_model(
             add_error_term=correction_config.add_kcat_times_e_error_term,
             error_cutoff=correction_config.kcat_times_e_error_cutoff,
             max_rel_correction=correction_config.max_rel_kcat_times_e_correction,
+            add_upper_enzyme_constraint=add_upper_enzyme_constraint,
         )
 
     # Add thermodynamic constraints if enabled
