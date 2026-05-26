@@ -253,6 +253,7 @@ def convert_cobrak_model_to_annotated_cobrapy_model(
     * `cobrak_R`: The gas constant.
     * `cobrak_T`: The temperature.
     * `cobrak_kinetic_ignored_metabolites`: A list of metabolites that are ignored in kinetic simulations.
+    * `cobrak_kinetic_ignored_metabolite_exceptions`: A list of exceptions of the κ-ignored metabolites.
     * `cobrak_extra_linear_constraints`: A list of extra linear constraints.
     * `cobrak_mw`: The molecular weight of an enzyme.
     * `cobrak_min_conc`: The minimum concentration of an enzyme.
@@ -536,6 +537,9 @@ def convert_cobrak_model_to_annotated_cobrapy_model(
     added_reactions[-1].annotation["cobrak_T"] = cobrak_model.T
     added_reactions[-1].annotation["cobrak_kinetic_ignored_metabolites"] = str(
         cobrak_model.kinetic_ignored_metabolites
+    )
+    added_reactions[-1].annotation["cobrak_kinetic_ignored_metabolite_exceptions"] = str(
+        cobrak_model.kinetic_ignored_metabolite_exceptions
     )
     added_reactions[-1].annotation["cobrak_reac_rev_suffix"] = cobrak_model.rev_suffix
     added_reactions[-1].annotation["cobrak_reac_fwd_suffix"] = cobrak_model.fwd_suffix
@@ -858,6 +862,12 @@ def load_annotated_cobrapy_model_as_cobrak_model(
         kinetic_ignored_metabolites = literal_eval(
             global_settings_reac.annotation["cobrak_kinetic_ignored_metabolites"]
         )
+        if "kinetic_ignored_metabolite_exceptions" in global_settings_reac.annotation:
+            kinetic_ignored_metabolite_exceptions = literal_eval(
+                global_settings_reac.annotation["kinetic_ignored_metabolite_exceptions"]
+            )
+        else:
+            kinetic_ignored_metabolite_exceptions = []
         if "cobrak_extra_linear_constraints" in global_settings_reac.annotation:
             extra_linear_constraints = [
                 ExtraLinearConstraint(**x)
@@ -907,9 +917,8 @@ def load_annotated_cobrapy_model_as_cobrak_model(
         ]
     else:
         max_prot_pool = STANDARD_MAX_PROT_POOL
-        extra_linear_constraints = []
-        extra_nonlinear_constraints = []
         kinetic_ignored_metabolites = []
+        kinetic_ignored_metabolite_exceptions = []
         R = STANDARD_R
         T = STANDARD_T
         reac_fwd_suffix = REAC_FWD_SUFFIX
@@ -1245,6 +1254,7 @@ def load_annotated_cobrapy_model_as_cobrak_model(
         extra_nonlinear_constraints=extra_nonlinear_constraints,
         extra_nonlinear_watches=extra_nonlinear_watches,
         kinetic_ignored_metabolites=kinetic_ignored_metabolites,
+        kinetic_ignored_metabolite_exceptions=kinetic_ignored_metabolite_exceptions,
         R=R,
         T=T,
         fwd_suffix=reac_fwd_suffix,

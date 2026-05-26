@@ -245,6 +245,7 @@ def get_nlp_from_cobrak_model(
             max_rel_kcat_times_e_correction=correction_config.max_rel_kcat_times_e_correction,
             add_error_sum_term=False,
         ),
+        add_upper_enzyme_constraint=True,
     )
     model = _add_concentration_vars_and_constraints(model, cobrak_model)
 
@@ -350,7 +351,8 @@ def get_nlp_from_cobrak_model(
         has_gamma = True
         has_kappa = True
         if not have_all_unignored_km(
-            reaction, cobrak_model.kinetic_ignored_metabolites
+            reaction, cobrak_model.kinetic_ignored_metabolites,
+            reac_id, cobrak_model.kinetic_ignored_metabolite_exceptions,
         ):
             has_kappa = False
         if reaction.dG0 is None:
@@ -438,13 +440,7 @@ def get_nlp_from_cobrak_model(
             else:
                 gamma_rhs = (
                     approximation_value
-                    + (
-                        1
-                        - exp(
-                            -f_by_RT
-                        )  # * getattr(model, f"{Z_VAR_PREFIX}{reac_id_to_reac_couple_id[reac_id]}")
-                    )
-                )  # (f_by_RT**2) / (1 + (f_by_RT**2)) would be a rough approximation
+                    + (f_by_RT**2) / (1 + (f_by_RT**2))) # would be a rough approximation
 
             if strict_mode or reac_id in single_strict_reacs:
                 gamma_var_constraint_0 = getattr(model, gamma_var_name) == gamma_rhs
@@ -460,7 +456,7 @@ def get_nlp_from_cobrak_model(
         if with_iota and has_iota:
             iota_product = 1.0
             for met_id, k_i in reaction.enzyme_reaction_data.k_is.items():
-                if met_id in cobrak_model.kinetic_ignored_metabolites:
+                if (met_id in cobrak_model.kinetic_ignored_metabolites) and ((reac_id, met_id) not in cobrak_model.kinetic_ignored_metabolite_exceptions):
                     continue
                 var_id = f"{LNCONC_VAR_PREFIX}{met_id}"
                 if var_id not in model_var_names:
@@ -532,7 +528,7 @@ def get_nlp_from_cobrak_model(
         if with_alpha and has_alpha:
             alpha_product = 1.0
             for met_id, k_a in reaction.enzyme_reaction_data.k_as.items():
-                if met_id in cobrak_model.kinetic_ignored_metabolites:
+                if (met_id in cobrak_model.kinetic_ignored_metabolites) and ((reac_id, met_id) not in cobrak_model.kinetic_ignored_metabolite_exceptions):
                     continue
                 var_id = f"{LNCONC_VAR_PREFIX}{met_id}"
                 if var_id not in model_var_names:

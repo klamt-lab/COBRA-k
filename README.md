@@ -5,7 +5,7 @@
         <td>
             <div style="background-color: #2E4053; padding: 4px 8px; border-radius: 4px; cursor: pointer; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
             <a style="color: #FFFFFF; text-decoration: none; font-weight: bold;" href="https://pypi.org/project/cobrak/">
-            pip &#124; version 0.0.10
+            pip &#124; version 0.0.11
             </a>
             </div>
         </td>

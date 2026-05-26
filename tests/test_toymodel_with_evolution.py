@@ -99,3 +99,6 @@ def test_toymodel_calculations() -> None:  # noqa: D103
     max_result = list(result.keys())[0]
     assert max_result > 32.718
     assert max_result < 32.719
+
+if __name__ == "__main__":
+    test_toymodel_calculations()

@@ -490,6 +490,7 @@ def get_database_dG0s_for_cobrak_model(
     exclusion_inner_parts: list[str] = [],
     ignore_uncertainty: bool = False,
     max_uncertainty: float = 1_000.0,
+    inclusion_prefixes: list[str] = [],
 ) -> tuple[dict[str, float], dict[str, float]]:
     """Compute standard Gibbs free energies (and uncertainties) for all reactions in a model.
 
@@ -542,6 +543,7 @@ def get_database_dG0s_for_cobrak_model(
             ignore_uncertainty=ignore_uncertainty,
             max_uncertainty=max_uncertainty,
             calculate_multicompartmental=calculate_multicompartmental,
+            inclusion_prefixes=inclusion_prefixes,
         )
 
 

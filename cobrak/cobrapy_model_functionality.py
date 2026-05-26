@@ -31,6 +31,7 @@ def get_fullsplit_cobra_model(
     cobrak_no_extra_versions: bool = False,
     reac_lb_ub_cap: float = float("inf"),
     delete_old_cobrak_id_annotations: bool = False,
+    cobrak_kinetic_ignored_metabolite_exceptions: list[tuple[str, str]] = [],
 ) -> cobra.Model:
     """Return a COBRApy model where reactions are split according to reversibility and enzymes.
 
@@ -67,6 +68,7 @@ def get_fullsplit_cobra_model(
         settings_reac.annotation["cobrak_R"] = STANDARD_R
         settings_reac.annotation["cobrak_T"] = STANDARD_T
         settings_reac.annotation["cobrak_kinetic_ignored_metabolites"] = {}
+        settings_reac.annotation["cobrak_kinetic_ignored_metabolite_exceptions"] = {}
         settings_reac.annotation["cobrak_reac_rev_suffix"] = (
             rev_suffix  # A "special" suffix to show that this is added
         )
@@ -77,6 +79,9 @@ def get_fullsplit_cobra_model(
         )
         settings_reac.annotation["cobrak_kinetic_ignored_metabolites"] = str(
             cobrak_kinetic_ignored_metabolites
+        )
+        settings_reac.annotation["cobrak_kinetic_ignored_metabolite_exceptions"] = str(
+            cobrak_kinetic_ignored_metabolite_exceptions
         )
 
         fullsplit_cobra_model.add_reactions([settings_reac])
@@ -223,6 +228,7 @@ def get_fullsplit_cobra_model_from_sbml(
     cobrak_kinetic_ignored_metabolites: list[str] = [],
     cobrak_no_extra_versions: bool = False,
     reac_lb_ub_cap: float = float("inf"),
+    cobrak_kinetic_ignored_metabolite_exceptions: list[tuple[str, str]] = [],
 ) -> cobra.Model:
     """Return a COBRApy model (loaded from the SBML) where reactions are split according to reversibility and enzymes.
 
@@ -257,4 +263,5 @@ def get_fullsplit_cobra_model_from_sbml(
         cobrak_kinetic_ignored_metabolites=cobrak_kinetic_ignored_metabolites,
         cobrak_no_extra_versions=cobrak_no_extra_versions,
         reac_lb_ub_cap=reac_lb_ub_cap,
+        cobrak_kinetic_ignored_metabolite_exceptions=cobrak_kinetic_ignored_metabolite_exceptions,
     )

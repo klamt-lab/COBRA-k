@@ -1,7 +1,6 @@
 """Functions for generating spreadsheet overviews of variability/optimization results"""
 
 # IMPORT SECTION #
-from openpyxl.styles.alignment import Alignment
 from dataclasses import dataclass, field
 from math import exp, log
 from statistics import mean, median
@@ -586,25 +585,29 @@ def create_cobrak_spreadsheet(
             SpreadsheetCell(str(cobrak_model.kinetic_ignored_metabolites)),
         ],
         "F": [
+            SpreadsheetCell("κ-ignored metabolite exceptions", font=FONT_BOLD),
+            SpreadsheetCell(str(cobrak_model.kinetic_ignored_metabolite_exceptions)),
+        ],
+        "G": [
             SpreadsheetCell("Model annotation", font=FONT_BOLD),
             SpreadsheetCell(str(cobrak_model.annotation)),
         ],
-        "G": [
+        "H": [
             SpreadsheetCell("Maximal concentration sum [M]:", font=FONT_BOLD),
             SpreadsheetCell(str(cobrak_model.max_conc_sum)),
         ],
-        "H": [
+        "I": [
             SpreadsheetCell("Metabolite pool [M]", font=FONT_BOLD),
             SpreadsheetCell(cobrak_model.max_conc_sum),
         ],
-        "I": [
+        "J": [
             SpreadsheetCell(
                 "Metabolite pool ignore prefixes (i.e. metabolites with this prefix are not counted)",
                 font=FONT_BOLD,
             ),
             SpreadsheetCell("; ".join(cobrak_model.conc_sum_ignore_prefixes)),
         ],
-        "J": [
+        "K": [
             SpreadsheetCell(
                 "Metabolite pool include prefixes (i.e. only metabolites with this prefix are counted)",
                 font=FONT_BOLD,
