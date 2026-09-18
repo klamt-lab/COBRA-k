@@ -168,10 +168,8 @@ def add_smiles_annotation_to_metabolites(
 
     for met_id, met_data in cobrak_model.metabolites.items():
         metanetx_id: str = ""
-        eligible_keys: list[str] = (
-            allowed_annotation_keys
-            if allowed_annotation_keys
-            else list(met_data.annotation.keys())
+        eligible_keys: list[str] = allowed_annotation_keys or list(
+            met_data.annotation.keys()
         )
         for key in eligible_keys:
             if key not in met_data.annotation:

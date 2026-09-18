@@ -33,9 +33,7 @@ from pyomo.environ import (
     value,
 )
 
-from .pyomo_functionality import add_linear_approximation_to_pyomo_model
 from ._community import remove_community_suffix
-
 from .constants import (
     ALL_OK_KEY,
     BIG_M,
@@ -68,7 +66,12 @@ from .dataclasses import (
     Reaction,
     Solver,
 )
-from .pyomo_functionality import get_model_var_names, get_objective, get_solver
+from .pyomo_functionality import (
+    add_linear_approximation_to_pyomo_model,
+    get_model_var_names,
+    get_objective,
+    get_solver,
+)
 from .standard_solvers import SCIP
 from .utilities import (
     add_statuses_to_optimziation_dict,
@@ -122,8 +125,10 @@ def _add_concentration_vars_and_constraints(
         for reac_id, reaction in cobrak_model.reactions.items():
             has_kappa = (reaction.enzyme_reaction_data is not None) and (
                 have_all_unignored_km(
-                    reaction, cobrak_model.kinetic_ignored_metabolites,
-                    reac_id, cobrak_model.kinetic_ignored_metabolite_exceptions,
+                    reaction,
+                    cobrak_model.kinetic_ignored_metabolites,
+                    reac_id,
+                    cobrak_model.kinetic_ignored_metabolite_exceptions,
                 )
             )
             has_gamma = reaction.dG0 is not None
@@ -215,7 +220,9 @@ def _add_conc_sum_constraints(
         for species_id, settings in cobrak_model.community_species_settings.items()
         if settings.max_conc_sum < float("inf") or settings.include_mets_in_prot_pool
     ]
-    community_conc_sum_exprs = dict.fromkeys(metsumconstrained_community_species_ids, 0.0)
+    community_conc_sum_exprs = dict.fromkeys(
+        metsumconstrained_community_species_ids, 0.0
+    )
     for met_sum_id in met_sum_ids:
         add_linear_approximation_to_pyomo_model(
             model=model,
@@ -241,7 +248,7 @@ def _add_conc_sum_constraints(
         else:
             conc_sum_expr += getattr(model, f"exp_{met_sum_id}")
         for species_id in community_conc_sum_exprs:
-            if not met_id.endswith(species_id):
+            if met_id.endswith(species_id):
                 if (
                     cobrak_model.include_mets_in_prot_pool
                     and cobrak_model.metabolites[met_id].molar_mass
@@ -252,7 +259,9 @@ def _add_conc_sum_constraints(
                         * getattr(model, f"exp_{met_sum_id}")
                     )
                 else:
-                    community_conc_sum_exprs[species_id] += getattr(model, f"exp_{met_sum_id}")
+                    community_conc_sum_exprs[species_id] += getattr(
+                        model, f"exp_{met_sum_id}"
+                    )
 
     setattr(
         model,
@@ -263,7 +272,13 @@ def _add_conc_sum_constraints(
         setattr(
             model,
             f"met_sum_var_{species_id}",
-            Var(within=Reals, bounds=(1e-12, cobrak_model.community_species_settings[species_id].max_conc_sum)),
+            Var(
+                within=Reals,
+                bounds=(
+                    1e-12,
+                    cobrak_model.community_species_settings[species_id].max_conc_sum,
+                ),
+            ),
         )
 
     if cobrak_model.include_mets_in_prot_pool:
@@ -287,7 +302,8 @@ def _add_conc_sum_constraints(
                 model,
                 f"{GENERALIZED_SUM_CONSTRAINT_NAME}_{species_id}",
                 Constraint(
-                    rule=getattr(model, f"{PROT_POOL_REAC_NAME}_{species_id}") + getattr(model, f"met_sum_var_{species_id}")
+                    rule=getattr(model, f"{PROT_POOL_REAC_NAME}_{species_id}")
+                    + getattr(model, f"met_sum_var_{species_id}")
                     <= cobrak_model.community_species_settings[species_id].max_prot_pool
                 ),
             )
@@ -295,7 +311,9 @@ def _add_conc_sum_constraints(
             setattr(
                 model,
                 f"met_sum_constraint_{species_id}",
-                Constraint(rule=conc_sum_expr <= getattr(model, f"met_sum_var_{species_id}")),
+                Constraint(
+                    rule=conc_sum_expr <= getattr(model, f"met_sum_var_{species_id}")
+                ),
             )
 
     return model
@@ -355,7 +373,10 @@ def _add_df_and_dG0_var_for_reaction(
     # <=> RT*ln([S]) + RT*ln([T]) - 2*RT*ln([A]) - RT*ln([B])
     f_expression_lhs = -getattr(model, dG0_var_name)
     if add_error_term:
-        error_var_id = remove_community_suffix(list(cobrak_model.community_species_settings.keys()), f"{ERROR_VAR_PREFIX}_dG0_{reac_id}")
+        error_var_id = remove_community_suffix(
+            list(cobrak_model.community_species_settings.keys()),
+            f"{ERROR_VAR_PREFIX}_dG0_{reac_id}",
+        )
         if not hasattr(model, error_var_id):
             setattr(
                 model,
@@ -477,14 +498,14 @@ def _add_error_sum_to_model(
 
 
 @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
-def _add_extra_watches_and_constraints_to_lp(
+def _add_extra_variables_and_watches_and_constraints_to_lp(
     model: ConcreteModel,
     cobrak_model: Model,
     ignore_nonlinear_terms: bool,
 ) -> ConcreteModel:
-    """Adds extra (non)-linear constraints from the COBRAk Model to the Pyomo model.
+    """Adds extra binary variables, (non)-linear constraints from the COBRAk Model to the Pyomo model.
 
-    This function iterates through each extra (non-)linear watch & constraint defined in the COBRAk Model.
+    This function iterates through each extra binary variable, (non-)linear watch & constraint defined in the COBRAk Model.
     For each watch/constraint, it checks if all required variables exist in the current Pyomo model.
     If any variable is missing, the watch/constraint is skipped. Otherwise, it adds the watch/constraint
     to the model, setting either a lower bound, an upper bound, or both, based on the values
@@ -498,7 +519,18 @@ def _add_extra_watches_and_constraints_to_lp(
     Returns:
         ConcreteModel: The updated Pyomo model with the added extra linear constraints.
     """
+    # Binary variables
+    for extra_binary_var_name in cobrak_model.extra_binary_vars:
+        setattr(model, extra_binary_var_name, Var(within=Binary))
+
     # Linear watches
+    if (
+        cobrak_model.extra_linear_watches
+        or cobrak_model.extra_linear_constraints
+        or cobrak_model.extra_nonlinear_watches
+        or cobrak_model.extra_nonlinear_constraints
+    ):
+        model_var_names = get_model_var_names(model)
     for (
         linear_watch_name,
         extra_linear_watch,
@@ -506,13 +538,13 @@ def _add_extra_watches_and_constraints_to_lp(
         missing_var = False
         extra_watch_lhs = 0.0
         for var_id in extra_linear_watch.stoichiometries:
-            if var_id not in get_model_var_names(model):
+            if var_id not in model_var_names:
                 missing_var = True
                 continue
             extra_watch_lhs += extra_linear_watch.stoichiometries[var_id] * getattr(
                 model, var_id
             )
-        if missing_var:
+        if missing_var and not extra_linear_watch.include_with_missing_keys:
             continue
 
         setattr(
@@ -533,14 +565,14 @@ def _add_extra_watches_and_constraints_to_lp(
         missing_var = False
         extra_constraint_lhs = 0.0
         for var_id in extra_linear_constraint.stoichiometries:
-            if var_id not in get_model_var_names(model):
+            if var_id not in model_var_names:
                 missing_var = True
                 continue
             extra_constraint_lhs += extra_linear_constraint.stoichiometries[
                 var_id
             ] * getattr(model, var_id)
 
-        if missing_var:
+        if missing_var and not extra_linear_constraint.include_with_missing_keys:
             continue
 
         base_extra_constraint_name = (
@@ -573,7 +605,7 @@ def _add_extra_watches_and_constraints_to_lp(
             missing_var = False
             extra_watch_lhs = 0.0
             for var_id in extra_nonlinear_watch.stoichiometries:
-                if var_id not in get_model_var_names(model):
+                if var_id not in model_var_names:
                     missing_var = True
                     continue
                 stoichiometry, application = extra_nonlinear_watch.stoichiometries[
@@ -595,7 +627,7 @@ def _add_extra_watches_and_constraints_to_lp(
                             )
                         case _:
                             extra_watch_lhs += stoichiometry * getattr(model, var_id)
-            if missing_var:
+            if missing_var and not extra_nonlinear_watch.include_with_missing_keys:
                 continue
 
             setattr(
@@ -617,7 +649,7 @@ def _add_extra_watches_and_constraints_to_lp(
             missing_var = False
             extra_constraint_lhs = 0.0
             for var_id in extra_nonlinear_constraint.stoichiometries:
-                if var_id not in get_model_var_names(model):
+                if var_id not in model_var_names:
                     missing_var = True
                     continue
                 stoichiometry, application = extra_nonlinear_constraint.stoichiometries[
@@ -642,7 +674,7 @@ def _add_extra_watches_and_constraints_to_lp(
                                 model, var_id
                             )
 
-            if missing_var:
+            if missing_var and not extra_nonlinear_constraint.include_with_missing_keys:
                 continue
 
             if extra_nonlinear_constraint.full_application.startswith("power"):
@@ -725,7 +757,15 @@ def _add_enzyme_constraints_to_lp(
         setattr(
             model,
             f"{PROT_POOL_REAC_NAME}_{protconstrained_community_species_id}",
-            Var(within=Reals, bounds=(0.0, cobrak_model.community_species_settings[protconstrained_community_species_id].max_prot_pool)),
+            Var(
+                within=Reals,
+                bounds=(
+                    0.0,
+                    cobrak_model.community_species_settings[
+                        protconstrained_community_species_id
+                    ].max_prot_pool,
+                ),
+            ),
         )
 
     # Collect all kcats and get error-eligible reactions
@@ -807,28 +847,36 @@ def _add_enzyme_constraints_to_lp(
                     / get_full_enzyme_mw(cobrak_model, reaction)
                 )
                 if max_k_cat_times_e <= max_kcat_times_e_lowbound:
-                    kcat_times_e_error_var_id = remove_community_suffix(list(cobrak_model.community_species_settings.keys()), f"{ERROR_VAR_PREFIX}_kcat_times_e_{reac_id}")
+                    kcat_times_e_error_var_id = remove_community_suffix(
+                        list(cobrak_model.community_species_settings.keys()),
+                        f"{ERROR_VAR_PREFIX}_kcat_times_e_{reac_id}",
+                    )
                     if not hasattr(model, kcat_times_e_error_var_id):
                         setattr(
                             model,
                             kcat_times_e_error_var_id,
                             Var(within=Reals, bounds=(0.0, QUASI_INF)),
                         )
-                    enzyme_constraint_expr: Expression = getattr(model, reac_id) <= getattr(
-                        model, full_enzyme_id
-                    ) * k_cat + getattr(model, kcat_times_e_error_var_id)
+                    enzyme_constraint_expr: Expression = getattr(
+                        model, reac_id
+                    ) <= getattr(model, full_enzyme_id) * k_cat + getattr(
+                        model, kcat_times_e_error_var_id
+                    )
 
                     setattr(
                         model,
                         f"enzyme_error_bound_constraint_{reac_id}",
                         Constraint(
                             expr=getattr(model, kcat_times_e_error_var_id)
-                            <= max_rel_correction * getattr(model, full_enzyme_id) * k_cat
+                            <= max_rel_correction
+                            * getattr(model, full_enzyme_id)
+                            * k_cat
                         ),
                     )
                 else:
                     enzyme_constraint_expr: Expression = (
-                        getattr(model, reac_id) <= getattr(model, full_enzyme_id) * k_cat
+                        getattr(model, reac_id)
+                        <= getattr(model, full_enzyme_id) * k_cat
                     )
             else:
                 enzyme_constraint_expr: Expression = (
@@ -844,7 +892,9 @@ def _add_enzyme_constraints_to_lp(
         prot_pool_sum += full_enzyme_mw * getattr(model, full_enzyme_id)
         for species_id in species_prot_pool_sums:
             if full_enzyme_id.endswith(species_id):
-                species_prot_pool_sums[species_id] += full_enzyme_mw * getattr(model, full_enzyme_id)
+                species_prot_pool_sums[species_id] += full_enzyme_mw * getattr(
+                    model, full_enzyme_id
+                )
 
     # Finally, set the protein pool
     setattr(
@@ -856,7 +906,10 @@ def _add_enzyme_constraints_to_lp(
         setattr(
             model,
             f"{PROT_POOL_REAC_NAME}_{species_id}_constraint",
-            Constraint(expr=getattr(model, f"{PROT_POOL_REAC_NAME}_{species_id}") >= species_prot_pool_sum),
+            Constraint(
+                expr=getattr(model, f"{PROT_POOL_REAC_NAME}_{species_id}")
+                >= species_prot_pool_sum
+            ),
         )
 
     return model
@@ -923,7 +976,10 @@ def _add_kappa_substrates_and_products_vars(
     kappa_products_lhs: Expression = -1.0 * getattr(model, kappa_products_var_id)
     kappa_products_sum = 0.0
     for reac_met_id, raw_stoichiometry in reaction.stoichiometries.items():
-        if (reac_met_id in cobrak_model.kinetic_ignored_metabolites) and ((reac_id, reac_met_id) not in cobrak_model.kinetic_ignored_metabolite_exceptions):
+        if (reac_met_id in cobrak_model.kinetic_ignored_metabolites) and (
+            (reac_id, reac_met_id)
+            not in cobrak_model.kinetic_ignored_metabolite_exceptions
+        ):
             continue
         if reac_met_id.startswith(ENZYME_VAR_PREFIX):
             continue
@@ -943,7 +999,7 @@ def _add_kappa_substrates_and_products_vars(
             if add_error_term and k_m <= kms_lowbound:
                 km_product_error_var_id = remove_community_suffix(
                     list(cobrak_model.community_species_settings.keys()),
-                    f"{ERROR_VAR_PREFIX}_{reac_id}____{reac_met_id}_product"
+                    f"{ERROR_VAR_PREFIX}_{reac_id}____{reac_met_id}_product",
                 )
                 max_product_change = abs(
                     log(k_m) - log((1 + max_rel_km_correction) * k_m)
@@ -1090,8 +1146,10 @@ def _add_thermodynamic_constraints_to_lp(
         has_kappa = True
         if (reaction.enzyme_reaction_data is None) or (
             not have_all_unignored_km(
-                reaction, cobrak_model.kinetic_ignored_metabolites,
-                reac_id, cobrak_model.kinetic_ignored_metabolite_exceptions,
+                reaction,
+                cobrak_model.kinetic_ignored_metabolites,
+                reac_id,
+                cobrak_model.kinetic_ignored_metabolite_exceptions,
             )
         ):
             has_kappa = False
@@ -1688,7 +1746,7 @@ def get_lp_from_cobrak_model(
 
     # Add extra linear constraints if enabled
     if add_extra_linear_constraints:
-        model = _add_extra_watches_and_constraints_to_lp(
+        model = _add_extra_variables_and_watches_and_constraints_to_lp(
             model=model,
             cobrak_model=cobrak_model,
             ignore_nonlinear_terms=ignore_nonlinear_terms,
@@ -2181,6 +2239,7 @@ def perform_lp_variability_analysis(
     parallel_verbosity_level: int = 0,
     ignore_nonlinear_terms: bool = False,
     verbose: bool = False,
+    num_used_cpu_cores: float = -1,
 ) -> dict[str, tuple[float, float]]:
     """Perform linear programming variability analysis on a COBRAk model.
 
@@ -2212,6 +2271,8 @@ def perform_lp_variability_analysis(
             Note: If such non-linear values exist and are included, the whole problem becomes *non-linear*, making it incompatible with any
             purely linear solver!
         verbose (bool): If True, the objective values of solved problems are shown, together with computation time in s. Defaults to False.
+        num_used_cpu_cores (float): Maximal number of used CPU cores. If set to -1, all
+            CPU cores of your computer may be used. Default is -1.
 
     Returns:
         dict[str, tuple[float, float]]: A dictionary mapping variable IDs to their minimum and maximum values
@@ -2370,7 +2431,9 @@ def perform_lp_variability_analysis(
     objectives_data_batches = split_list(objectives_data, cpu_count())
     pyomo_solver = get_solver(solver)
 
-    results_list = Parallel(n_jobs=-1, verbose=parallel_verbosity_level)(
+    results_list = Parallel(
+        n_jobs=num_used_cpu_cores, verbose=parallel_verbosity_level
+    )(
         delayed(_batch_variability_optimization)(
             pyomo_solver, model, batch, solver.solve_extra_options, verbose
         )

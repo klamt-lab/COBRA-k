@@ -3,6 +3,7 @@
 # IMPORTS SECTION #
 import contextlib
 import gzip
+import io
 import json
 import os
 import pickle
@@ -12,7 +13,6 @@ from ast import literal_eval
 from copy import deepcopy
 from dataclasses import asdict, is_dataclass
 from typing import Any, TypeVar
-from zipfile import ZipFile
 
 import cobra
 from numpy import exp, log
@@ -538,8 +538,8 @@ def convert_cobrak_model_to_annotated_cobrapy_model(
     added_reactions[-1].annotation["cobrak_kinetic_ignored_metabolites"] = str(
         cobrak_model.kinetic_ignored_metabolites
     )
-    added_reactions[-1].annotation["cobrak_kinetic_ignored_metabolite_exceptions"] = str(
-        cobrak_model.kinetic_ignored_metabolite_exceptions
+    added_reactions[-1].annotation["cobrak_kinetic_ignored_metabolite_exceptions"] = (
+        str(cobrak_model.kinetic_ignored_metabolite_exceptions)
     )
     added_reactions[-1].annotation["cobrak_reac_rev_suffix"] = cobrak_model.rev_suffix
     added_reactions[-1].annotation["cobrak_reac_fwd_suffix"] = cobrak_model.fwd_suffix
@@ -818,9 +818,13 @@ def json_zip_write(
     * json_data: Any ~ The dictionary or list which shalll be the content of
       the created JSON file
     """
-    json_output = json.dumps(json_data, indent=4).encode("utf-8")
-    with ZipFile(path + ".zip", "w", compression=zip_method) as zip_file:
-        zip_file.writestr(os.path.basename(path), json_output)
+    with (
+        zipfile.ZipFile(path + ".zip", "w", compression=zip_method) as zip_file,
+        zip_file.open(os.path.basename(path), "w") as f,
+    ):
+        text_wrapper = io.TextIOWrapper(f, encoding="utf-8")
+        json.dump(json_data, text_wrapper, indent=4)
+        text_wrapper.flush()
 
 
 @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
@@ -959,7 +963,9 @@ def load_annotated_cobrapy_model_as_cobrak_model(
             log_min_conc=log_min_conc,
             log_max_conc=log_max_conc,
             annotation={
-                key: literal_eval(value) if (isinstance(value, str) and "[" in value) else str(value)
+                key: literal_eval(value)
+                if (isinstance(value, str) and "[" in value)
+                else str(value)
                 for key, value in metabolite.annotation.items()
                 if not key.startswith("cobrak_")
             },
@@ -1186,7 +1192,9 @@ def load_annotated_cobrapy_model_as_cobrak_model(
                 dG0_uncertainty=dG0_uncertainty,
                 enzyme_reaction_data=enzyme_reaction_data,
                 annotation={
-                    key: literal_eval(value) if (isinstance(value, str) and "[" in value) else str(value)
+                    key: [str(listel) for listel in literal_eval(value)]
+                    if (isinstance(value, str) and "[" in value)
+                    else str(value)
                     for key, value in reaction.annotation.items()
                     if not key.startswith("cobrak_")
                 },

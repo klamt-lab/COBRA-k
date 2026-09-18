@@ -2,21 +2,27 @@
 
 ??? abstract "Quickstart code"
     ```py
-    #%% Construct own MILP
+    # %% Construct own MILP
     from cobrak.example_models import toy_model
+
     # Get the functionality that returns a basic (Mixed-Integer) Linear Program,
     # i.e. with steady-state constraint and variables for all reactions, and
     # if such constraints are chosen, also enzymes and metabolites.
     from cobrak.lps import get_lp_from_cobrak_model
+
     # Using COBRA-k's pyomo_functionality submodule, get the functions for setting
     # a custom objective and getting a pyomo solver
     from cobrak.pyomo_functionality import get_solver
+
     # Get a needed constants from COBRA-k
     from cobrak.constants import BIG_M
+
     # Get the function that converts pyomo solution states into a COBRA-k dictionary
     from cobrak.utilities import get_pyomo_solution_as_dict
+
     # Also get a pretty-printing function
     from cobrak.printing import print_dict
+
     # Get the needed classes from pyomo
     from pyomo.environ import Constraint, Binary, Var
 
@@ -55,7 +61,7 @@
         setattr(
             lp,
             f"new_constraint_{ex_reac_id}",
-            Constraint(expr=flux_var <= getattr(lp, new_binary_var_id) * BIG_M)
+            Constraint(expr=flux_var <= getattr(lp, new_binary_var_id) * BIG_M),
         )
 
     # Now that we've added the constraints and variables, we can run the minimization :D
@@ -79,7 +85,7 @@
     print_dict(lp_result_dict)
 
 
-    #%% Construct own NLP
+    # %% Construct own NLP
     # (See previous example for more comments)
     from cobrak.example_models import toy_model
     from cobrak.nlps import get_nlp_from_cobrak_model
@@ -123,7 +129,9 @@
     setattr(
         nlp,
         "squared_met_logconc_sum_constraint",
-        Constraint(expr=getattr(nlp, squared_met_logconc_sum_var_id) == squared_log_metconc_sum)
+        Constraint(
+            expr=getattr(nlp, squared_met_logconc_sum_var_id) == squared_log_metconc_sum
+        ),
     )
 
     # Now we get the NLP solver
@@ -148,13 +156,13 @@
 
 Up to now, we looked at the range of predefined (mixed-integer) linear programs (e.g. ecTFVA, bottleneck analyses, ...; see LP and MILP chapters) and non-linear programs (see NLP chapter) provided by COBRA-k, whereby...
 
-- ...the general optimization functions (such as ```perform_lp_optimization```and ```perform_nlp_optimization```) allow one to optimize any objective function in the model
-- ...and the special optimization functions (such as ```perform_lp_thermodynamic_bottleneck_analysis```) provide expanded programs with additional constraints and variables.
+- ...the general optimization functions (such as `perform_lp_optimization` and `perform_nlp_optimization`) allow one to optimize any objective function in the model
+- ...and the special optimization functions (such as `perform_lp_thermodynamic_bottleneck_analysis`) provide expanded programs with additional constraints and variables.
 
 But sometimes, for advanced optimizations, you need to add your own extra constraints and/or variables. Luckily, this is possible in COBRA-k thanks to its internal usage of pyomo [Website](https://www.pyomo.org/), as explained in the following subchapters :-)
 
 !!! note "Alternative for simple cases: Extra (non-)linear watches and constraints"
-    If you just want to restrict a (non-)linear weighted sum of any kind of model variables, you can always use the ```extra_linear_watches```, ```extra_nonlinear_watches```, ```extra_linear_constraints``` and ```extra_nonlinear_constraints``` member variable as explained in the LP and NLP chapters and the API documentation.
+    If you just want to restrict a (non-)linear weighted sum of any kind of model variables, you can always use the `extra_linear_watches`, `extra_nonlinear_watches`, `extra_linear_constraints` and `extra_nonlinear_constraints` member variable as explained in the LP and NLP chapters and the API documentation.
 
 ## Example 1: Construct own (MI)LPs
 
@@ -163,19 +171,25 @@ Let's say that we want to minimize the number of used exchange reactions (i.e. r
 ```py
 # Get our toy model
 from cobrak.example_models import toy_model
+
 # Get the functionality that returns a basic (Mixed-Integer) Linear Program,
 # i.e. with steady-state constraint and variables for all reactions, and
 # if such constraints are chosen, also enzymes and metabolites.
 from cobrak.lps import get_lp_from_cobrak_model
+
 # Using COBRA-k's pyomo_functionality submodule, get the functions for setting
 # a custom objective and getting a pyomo solver
 from cobrak.pyomo_functionality import get_solver
-# Get a needed constants from COBRA-k
+
+# Get the needed constants from COBRA-k
 from cobrak.constants import BIG_M
+
 # Get the function that converts pyomo solution states into a COBRA-k dictionary
 from cobrak.utilities import get_pyomo_solution_as_dict
+
 # Also get a pretty-printing function
 from cobrak.printing import print_dict
+
 # Get the needed classes from pyomo
 from pyomo.environ import Constraint, Binary, Var
 
@@ -206,7 +220,7 @@ for ex_reac_id in ex_reac_ids:
     new_binary_var_id = f"new_binary_{ex_reac_id}"
     setattr(lp, new_binary_var_id, Var(within=Binary))
 
-    # Finally, let's add an associated constraints through
+    # Finally, let's add an associated constraint through
     # which the reaction can only run if the new binary variable > 0
     # We formulate it in Big-M style (i.e. if the binary variable
     # = 1, the reaction flux can be <= Big-M, whereby Big-M is just
@@ -214,7 +228,7 @@ for ex_reac_id in ex_reac_ids:
     setattr(
         lp,
         f"new_constraint_{ex_reac_id}",
-        Constraint(expr=flux_var <= getattr(lp, new_binary_var_id) * BIG_M)
+        Constraint(expr=flux_var <= getattr(lp, new_binary_var_id) * BIG_M),
     )
 
 # Now that we've added the constraints and variables, we can run the minimization :D
@@ -240,7 +254,7 @@ print_dict(lp_result_dict)
 
 ## Example 2: Construct own NLPs
 
-Of course, we can also construct our own NLPs. Here's an example where we (for whatever reason xD) we try to minimize the
+Of course, we can also construct our own NLPs. Here's an example where we (for whatever reason xD) try to minimize the
 *squared* logarithmic metabolite concentrations in our model:
 
 ```py
@@ -287,7 +301,9 @@ setattr(nlp, squared_met_logconc_sum_var_id, Var(within=Reals, bounds=(0.0, 1e6)
 setattr(
     nlp,
     "squared_met_logconc_sum_constraint",
-    Constraint(expr=getattr(nlp, squared_met_logconc_sum_var_id) == squared_log_metconc_sum)
+    Constraint(
+        expr=getattr(nlp, squared_met_logconc_sum_var_id) == squared_log_metconc_sum
+    ),
 )
 
 # Now we get the NLP solver
@@ -304,6 +320,6 @@ pyomo_nlp_solver.solve(nlp, tee=True)
 # We then retrieve the solution as a dictionary in the form of dict[str, float]
 nlp_result_dict = get_pyomo_solution_as_dict(nlp)
 
-# Finally, print the (unspecatular) result
+# Finally, print the (unspectacular) result
 print_dict(nlp_result_dict)
 ```

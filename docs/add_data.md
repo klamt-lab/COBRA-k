@@ -10,22 +10,22 @@ If you want to perform COBRA-k's thermodynamic and/or enzyme kinetic (in short, 
 !!! note
     It's not necessary to collect all of this data for COBRA-k. E.g., if you want to calculate with thermodynamic constraints only, you only need ΔG'° values. On the other hand, it also doesn't hurt to collect more data than necessary for your model as long as you don't use it in your calculations. As explained in the previous chapters, the COBRA-k package allows you to control which constraints are active in a flexible way.
 
-If you already have such data, follow with the subchapter ["manually adding data"](#manually-adding-data) at the bottom of this page. If you only have some of this data and want to use COBRA-k's automatic collection functions for the rest, read the [second-to-last chapter](#automatically-collecting-some-of-the-data). But if you don't have any such data, COBRA-k provides automatic data retrieval functions that are explained in the [second-to-next subchapter](#full-automatic-data-collection).
+If you already have such data, follow the subchapter ["manually adding data"](#manually-adding-data) at the bottom of this page. If you only have some of this data and want to use COBRA-k's automatic collection functions for the rest, read the [second-to-last chapter](#automatically-collecting-some-of-the-data). But if you don't have any such data, COBRA-k provides automatic data retrieval functions that are explained in the [second-to-next subchapter](#full-automatic-data-collection).
 
 Before you can automatically retrieve some or all of the thermokinetic data for your model, make sure that your model must be correctly split and have the right usage of identifiers and annotations, as explained in the following subchapters :-)
 
 ## Model requirements for any COBRA-k model
 
-As always when using the COBRA-k package (see e.g. the chapter about Linear Programming), models must be "fullsplit" which you can automatically do for SBML models using ```load_annotated_sbml_model_as_cobrak_model``` in ```cobrak.io```.
+As always when using the COBRA-k package (see e.g. the chapter about Linear Programming), models must be "fullsplit" which you can automatically do for SBML models using `load_annotated_sbml_model_as_cobrak_model` in `cobrak.io`.
 
-"Fullsplit" means that each original reaction is split i) for forward & reverse directions and ii) for each enzyme (complex) catalyzing it. E.g., a reversible reaction ```R1: A → B``` catalyzed by the enzyme $E_1$ and the enzyme complex $E_{2,sub1} \space and \space E_{2,sub2}$ is going to be split into the four reactions ```R1_ENZ_E1_FWD: A → B,  R1_ENZ_E2SUB1_AND_E2SUB2_FWD: A → B``` and ```R1_ENZ_E1_REV: B → A```,  ```R1_ENZ_E2SUB1_AND_E2SUB2_REV: B → A```. This fullsplit is necessary in order to perform thermodynamic and enzymatic calculations later on.
+"Fullsplit" means that each original reaction is split i) for forward & reverse directions and ii) for each enzyme (complex) catalyzing it. E.g., a reversible reaction `R1: A → B` catalyzed by the enzyme $E_1$ and the enzyme complex $E_{2,sub1} \space and \space E_{2,sub2}$ is going to be split into the four reactions `R1_ENZ_E1_FWD: A → B,  R1_ENZ_E2SUB1_AND_E2SUB2_FWD: A → B` and `R1_ENZ_E1_REV: B → A`,  `R1_ENZ_E2SUB1_AND_E2SUB2_REV: B → A`. This fullsplit is necessary in order to perform thermodynamic and enzymatic calculations later on.
 
 ## Additional model requirements for automatic data collection
 
 !!! note
     This model preparation is not necessary if you just want to add *already existing* thermokinetic data manually, as explained in the ["manually adding data"](#manually-adding-data) subchapter.
 
-Before we explain how the names, we'll illustrate these requirements with a very small toy model that we'll call ```data_toy_model```. This small model represents the forward glucose-6-phosphate isomerase (BiGG ID PGI_fw) with just one substrate (cytosolic glucose-6-phosphate; BiGG ID g6p_c) and one product (cytosolic fructose-6-phosphate; BiGG ID f6p_c):
+Before we explain the naming requirements, we'll illustrate these requirements with a very small toy model that we'll call ```data_toy_model```. This small model represents the forward glucose-6-phosphate isomerase (BiGG ID PGI_fw) with just one substrate (cytosolic glucose-6-phosphate; BiGG ID g6p_c) and one product (cytosolic fructose-6-phosphate; BiGG ID f6p_c):
 
 ```py
 from cobrak.dataclasses import Model, Reaction, EnzymeReactionData, Metabolite, Enzyme
@@ -42,7 +42,7 @@ data_toy_model = Model(
             # ...additionally, for the search of ΔG'° values, you
             # have to use eQuilibrator-API-compatible
             # annotations, i.e. metabolite IDs from a multitude of databases
-            # Lets define three examples (for a full list of supported
+            # Let's define three examples (for a full list of supported
             # identifiers, check out the USED_IDENTIFIERS_FOR_EQUILIBRATOR
             # constant in cobrak.constants; note: Sometimes, INCHI strings
             # and keys cannot be read out correctly)
@@ -83,16 +83,16 @@ data_toy_model = Model(
             # As always with COBRA-k, reactions have to be *irreversible*,
             # reversible reactions have to be split up beforehand,
             # which you can e.g. automatically do for SBML models with the COBRA-k function
-            # ```load_annotated_sbml_model_as_cobrak_model``` in ```cobrak.io```
-            # while keeping the ```do_model_fullsplit``` argument at ```True```.
+            # `load_annotated_sbml_model_as_cobrak_model` in `cobrak.io`
+            # while keeping the `do_model_fullsplit` argument at `True`.
             min_flux=0.0,
             max_flux=1000.0,
             # And, again, as always with COBRA-k, not only reversible reactions have to be split
-            # into seperate ones, but also reactions that are catalyzed by multiple enzymes (isozymes).
+            # into separate ones, but also reactions that are catalyzed by multiple enzymes (isozymes).
             # In this case, the reaction is split into as many variants as there are enzymes that catalyze it.
             # Again, you can do this automatically for SBML models with the COBRA-k function
-            # ```load_annotated_sbml_model_as_cobrak_model``` in ```cobrak.io````
-            # while keeping the ```do_model_fullsplit``` argument at ```True```.
+            # `load_annotated_sbml_model_as_cobrak_model` in `cobrak.io`
+            # while keeping the `do_model_fullsplit` argument at `True`.
             enzyme_reaction_data=EnzymeReactionData(
                 identifiers=["b4025"],
             ),
@@ -124,7 +124,7 @@ data_toy_model = Model(
 ```
 
 !!! note "Requirements for SBML models"
-    While the annotation and ID requirements were explained for a COBRA-k Model instance, the same requirements exist for SBML models. I.e., metabolites should use BiGG IDs, reactions should have an ```ec-code``` annotation and so on...
+    While the annotation and ID requirements were explained for a COBRA-k Model instance, the same requirements exist for SBML models. I.e., metabolites should use BiGG IDs, reactions should have an `ec-code` annotation and so on...
 
 To summarize the key points for automatic data collection (in addition to the "fullsplit" requirement explained above):
 
@@ -138,7 +138,7 @@ and reactions need an ```ec-code``` EC number annotation
 !!! warning
     Before you can effectively use these functions, make sure that you performed the necessary manual downloads (if you want to collect $k_{cat}$ or $k_M$ values) *and* that your model uses identifiers/annotations as explained in the [previous subchapter](#additional-model-requirements-for-automatic-data-collection).
 
-If you do not have any thermokinetic data for you model, COBRA-k provides functions for adding it automatically. Thereby, COBRA-k uses the following databases:
+If you do not have any thermokinetic data for your model, COBRA-k provides functions for adding it automatically. Thereby, COBRA-k uses the following databases:
 
 * $k_{cat}$ and $k_M$: From [SABIO-RK](https://www.sabio.h-its.org/) (using its web API) and [BRENDA](https://www.brenda-enzymes.org/) (using its downloadable JSON file)
 * Molecular enzyme weights: From [UniProt](https://www.uniprot.org/) (using its web API)
@@ -168,11 +168,11 @@ Phew 😸! Now that you've come so far, adding data automatically is easy :D Dep
 
 ### i) Create model with full data directly from an existing SBML
 
-For SBML-based full data usage, we can use COBRA-k's ```model_instantiation``` (i.e. functions that create Model instances from other types) submodule as follows:
+For SBML-based full data usage, we can use COBRA-k's `model_instantiation` (i.e. functions that create Model instances from other types) submodule as follows:
 
 !!! note
-    You can safely ignore any ```'' is not a valid SBML 'SId'. No objective coefficients in model. Unclear what should be optimized````
-    message :-)
+    You can safely ignore any `'' is not a valid SBML 'SId'. No objective coefficients in model. Unclear what should be optimized`
+    messages :-)
 
 ```py
 # First, we'll simulate creating an SBML model out of our data toy model
@@ -192,7 +192,9 @@ save_cobrak_model_as_annotated_sbml_model(
 # Now, we can create a COBRA-k Model instance with full data out of this SBML :-)
 # *Note*: We assume that you put the downloaded needed files (see above) into a subfolder
 # called 'database_data'
-from cobrak.model_instantiation import get_cobrak_model_with_kinetic_data_from_sbml_model_alone
+from cobrak.model_instantiation import (
+    get_cobrak_model_with_kinetic_data_from_sbml_model_alone,
+)
 
 cobrak_model_with_full_data = get_cobrak_model_with_kinetic_data_from_sbml_model_alone(
     sbml_path=sbml_path,
@@ -203,16 +205,17 @@ cobrak_model_with_full_data = get_cobrak_model_with_kinetic_data_from_sbml_model
 ```
 
 !!! warning "Cache files"
-    You may notice that in the ```database_data_folder```, several new files starting with "_cache" were generated. These contain the found database data. But if you change your model or run this routine with a different model, you have to delete these cache files first! They exist so that, if you do not change your model, the expensive database searches do not have to be performed again.
+    You may notice that in the `database_data_folder`, several new files starting with "_cache" were generated. These contain the found database data. But if you change your model or run this routine with a different model, you have to delete these cache files first! They exist so that, if you do not change your model, the expensive database searches do not have to be performed again.
 
 !!! note "Important setting"
-    ```get_cobrak_model_with_kinetic_data_from_sbml_model_alone``` has (amongst other) the important argument: ```do_delete_enzymatically_suboptimal_reactions```: Akin to the enzyme constraint method sMOMENT [!], all (fullsplit) variants of a reaction which do not have the lowest $k_{cat}/MW$ ratio (i.e., which have higher enzyme costs à flux) are *deleted*. Keep in mind that, while this can drastically reduce a model's size, this also means that any $K_M$, $K_I$ etc. variants of reactions are not considered.
+    `get_cobrak_model_with_kinetic_data_from_sbml_model_alone` has (amongst other) the important argument: `do_delete_enzymatically_suboptimal_reactions`: Akin to the enzyme constraint method sMOMENT [!], all (fullsplit) variants of a reaction which do not have the lowest $k_{cat}/MW$ ratio (i.e., which have higher enzyme costs à flux) are *deleted*. Keep in mind that, while this can drastically reduce a model's size, this also means that any $K_M$, $K_I$ etc. variants of reactions are not considered.
 
 Now, you have a COBRA-k model with k_cats, k_Ms and ΔG'°. Let's have a look at its data, which reveal its $MW$, ΔG'°, $k_{cat}$ and $k_{M}$ values:
 
 ```py
 # ...following the last code block
 from cobrak.printing import print_model
+
 print_model(cobrak_model=cobrak_model_with_full_data)
 ```
 
@@ -224,6 +227,7 @@ You can also e.g. save the newly generated COBRA-k model  using
 ```py
 # ...following the second-to-last code block
 from cobrak.io import json_write
+
 json_write("cobrak_model.json", cobrak_model_with_full_data)
 ```
 and/or perform any other calculations with it :-) You can also save it again as an (this time with COBRA-k-compatible
@@ -235,7 +239,9 @@ If you already have a COBRA-k Model object, you don't need the SBML-based functi
 
 ```py
 from cobrak.example_models import data_toy_model
-from cobrak.thermokinetic_data_retrieval import automatically_add_database_thermokinetic_data_to_cobrak_model
+from cobrak.thermokinetic_data_retrieval import (
+    automatically_add_database_thermokinetic_data_to_cobrak_model,
+)
 
 cobrak_model = automatically_add_database_thermokinetic_data_to_cobrak_model(
     data_toy_model,
@@ -250,6 +256,7 @@ Again, we can look at the added data (ΔG'°, $k_{cat}$, $k_M$ and $MW$) in our 
 ```py
 # ...following the last code block
 from cobrak.printing import print_model
+
 print_model(cobrak_model=cobrak_model)
 ```
 
@@ -268,32 +275,32 @@ To add $k_{cat}$ and $k_{M}$ values to a COBRA-k model, use the function ```cobr
 
 ### $MW$ values
 
-To add $MW$ to a COBRA-k model, use the function ```cobrak.thermokinetic_data_retrieval.get_database_mws_for_cobrak_model```. It returns a dictionary with the $MW$ values that you can then add as explained in subchapter ["Manually adding data"](#manually-adding-data)
+To add $MW$ to a COBRA-k model, use the function `cobrak.thermokinetic_data_retrieval.get_database_mws_for_cobrak_model`. It returns a dictionary with the $MW$ values that you can then add as explained in subchapter ["Manually adding data"](#manually-adding-data)
 
 ### Alternative functions for an SBML
 
 If you want to automatically create only a select amount of data directly for an SBML, look up COBRA-k's submodules
-```equilibrator_functionality``` (for $Δ_r G^{'°}$), ```uniprot_functionality``` (for molecular enzyme weights),
-```sabio_rk_functionality``` (for enzyme kinetic data from SABIO-RK), ```brenda_functionality``` (for enzyme kinetic
-data from BRENDA) and ```ncbi_taxonomy_functionality``` (for taxonomy distance data). Their functions are also described in this documentation's API reference.
+`equilibrator_functionality` (for $Δ_r G^{'°}$), `uniprot_functionality` (for molecular enzyme weights),
+`sabio_rk_functionality` (for enzyme kinetic data from SABIO-RK), `brenda_functionality` (for enzyme kinetic
+data from BRENDA) and `ncbi_taxonomy_functionality` (for taxonomy distance data). Their functions are also described in this documentation's API reference.
 
 ## Manually adding data
 
 !!! warning
-    Before using theromkinetic data, make sure that your model is "fullsplit" as explained in subsection [Model requirements for any COBRA-k model](#model-requirements-for-any-cobra-k-model).
+    Before using thermokinetic data, make sure that your model is "fullsplit" as explained in subsection [Model requirements for any COBRA-k model](#model-requirements-for-any-cobra-k-model).
 
 If you have some or all thermokinetic data already ready, make sure that you have it in the following type form:
 
 * ΔG'° as ```dict[str, float]``` with reaction IDs as keys and ΔG'° as values in kJ⋅mol⁻¹
 * ΔG'° uncertainties as ```dict[str, float]```  with reaction IDs as keys and ΔG'° uncertainties as values in kJ⋅mol⁻¹
 * $MW$ as ```dict[str, float]```  with enzyme IDs as keys and the weights in kDa
-* $k_{cat}$, $k_{M}$ and so on as ```dict[str, EnzymeReactionData]```  with reaction IDs as keys and the kinetic data as ```EnzymeReactionData``` instances (for more about this dataclass, see "Building metabolic models from scratch" chapter)
+* $k_{cat}$, $k_{M}$ and so on as ```dict[str, EnzymeReactionData]```  with reaction IDs as keys and the kinetic data as `EnzymeReactionData` instances (for more about this dataclass, see "Building metabolic models from scratch" chapter)
 
 !!! info
     The methods presented in [Automatically collecting some of the data](#automatically-collecting-some-of-the-data) already
     adhere to these types :D
 
-Now that you have such data, we can use the major ```add_thermokinetic_data_to_cobrak_model``` function in ```cobrak.thermokinetic_data_retrieval```, which is defined as follows:
+Now that you have such data, we can use the major `add_thermokinetic_data_to_cobrak_model` function in `cobrak.thermokinetic_data_retrieval`, which is defined as follows:
 
 ```py
 def add_thermokinetic_data_to_cobrak_model(

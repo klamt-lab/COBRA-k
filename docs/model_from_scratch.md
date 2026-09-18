@@ -5,8 +5,8 @@
     # IMPORT SECTION
     from math import log
 
-    from .constants import STANDARD_R, STANDARD_T
-    from .dataclasses import (
+    from cobrak.constants import STANDARD_R, STANDARD_T
+    from cobrak.dataclasses import (
         Enzyme,
         EnzymeReactionData,
         ExtraLinearConstraint,
@@ -30,7 +30,7 @@
                 min_flux=0.0,  # Minimal flux in mmol⋅gDW⁻¹⋅h⁻¹; should be ≥0 for most analyses
                 max_flux=1_000.0,  # Maximal flux in mmol⋅gDW⁻¹⋅h⁻¹
                 # Thermodynamically relevant member variables
-                # (only neccessary if thermodynamic constraints are used)
+                # (only necessary if thermodynamic constraints are used)
                 dG0=-10.0,  # Standard Gibb's free energy ΔG'° in kJ⋅mol⁻¹; Default is None (no ΔG'°)
                 dG0_uncertainty=None,  # ΔG'° uncertainty in kJ⋅mol⁻¹; Default is None (no uncertainty)
                 # Let's set the variable for enzyme-kinetic parameters
@@ -156,11 +156,11 @@
         },
         max_prot_pool=0.4,  # In g⋅gDW⁻¹; This value is used for our analyses with enzyme constraints
         # We set the following two constraints:
-        # 1.0 * EX_A - 1.0 * Glycolysis ≤ 0.0
+        # 1.0 * EX_S - 1.0 * Glycolysis ≤ 0.0
         # and
-        # 1.0 * EX_A + 1.0 * Glycolysis ≥ 0.0
+        # 1.0 * EX_S + 1.0 * Glycolysis ≥ 0.0
         # in other words, effectively,
-        # 1.0 * EX_A = 1.0 * Glycolysis
+        # 1.0 * EX_S = 1.0 * Glycolysis
         extra_linear_constraints=[
             ExtraLinearConstraint(
                 stoichiometries={
@@ -184,21 +184,21 @@ To encode a metabolic network in COBRA-k, you can:
 1. Create a model from scratch - explained in this chapter :-)
 2. Load an already existing metabolic model - all such options, including JSON & SBML import/export, are explained in the next chapters :D
 
-Here, we recreate the toymodel from COBRA-k's publication [](). It looks as follows:
+Here, we recreate the toymodel from COBRA-k's publication [[Link]](https://doi.org/10.1126/sciadv.aeb3022). It looks as follows:
 
 <img src="img/toymodel.png" alt="Toymodel visualization" class="img-border img-half">
 
-Arrows stand for toy *reactions* with the name given in italic letters. Bold letters for toy *metabolites*. The numbers at the begin and end of arrows stand for the stoichiometry of each metabolite. E.g. the toy reaction "Respiration" looks as follows:
+Arrows stand for toy *reactions* with the name given in italic letters, bold letters for toy *metabolites*. The numbers at the beginning and end of arrows stand for the stoichiometry of each metabolite. E.g. the toy reaction "Respiration" looks as follows:
 ```
 1 M ⇒ 1 C + 6 ATP
 ```
 
-By convention, reactions starting with "EX_" are substrate or product exchange reactions. They produce/consume their metabolite out of/into nothing, simulating an exchange with the outside. Such "EX" reactions are neccessary to make constraint-based model calculations work (see next chapters).
+By convention, reactions starting with "EX_" are substrate or product exchange reactions. They produce/consume their metabolite out of/into nothing, simulating an exchange with the outside. Such "EX" reactions are necessary to make constraint-based model calculations work (see next chapters).
 
 The reactions "Glycolysis", "Respiration" and "Overflow" are toy metabolic reactions with a full set of kinetic and thermodynamic parameters.
 
 !!! note
-    The usage of stoichiometric, kinetic and thermodynamic parameters will be explained in the following chapters. Here, we concentrate on recreating the model first and simply set the parameters as neccessary.
+    The usage of stoichiometric, kinetic and thermodynamic parameters will be explained in the following chapters. Here, we concentrate on recreating the model first and simply set the parameters as necessary.
 
 ## Model
 
@@ -207,34 +207,35 @@ Programmatically, a metabolic model in COBRA-k is an instance of the [dataclass]
 !!! info "About dataclasses and pydantic validation"
     Dataclasses hold multiple objects together as one dataclass object. In many programming languages, they are known as ```struct```. The objects held by a dataclass are called *member variables*.
 
-    To automatically validate that your data is in the right numeric ranges (e.g., we only want positive values for molecular weights of enzymes), COBRA-k also integrated pydantic [[GitHub]](https://github.com/pydantic/pydantic) validation for its dataclasses. That's why you can find pydantic types such as ```PositiveFloat```in COBRA-k's dataclass definitions. But you can still use normal types (e.g. ```float```instead of ```PositiveFloat```) for any dataclass member variable.
+    To automatically validate that your data is in the right numeric ranges (e.g., we only want positive values for molecular weights of enzymes), COBRA-k also integrated pydantic [[GitHub]](https://github.com/pydantic/pydantic) validation for its dataclasses. That's why you can find pydantic types such as ```PositiveFloat``` in COBRA-k's dataclass definitions. But you can still use normal types (e.g. ```float```instead of ```PositiveFloat```) for any dataclass member variable.
 
 As a first step, we'll create a Model dataclass instance with an empty set of metabolites, reactions and enzymes (we'll fill these sets later on) and where we explicitly set every member variable for didactic purposes:
 
 ```py
 # All COBRA-k dataclasses can be found in the "dataclasses" submodule
 from cobrak.dataclasses import Model
+
 # In the "constants" subpackage, we can find values and identifiers
 # that are used throughout COBRA-k
 from cobrak.constants import STANDARD_R, STANDARD_T
 
 # Instantiate empty Model
 toy_model = Model(
-    metabolites={}, # will become a dict[str, Metabolite] (see below)
-    reactions={}, # will become a dict[str, Reaction] (see below)
-    enzymes={}, # optional, default is {}, will become a dict[str, Enzyme] (see below)
-    max_prot_pool=0.4, # optional, default is 1e9
-    extra_linear_constraints=[], # optional, defaults to []
-    kinetic_ignored_metabolites=[], # optional, defaults to []
-    R=STANDARD_R, # optional, defaults to STANDARD_R = 8.314e-3 kJ⋅K⁻¹⋅mol⁻¹
-    T=STANDARD_T, # optional, defaults to STANDARD_T = 298.15 K = 25 °C = 77 °F
-    max_conc_sum=float("inf"), # optional, defaults to float("inf")
-    annotation={"description": "COBRA-k toy model"}, # optional, defaults to {}
+    metabolites={},  # will become a dict[str, Metabolite] (see below)
+    reactions={},  # will become a dict[str, Reaction] (see below)
+    enzymes={},  # optional, default is {}, will become a dict[str, Enzyme] (see below)
+    max_prot_pool=0.4,  # optional, default is 1e9
+    extra_linear_constraints=[],  # optional, defaults to []
+    kinetic_ignored_metabolites=[],  # optional, defaults to []
+    R=STANDARD_R,  # optional, defaults to STANDARD_R = 8.314e-3 kJ⋅K⁻¹⋅mol⁻¹
+    T=STANDARD_T,  # optional, defaults to STANDARD_T = 298.15 K = 25 °C = 77 °F
+    max_conc_sum=float("inf"),  # optional, defaults to float("inf")
+    annotation={"description": "COBRA-k toy model"},  # optional, defaults to {}
     # For additional Model member variables not relevant here, see below :-)
 )
 ```
 
-Only ```metabolites``` and ```reactions``` are neccessary and we'll fill them in the following paragraphs :-) All other member variables are only neccessary if you want to use COBRA-k's kinetic and/or thermodynamic analysis features, which are explained in the next chapters.
+Only ```metabolites``` and ```reactions``` are necessary and we'll fill them in the following paragraphs :-) All other member variables are only necessary if you want to use COBRA-k's kinetic and/or thermodynamic analysis features, which are explained in the next chapters.
 
 The Model member variables have the following meaning (variables in italic are *optional*):
 
@@ -264,17 +265,18 @@ Now, let's create the metabolites $S$, $M$, $C$, $P$ and $ATP$ for our toy model
 ```py
 # Import COBRA-k's Metabolite dataclass
 from cobrak.dataclasses import Metabolite
+
 # Let's import the standard Python natural logarithm function
 from math import log
 
 toy_model.metabolites = {
     "S": Metabolite(
-        log_min_conc=log(1e-6), # optional, minimal ln(conc); Default is ln(1e-6 M)
-        log_max_conc=log(0.02), # optional, maximal ln(conc); Default is ln(0.02 M)
-        annotation={"description": "This is metabolite A"}, # optional, default is ""
-        name="Metabolite A", # optional, default is ""
-        formula="X", # optional, default is ""
-        charge=0, # optional, default is 0
+        log_min_conc=log(1e-6),  # optional, minimal ln(conc); Default is ln(1e-6 M)
+        log_max_conc=log(0.02),  # optional, maximal ln(conc); Default is ln(0.02 M)
+        annotation={"description": "This is metabolite S"},  # optional, default is ""
+        name="Metabolite A",  # optional, default is ""
+        formula="X",  # optional, default is ""
+        charge=0,  # optional, default is 0
     ),
     "M": Metabolite(),
     "C": Metabolite(),
@@ -345,7 +347,7 @@ toy_model.reactions = {
         min_flux=0.0,  # Minimal flux in mmol⋅gDW⁻¹⋅h⁻¹; should be ≥0 for most analyses
         max_flux=1_000.0,  # Maximal flux in mmol⋅gDW⁻¹⋅h⁻¹
         # Thermodynamically relevant member variables
-        # (only neccessary if thermodynamic constraints are used)
+        # (only necessary if thermodynamic constraints are used)
         dG0=-10.0,  # Standard Gibb's free energy ΔG'° in kJ⋅mol⁻¹; Default is None (no ΔG'°)
         dG0_uncertainty=None,  # ΔG'° uncertainty in kJ⋅mol⁻¹; Default is None (no uncertainty)
         # Let's set the variable for enzyme-kinetic parameters
@@ -445,30 +447,30 @@ Reaction's member variables are as follows (optional variables are *italic*):
 * stoichiometries: dict[str, float] ~ A dictionary that describes the stoichiometry of the reaction. Metabolite IDs are keys, stoichiometries values.
 * min_flux: float ~ Minimal flux in mmol/(gDW⋅h); **For most analyses, it must be ≥0, i.e. the reaction must be irreversible (no backwards flux possible)**.
 * max_flux: float ~ Maximal flux in mmol/(gDW⋅h)
-* *dG0: float* ~ Only neccessary if thermodynamic constraints are used; Standard Gibbs free energy (ΔrG'°) of the reaction. For more about it, see [the great explanation from the eQuilibrator FAQ](https://equilibrator.weizmann.ac.il/static/classic_rxns/faq.html#what-are-rg-rg-and-rg).
-* *dG0_uncertainty: float*: Only neccessary if thermodynamic constraints are used; The standard Gibb free energy's uncertainty, as returned, e.g., by the eQuilibrator API.
+* *dG0: float* ~ Only necessary if thermodynamic constraints are used; Standard Gibbs free energy (ΔrG'°) of the reaction. For more about it, see [the great explanation from the eQuilibrator FAQ](https://equilibrator.weizmann.ac.il/static/classic_rxns/faq.html#what-are-rg-rg-and-rg).
+* *dG0_uncertainty: float*: Only necessary if thermodynamic constraints are used; The standard Gibb's free energy's uncertainty, as returned, e.g., by the eQuilibrator API.
 * *enzyme_reaction_data: None | EnzymeReactionData* ~ See subparagraph below.
 * *annotation: dict[str, str]* ~ Any additional information regarding this reaction.
 * *name: str* ~ Optional colloquial name of reaction.
 
 
 !!! info
-    Reaction and Metabolite are the only *obligatory* dataclasses for a Model. All following presented dataclasses are only neccessary if you want to use enzymatic, kinetic and/or thermodynamic constraints. For these, see chapters "Linear Programs" and "Non-Linear Programs", which also explain what you can do with a Model as built here ;-)
+    Reaction and Metabolite are the only *obligatory* dataclasses for a Model. All following presented dataclasses are only necessary if you want to use enzymatic, kinetic and/or thermodynamic constraints. For these, see chapters "Linear Programs" and "Non-Linear Programs", which also explain what you can do with a Model as built here ;-)
 
 ## EnzymeReactionData
 
 The defining feature of COBRA-k is that it can include the *full* reversible Michaelis-Menten kinetics. For this, COBRA-k needs associated enzymatic and kinetic data if it is known for a reaction (in this example, we just set some arbitrary values). If such data exists, we can set a Reaction's ```enzyme_reaction_data``` member variable to an EnzymeReactionData instance. If such data does not exist, enzyme_reaction_data is just ```None```, which is also its default value.
 
-In our toy model, we could set the ```enzyme_reaction_data``` of the three toy metabolic reactions. Thereby, the member variables ```identifiers``` and ```k_cat``` are the only obligatory member variables for an EnzymeReactionData instance and all that's needed for "classic" linear enzyme-constrained modeling (see chapter "Linear Programs"). The other member variables are neccessary for the new COBRA-k non-linear modeling methologies (see chapter "Non-Linear Programs"). The member variables are:
+In our toy model, we could set the ```enzyme_reaction_data``` of the three toy metabolic reactions. Thereby, the member variables ```identifiers``` and ```k_cat``` are the only obligatory member variables for an EnzymeReactionData instance and all that's needed for "classic" linear enzyme-constrained modeling (see chapter "Linear Programs"). The other member variables are necessary for the new COBRA-k non-linear modeling methodologies (see chapter "Non-Linear Programs"). The member variables are:
 
 * identifiers: list[str] ~ List of Enzyme IDs (see next subparagraph)
-* k_cat: float ~ Turnover number in h
+* k_cat: float ~ Turnover number in h⁻¹
 * *k_ms: dict[str, float]* ~ Michaelis-Menten constants for metabolites; the metabolites IDs are the string keys, and the $K_M$ values the float values. Defaults to {}.
 * *special_stoichiometries: dict[str, float]* ~ If any of the reaction's enzyme subunits (given in ```identifiers```) has a stoichiometry that differs from 1, it can be given here. E.g. if an enzyme $E$ would occur twice to form the reaction's enzyme complex, special_stoichiometries would be ```{"E": 2}```.
 
 !!! note
     In COBRA-k, we assume that there is *only one* enzyme (complex) that catalyzes a single reaction. If multiple enzymes can catalyze the stoichiometrically identical reaction, multiple reactions have to be created in a Model. Nevertheless, this single enzyme that catalyzes a reaction
-    can be made out of multiple subunits, all which are referenced in the ```identifiers```
+    can be made out of multiple subunits, all of which are referenced in the ```identifiers```
     member variable of EnzymeReactionData.
 
 ??? info "Adding references for $k_cat$ and $k_M$ data in EnzymeReactionData"
@@ -488,17 +490,17 @@ Any enzyme (or enzyme subunit) that is referenced in the identifiers of a reacti
 ```py
 from cobrak.dataclasses import Enzyme
 
-toy_model.enzymes={
+toy_model.enzymes = {
     "E_glyc": Enzyme(
-        molecular_weight=1_000.0, # Molecular weight in kDa
-        min_conc=None, # Optional concentration in mmol⋅gDW⁻¹; Default is None (minimum is 0)
-        max_conc=None, # Optional maximal concentration in mmol⋅gDW⁻¹; Default is None (only protein pool restricts)
-        annotation={"description": "Enzyme of Glycolysis"}, # Default is {}
-        name="Glycolysis enzyme", # Default is ""
+        molecular_weight=1_000.0,  # Molecular weight in kDa
+        min_conc=None,  # Optional concentration in mmol⋅gDW⁻¹; Default is None (minimum is 0)
+        max_conc=None,  # Optional maximal concentration in mmol⋅gDW⁻¹; Default is None (only protein pool restricts)
+        annotation={"description": "Enzyme of Glycolysis"},  # Default is {}
+        name="Glycolysis enzyme",  # Default is ""
     ),
     "E_resp": Enzyme(molecular_weight=2_500.0),
     "E_over": Enzyme(molecular_weight=500.0),
-},
+}
 ```
 
 The full molecular weight of a reaction's enzyme is the sum of all its subunit molecular weights.
@@ -524,14 +526,16 @@ from cobrak.dataclasses import ExtraLinearConstraint
 # 1.0 * EX_S + 1.0 * Glycolysis ≥ 0.0
 # in other words, effectively,
 # 1.0 * EX_S = 1.0 * Glycolysis
-toy_model.extra_linear_constraints=[ExtraLinearConstraint(
-    stoichiometries={
-        "EX_S": -1.0,
-        "Glycolysis": 1.0,
-    },
-    lower_value=0.0,
-    upper_value=0.0,
-)] # Keep in mind that this is a list as multiple extra flux constraints are possible
+toy_model.extra_linear_constraints = [
+    ExtraLinearConstraint(
+        stoichiometries={
+            "EX_S": -1.0,
+            "Glycolysis": 1.0,
+        },
+        lower_value=0.0,
+        upper_value=0.0,
+    )
+]  # Keep in mind that this is a list as multiple extra flux constraints are possible
 ```
 
 !!! note

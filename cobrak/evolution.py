@@ -111,6 +111,7 @@ class COBRAKProblem:
         min_abs_objvalue: float = 1e-6,
         pop_size: int | None = None,
         ignore_nonlinear_extra_terms_in_ectfbas: bool = True,
+        num_used_cpu_cores: float = -1,
     ) -> None:
         """Initializes a COBRAKProblem object.
 
@@ -138,6 +139,8 @@ class COBRAKProblem:
             min_abs_objvalue (float, optional): The minimum absolute value of the objective function to consider as valid. Defaults to 1e-6.
             pop_size (int | None, optional): The population size for the evolutionary algorithm. Defaults to None.
             ignore_nonlinear_extra_terms_in_ectfbas: (bool, optional): Whether or not non-linear watches/constraints shall be ignored in ecTFBAs. Defaults to True.
+            num_cpus_used (float): Maximal number of used CPU cores. If set to -1, all
+                            CPU cores of your computer may be used. Default is -1.
         """
         self.original_cobrak_model: Model = deepcopy(cobrak_model)
         self.objective_target = objective_target
@@ -222,6 +225,7 @@ class COBRAKProblem:
         self.ignore_nonlinear_extra_terms_in_ectfbas = (
             ignore_nonlinear_extra_terms_in_ectfbas
         )
+        self.num_used_cpu_cores = num_used_cpu_cores
 
     def fitness(
         self,
@@ -467,6 +471,7 @@ class COBRAKProblem:
                     objvalue_json_path=self.objvalue_json_path,
                     max_rounds_same_objvalue=self.max_rounds_same_objvalue,
                     pop_size=self.pop_size,
+                    num_used_cpu_cores=self.num_used_cpu_cores,
                 )
             case _:
                 print(
@@ -795,6 +800,7 @@ def postprocess(
     correction_config: CorrectionConfig = CorrectionConfig(),
     onlytested: str = "",
     ignore_nonlinear_extra_terms_in_ectfbas: bool = True,
+    num_used_cpu_cores: float = -1,
 ) -> tuple[float, list[float | int]]:
     """Postprocesses the optimization results to find feasible switches.
 
@@ -817,6 +823,8 @@ def postprocess(
         correction_config (CorrectionConfig, optional): Configuration for corrections during optimization. Defaults to CorrectionConfig().
         onlytested (str, optional): Specific reactions to test during postprocessing. Defaults to "".
         ignore_nonlinear_extra_terms_in_ectfbas: (bool, optional): Whether or not non-linear watches/constraints shall be ignored in ecTFBAs.
+        num_used_cpu_cores (float): Maximal number of used CPU cores. If set to -1, all
+            CPU cores of your computer may be used. Default is -1.
 
     Returns:
         tuple[float, list[float | int]]: Best result and a list of feasible switches.
@@ -829,6 +837,7 @@ def postprocess(
             active_reactions=[],
             solver=lp_solver,
             ignore_nonlinear_terms=ignore_nonlinear_extra_terms_in_ectfbas,
+            num_used_cpu_cores=num_used_cpu_cores,
         )
     else:
         variability_data = deepcopy(variability_data)
@@ -875,7 +884,7 @@ def postprocess(
     for max_target_num in (0, 5):
         targets += [("deac", x, max_target_num) for x in active_reac_couples]
         targets += [("ac", x, max_target_num) for x in inactive_reac_couples]
-    all_feasible_switches_metalist = Parallel(n_jobs=-1, verbose=10)(
+    all_feasible_switches_metalist = Parallel(n_jobs=num_used_cpu_cores, verbose=10)(
         delayed(_postprocess_batch)(
             reac_couples,
             targets_batch,
@@ -1054,6 +1063,7 @@ def perform_nlp_evolutionary_optimization(
     pop_size: int | None = None,
     working_results: list[dict[str, float]] = [],
     ignore_nonlinear_extra_terms_in_ectfbas: bool = True,
+    num_used_cpu_cores: float = -1,
 ) -> dict[float, list[dict[str, float]]]:
     """Performs NLP evolutionary optimization on the given COBRA-k model.
 
@@ -1085,6 +1095,7 @@ def perform_nlp_evolutionary_optimization(
         pop_size (int | None, optional): Population size for the evolutionary algorithm. Defaults to None.
         working_results (list[dict[str, float]], optional): List of initial feasible results. Defaults to [].
         ignore_nonlinear_extra_terms_in_ectfbas: (bool, optional): Whether or not non-linear watches/constraints shall be ignored in ecTFBAs. Defaults to True.
+        num_used_cpu_cores (float): Maximal number of used CPU cores. If set to -1, all CPU cores of your computer may be used. Default is -1.
 
     Returns:
         dict[float, list[dict[str, float]]]: Dictionary of objective values and corresponding solutions.
@@ -1135,7 +1146,7 @@ def perform_nlp_evolutionary_optimization(
             )
 
         # run sampling
-        results = Parallel(n_jobs=-1, verbose=10)(
+        results = Parallel(n_jobs=num_used_cpu_cores, verbose=10)(
             delayed(_sampling_routine)(
                 cobrak_model,
                 objective_target,
@@ -1217,6 +1228,7 @@ def perform_nlp_evolutionary_optimization(
         ignore_nonlinear_extra_terms_in_ectfbas=ignore_nonlinear_extra_terms_in_ectfbas,
         nlp_strict_mode=nlp_strict_mode,
         nlp_single_strict_reacs=nlp_single_strict_reacs,
+        num_used_cpu_cores=num_used_cpu_cores,
     )
 
     return problem.optimize()

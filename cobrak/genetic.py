@@ -42,6 +42,7 @@ class COBRAKGENETIC:
         objvalue_json_path: str = "",
         max_rounds_same_objvalue: float = float("inf"),
         pop_size: int | None = None,
+        num_used_cpu_cores: float = -1,
     ) -> None:
         """Initializes the COBRAKGENETIC object.
 
@@ -57,12 +58,15 @@ class COBRAKGENETIC:
             max_rounds_same_objvalue (float, optional): Maximum rounds with the same objective
                 value before stopping. Defaults to infinity.
             pop_size (int | None, optional): Population size. Defaults to None.
+            num_used_cpu_cores (float): Maximal number of used CPU cores. If set to -1, all
+                CPU cores of your computer may be used. Default is -1.
         """
         # Parameters
         self.fitness_function = fitness_function
         self.xs_dim = xs_dim
         self.gen = gen
         self.seed = seed
+        self.num_cpus_used = num_used_cpu_cores
         if seed is not None:
             np.random.seed(seed)  # noqa: NPY002
 
@@ -105,7 +109,7 @@ class COBRAKGENETIC:
             tuple[float, tuple[int, ...]]: A tuple containing the best fitness score and the
             corresponding solution.
         """
-        init_fitnesses = Parallel(n_jobs=-1)(
+        init_fitnesses = Parallel(n_jobs=self.num_cpus_used)(
             delayed(self.fitness_function)(x) for x in self.init_xs
         )
         if init_fitnesses is not None:
@@ -163,7 +167,7 @@ class COBRAKGENETIC:
                 )
 
             # Test Xs in parallel
-            results = Parallel(n_jobs=-1, verbose=10)(
+            results = Parallel(n_jobs=self.num_cpus_used, verbose=10)(
                 delayed(self.update_particle)(
                     chosen_x,
                     count_last_equal_elements(max_objvalues),

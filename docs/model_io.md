@@ -3,11 +3,11 @@
 All functionality regarding loading and saving a Model instance or parts of it can be found in the ```cobrak.io``` submodule. For specific information on its functions, you can also see the ```io``` section in this documentation's "API reference" chapter.
 
 !!! note "Pydantic validation"
-    As mentioned in the previous chapter, COBRA-k uses pydantic's [[GitHub]](https://github.com/pydantic/pydantic) validation features for its dataclasses, including ```Model```. If your model file (in whatever format) contains an invalid value (e.g., a negative turnover number $k_cat$ for a Reaction's enzyme reaction data), you'll get a ```ValidationError```from pydantic. The error message shows more details about why the validation failed.
+    As mentioned in the previous chapter, COBRA-k uses pydantic's [[GitHub]](https://github.com/pydantic/pydantic) validation features for its dataclasses, including ```Model```. If your model file (in whatever format) contains an invalid value (e.g., a negative turnover number $k_cat$ for a Reaction's enzyme reaction data), you'll get a ```ValidationError``` from pydantic. The error message shows more details about why the validation failed.
 
-    If this happens, going through pydantic's validation error messages helps you to find these strange values in your model. Once fixed, you can then load the model into COBRA-k with more confidence in the integritiy of its data :-)
+    If this happens, going through pydantic's validation error messages helps you to find these strange values in your model. Once fixed, you can then load the model into COBRA-k with more confidence in the integrity of its data :-)
 
-There are two formats, JSON and SBML, in which you can interchangeably load and save a COBRA-k model, both of which store it in an human readable way:
+There are two formats, JSON and SBML, in which you can interchangeably load and save a COBRA-k model, both of which store it in a human readable way:
 
 !!! info "In case you have a MATLAB model"
     COBRA-k cannot read a MATLAB .mat metabolic model directly. However, it is usually possible to save such a model as an SBML model, which can then be loaded by COBRA-k. E.g. you could use [COBRApy](https://github.com/opencobra/cobrapy) to do so as follows (thanks to Rui Tavares for this tip :-):
@@ -15,6 +15,7 @@ There are two formats, JSON and SBML, in which you can interchangeably load and 
     ```py
     # Loading the MATLAB model using COBRApy
     from cobra.io import load_matlab_model, write_sbml_model
+
     matlab_model = load_matlab_model("your_matlab_model.mat")
     write_sbml_model(matlab_model, "your_matlab_model_as_sbml.xml")
     # ...and then load it as SBML in COBRA-k as explained below :D
@@ -22,7 +23,7 @@ There are two formats, JSON and SBML, in which you can interchangeably load and 
 
 ## 1. JSON
 
-Any of COBRA-k's dataclasses (see previous chapter), including Model instances, can be stored and loaded as JSON [[Wikipedia]](https://en.wikipedia.org/wiki/JSON) files. JSONs can be quickly saved and loaded tend to be easier to read and have a smaller file size than SBMLs. However, they are not interoperable with other program packages so that, if you publish a model, you should always use the SBML format as it is the only widespread "standard" format.
+Any of COBRA-k's dataclasses (see previous chapter), including Model instances, can be stored and loaded as JSON [[Wikipedia]](https://en.wikipedia.org/wiki/JSON) files. JSONs can be quickly saved and loaded and tend to be easier to be read and to have a smaller file size than SBMLs. However, they are not interoperable with other program packages so that, if you publish a model, you should always use the SBML format as it is the only widespread "standard" format.
 
 !!! note
     While some other constraint-based modeling packages also provide JSON as input and output format, COBRA-k's JSON definition is incompatible with their definitions. To use an interoperable format that works with virtually all packages, use the SBML format (see below).
@@ -43,14 +44,14 @@ json_write(
 
 ### Load Model as JSON
 
-Use ```json_load``` using ```Model```as type argument:
+Use ```json_load``` using ```Model``` as type argument:
 
 ```py
 from cobrak.io import json_load
 from cobrak.dataclasses import Model
 
 # The ": Model" addition and import of the Model dataclass
-# are not neccessary, however, they help if you utilize
+# are not necessary, however, they help if you utilize
 # Python's typing functionality, which provides e.g.
 # automatic completion for model instances.
 cobrak_model: Model = json_load(
@@ -59,7 +60,7 @@ cobrak_model: Model = json_load(
 )
 ```
 
-The type argument of ```json_load```is optional to load a JSON. Using this type, COBRA-k utilizes pydantic to automatically verify the correctness of the given JSON (i.e. that it matches the given type or dataclass). If you're unsure about your JSON's type (e.g. if it is not a COBRA-k dataclass), you can also just use the ```Any```type from Python's ```typing``` package.
+The type argument of ```json_load``` is optional to load a JSON. Using this type, COBRA-k utilizes pydantic to automatically verify the correctness of the given JSON (i.e. that it matches the given type or dataclass). If you're unsure about your JSON's type (e.g. if it is not a COBRA-k dataclass), you can also just use the ```Any``` type from Python's ```typing``` package.
 
 ## 2. **(Annotated) SBML**
 
@@ -78,8 +79,8 @@ from cobrak.io import save_cobrak_model_as_annotated_sbml_model
 save_cobrak_model_as_annotated_sbml_model(
     cobrak_model,
     filepath="/wished/path/filename.xml",
-    combine_base_reactions=False, # Default is False
-    add_enzyme_constraints=False, # Default is False
+    combine_base_reactions=False,  # Default is False
+    add_enzyme_constraints=False,  # Default is False
 )
 ```
 
@@ -96,9 +97,7 @@ Loading an (annotated or also plain unannotated) SBML as a Model is simple:
 ```py
 from cobrak.io import load_annotated_sbml_model_as_cobrak_model
 
-cobrak_model = load_annotated_sbml_model_as_cobrak_model(
-    "/path/to/sbml/filename.xml"
-)
+cobrak_model = load_annotated_sbml_model_as_cobrak_model("/path/to/sbml/filename.xml")
 ```
 
-Keep in mind that only with COBRA-k annotations, COBRA-k can successfully directly read the thermodynamic and kinetic data of the model. Otherwise, t has to be included later to the Model instance. Options to do so are detailed in the next chapter. Without COBRA-k annotations in the SBML, a standard metabolite concentration range of $10^{-6}$ up to 0.02 M is assumed. Also, the protein pool is set to 1_000 g⋅gDW⁻¹, essentially deactivating any possible enzyme constraints.
+Keep in mind that only with COBRA-k annotations, COBRA-k can successfully directly read the thermodynamic and kinetic data of the model. Otherwise, it has to be included later to the Model instance. Options to do so are detailed in the next chapter. Without COBRA-k annotations in the SBML, a standard metabolite concentration range of $10^{-6}$ up to 0.02 M is assumed. Also, the protein pool is set to 1_000 g⋅gDW⁻¹, essentially deactivating any possible enzyme constraints.

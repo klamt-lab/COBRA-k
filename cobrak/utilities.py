@@ -408,11 +408,18 @@ def combine_enzyme_reaction_datasets(
             if enzyme_reaction_data is None:
                 continue
 
-            if (reac_id not in combined_data):
-                combined_data[reac_id] = EnzymeReactionData(identifiers=enzyme_reaction_data.identifiers,)
+            if reac_id not in combined_data:
+                combined_data[reac_id] = EnzymeReactionData(
+                    identifiers=enzyme_reaction_data.identifiers,
+                )
 
-            if not combined_data[reac_id].k_cat_references or (enzyme_reaction_data.k_cat < 1e20 and (combined_data[reac_id].k_cat_references[0].tax_distance
-                > enzyme_reaction_data.k_cat_references[0].tax_distance)):
+            if not combined_data[reac_id].k_cat_references or (
+                enzyme_reaction_data.k_cat < 1e20
+                and (
+                    combined_data[reac_id].k_cat_references[0].tax_distance
+                    > enzyme_reaction_data.k_cat_references[0].tax_distance
+                )
+            ):
                 combined_data[reac_id] = EnzymeReactionData(
                     identifiers=enzyme_reaction_data.identifiers,
                     k_cat=enzyme_reaction_data.k_cat,
@@ -892,7 +899,10 @@ def delete_unused_reactions_in_optimization_dict(
                 else:
                     to_delete = False
             else:
-                if not delete_nonthermodynamic_reacs and cobrak_model.reactions[reac_id].dG0 is None:
+                if (
+                    not delete_nonthermodynamic_reacs
+                    and cobrak_model.reactions[reac_id].dG0 is None
+                ):
                     to_delete = False
                 else:
                     to_delete = True
@@ -1869,6 +1879,7 @@ def get_model_with_filled_missing_parameters(
     verbose: bool = False,
     ignore_nameparts: list[str] = ["diffusion"],
     ignore_infixes: list[str] = [],
+    same_filling_for_substrate_and_product_kms: bool = False,
 ) -> Model:
     """Fills missing parameters in a COBRA-k model, including dG0, k_cat, and k_ms values.
 
@@ -1897,6 +1908,9 @@ def get_model_with_filled_missing_parameters(
     all_mws = get_model_mws(cobrak_model)
     all_kcats = get_model_kcats(cobrak_model)
     substrate_kms, product_kms = get_model_kms_by_usage(cobrak_model)
+    if same_filling_for_substrate_and_product_kms:
+        substrate_kms += product_kms
+        product_kms = deepcopy(substrate_kms)
     all_abs_dG0s = [
         abs(dG0)
         for dG0 in get_model_dG0s(
@@ -2860,7 +2874,10 @@ def get_unoptimized_reactions_in_nlp_solution(
 
 @validate_call(validate_return=True)
 def have_all_unignored_km(
-    reaction: Reaction, kinetic_ignored_metabolites: list[str], reac_id: str = "", kinetic_ignored_metabolite_exceptions: list[tuple[str, str]]=[],
+    reaction: Reaction,
+    kinetic_ignored_metabolites: list[str],
+    reac_id: str = "",
+    kinetic_ignored_metabolite_exceptions: list[tuple[str, str]] = [],
 ) -> bool:
     """Check if all non-ignored metabolites in a reaction have associated Michaelis-Menten constants (k_m).
 
@@ -2880,7 +2897,8 @@ def have_all_unignored_km(
     mets_needing_km = [
         met_id
         for met_id in reaction.stoichiometries
-        if (met_id not in kinetic_ignored_metabolites) and ((reac_id, met_id) not in kinetic_ignored_metabolite_exceptions)
+        if (met_id not in kinetic_ignored_metabolites)
+        and ((reac_id, met_id) not in kinetic_ignored_metabolite_exceptions)
     ]
     for met_needing_km in mets_needing_km:
         if met_needing_km not in reaction.enzyme_reaction_data.k_ms:

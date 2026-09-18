@@ -1,12 +1,12 @@
 [project]
 name = "cobrak"
-version = "0.0.11"
+version = "0.0.12"
 authors = [
   { name="Pavlos Stephanos Bekiaris" },
 ]
 description = "Implementation of COBRA-k"
 readme = "README.md"
-requires-python = "==3.10.*"
+requires-python = ">=3.10, <=3.12"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: Apache Software License",
@@ -28,6 +28,9 @@ dependencies = [
     "pydantic",
     "highspy",
     "molmass",
+    "gurobipy",
+    "cplex",
+    "docplex",
     # "copasi-basico",
     # "ruff",
     # "mkdocs",

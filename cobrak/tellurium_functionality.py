@@ -120,8 +120,10 @@ def _get_reaction_string_of_cobrak_reaction(
         and (cobrak_reaction.enzyme_reaction_data.identifiers != [""])
     )
     has_kappa = has_vplus and have_all_unignored_km(
-        cobrak_reaction, kinetic_ignored_metabolites,
-        reac_id, kinetic_ignored_metabolite_exceptions,
+        cobrak_reaction,
+        kinetic_ignored_metabolites,
+        reac_id,
+        kinetic_ignored_metabolite_exceptions,
     )
     has_gamma = cobrak_reaction.dG0 is not None
 
@@ -150,7 +152,9 @@ def _get_reaction_string_of_cobrak_reaction(
             + str(abs(stoichiometry))
             + ")"
         )
-        if (met_id in kinetic_ignored_metabolites) and (reac_id, met_id not in kinetic_ignored_metabolite_exceptions):
+        if (met_id in kinetic_ignored_metabolites) and (
+            (reac_id, met_id) not in kinetic_ignored_metabolite_exceptions,
+        ):
             pow_stoich_d_km_met_string = "1.0"
         if stoichiometry < 0:
             stoich_times_substrate_strings.append(stoich_times_met_string)

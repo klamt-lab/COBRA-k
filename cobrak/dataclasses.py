@@ -161,6 +161,9 @@ class ExtraLinearWatch:
     """
 
     stoichiometries: dict[str, float]
+    """Keys: Model variable names; Children: Multipliers of constraint"""
+    include_with_missing_keys: bool = False
+    """Ignore keys that do not occur in the model (True) or dont' include whole constraint if ≥1 key is missing (False). Default: False."""
 
 
 @dataclass
@@ -189,6 +192,8 @@ class ExtraLinearConstraint:
     """Minimal numeric constraint value. Either this and/or upper_value must be not None. Defaults to None."""
     upper_value: float | None = None
     """Maximal numeric constraint value. Either this and/or lower_value must be not None. Defaults to None."""
+    include_with_missing_keys: bool = False
+    """Ignore keys that do not occur in the model (True) or dont' include whole constraint if ≥1 key is missing (False). Defaults to False."""
 
 
 @dataclass
@@ -217,6 +222,9 @@ class ExtraNonlinearWatch:
     """
 
     stoichiometries: dict[str, tuple[float, str]]
+    """Keys: Model variable names; Children: tuple of (multiplier, 'exp' OR 'powerX' OR 'log' or 'same'); see ExtraNonlinearWatch's class docstring for more"""
+    include_with_missing_keys: bool = False
+    """Ignore keys that do not occur in the model (True) or dont' include whole constraint if ≥1 key is missing (False). Defaults to False."""
 
 
 @dataclass
@@ -254,6 +262,8 @@ class ExtraNonlinearConstraint:
     """Minimal numeric constraint value. Either this and/or upper_value must be not None. Defaults to None."""
     upper_value: float | None = None
     """Maximal numeric constraint value. Either this and/or lower_value must be not None. Defaults to None."""
+    include_with_missing_keys: bool = False
+    """Ignore keys that do not occur in the model (True) or dont' include whole constraint if ≥1 key is missing (False). Defaults to False."""
 
 
 @dataclass
@@ -330,6 +340,7 @@ class Reaction:
 class CommunitySpeciesSetting:
     max_prot_pool: float = float("inf")
     max_conc_sum: float = float("inf")
+    max_mass_sum: float = float("inf")
     include_mets_in_prot_pool: bool = False
 
 
@@ -350,6 +361,8 @@ class Model:
     """[Only neccessary with enzymatic constraints] Keys: Enzyme IDs; Children: Enzyme instances; default is {}"""
     max_prot_pool: PositiveFloat = Field(default=1e9)
     """[Only neccessary with enzymatic constraints] Maximal usable protein pool in g/gDW; default is 1e9, i.e. basically unrestricted"""
+    extra_binary_vars: list[str] = Field(default_factory=list)
+    """[Optional] List of extra binary variables"""
     extra_linear_watches: dict[str, ExtraLinearWatch] = Field(default_factory=dict)
     """[Optional] Extra non-linear watches. Keys are watch names, children the watch definition."""
     extra_nonlinear_watches: dict[str, ExtraNonlinearWatch] = Field(
@@ -364,7 +377,9 @@ class Model:
     """[Optional] Extra non-linear constraints"""
     kinetic_ignored_metabolites: list[str] = Field(default_factory=list)
     """[Optional and only works with saturation term constraints] Metabolite IDs for which no k_m is neccessary and whill will have no influence on κ (useful e.g. for H⁺ and H₂O)"""
-    kinetic_ignored_metabolite_exceptions: list[tuple[str, str]] = Field(default_factory=list)
+    kinetic_ignored_metabolite_exceptions: list[tuple[str, str]] = Field(
+        default_factory=list
+    )
     """[Optional] Exceptions for the kinetic ignored metabolites given in ```kinetic_ignored_metabolites```, 1ˢᵗ tuple element is the reaction ID, 2ⁿᵈ the unignored metabolite"""
     R: PositiveFloat = Field(default=STANDARD_R)
     """[Optional and only works with thermodynamic constraints] Gas constant reference for dG'° in kJ⋅K⁻¹⋅mol⁻¹; default is STANDARD_R"""
@@ -388,11 +403,15 @@ class Model:
     """[Optional and only works with MILPs with thermodynamic constraints] Maximal relative concentration sum approximation error"""
     conc_sum_min_abs_error: float = 1e-6
     """[Optional and only works with MILPs with thermodynamic constraints] Maximal absolute concentration sum approximation error"""
+    max_met_mass_sum = float("inf")
+    """[Experimental!] A maximal sum of metabolite masses. Only works in NLPs."""
     include_mets_in_prot_pool: bool = False
     """[Experimental! Optional and only works with MILPs with enzyme and thermodynamic constraints] Whether or not metabolite masses are included in the protein (now generalized mass) pool (makes the problem non-linear!)"""
     cell_density: float = 330
     """[Experimental! Optional and only works with MINLPs with enzyme and thermodynamic constraints] The cell density used if include_mets_in_prot_pool is True. Default is 330 g⋅l⁻¹."""
-    community_species_settings: dict[str, CommunitySpeciesSetting] = Field(default_factory=dict)
+    community_species_settings: dict[str, CommunitySpeciesSetting] = Field(
+        default_factory=dict
+    )
     """[Experimental!] Add a list of community species suffixes"""
 
     def __enter__(self):  # noqa: ANN204
@@ -465,7 +484,7 @@ class CorrectionConfig:
 class Solver:
     """Represents options for a pyomo-compatible solver"""
 
-    name: str
+    name: str = "scip"
     """The solver's name. E.g. 'scip' for SCIP and 'cplex_direct' for CPLEX."""
     solver_options: dict[str, float | int | str] = Field(default_factory=dict)
     """[Optional] Options transmitted to the solver itself."""
