@@ -5,15 +5,17 @@
     from cobrak.example_models import toy_model
     from cobrak.lps import perform_lp_variability_analysis
     from cobrak.printing import print_optimization_result, print_variability_result
+
     # Import MINLP functionality in our *NLP* package
     # The "reversible" means that driving forces can become negative, but
     # reactions still have to be split as irreversible ones (v_i>=0)
     from cobrak.nlps import perform_nlp_reversible_optimization
+
     # Import NLP functionality in our NLP package
     # The "irreversible" means that driving forces can*not* become negative
     from cobrak.nlps import perform_nlp_irreversible_optimization_with_active_reacs_only
 
-    #%
+    # %
     # Run preparatory variability analysis
     variability_dict = perform_lp_variability_analysis(
         toy_model,
@@ -23,11 +25,11 @@
     # Pretty-print variability result
     print_variability_result(toy_model, variability_dict)
 
-    #%
+    # %
     # Run MINLP (by default, with the SCIP solver)
     minlp_result = perform_nlp_reversible_optimization(
         cobrak_model=toy_model,
-        objective_target="ATP_Consumption", # Let's maximize ATP production
+        objective_target="ATP_Consumption",  # Let's maximize ATP production
         objective_sense=+1,
         # Set the variable bounds from our preparatory variability analysis
         variability_dict=variability_dict,
@@ -41,7 +43,7 @@
     # Pretty-print MINLP result
     print_optimization_result(toy_model, minlp_result)
 
-    #%
+    # %
     # Run (local and fast) NLP (by default, with the IPOPT solver)
     nlp_result = perform_nlp_irreversible_optimization_with_active_reacs_only(
         toy_model,
@@ -70,7 +72,7 @@ In the last chapters, we looked at Linear and Mixed-Integer Linear Optimization 
 
 $$ v_i = V^{+}_i ⋅ κ_i ⋅ γ_i $$
 
-$v_i$ is, again, the reaction $i$'s flux. $V^{+}_i stands for the enzyme-dependent maximal flux that we already know from the basic enzyme constraints:
+$v_i$ is, again, the reaction $i$'s flux. $V^{+}_i$ stands for the enzyme-dependent maximal flux that we already know from the basic enzyme constraints:
 
 $$ V^{+}_i = E_i ⋅ k_{cat} $$
 
@@ -78,15 +80,15 @@ $κ_i$ is the saturation term - a unitless value that lies in $[0,1]$ - which is
 
 $$ κ_i = {{\bar{s}_i} \over {1 + \bar{s}_i + \bar{p}_i}} $$
 
-${\bar{s}_i}$ a $K_M$-dependent product of the concentrations of the reaction's *substrates*:
+${\bar{s}_i}$ is a $K_M$-dependent product of the concentrations of the reaction's *substrates*:
 
 $$ {\bar{s}_i} = \prod_{j \in 𝖲_i} (c_j ⋅ K_{M,j,i}) ^ {|N_{i,j}|}$$
 
 $K_{M,j,i}$ is the Michaelis-Menten constant of this substrate for this reaction, and $𝖲_i$ is the set of all indices of reaction $i$'s substrates. $c_s$ is the concentration of substrate $j$ and $|N_{i,j}|$ the absolute stoichiometry of the metabolite.
 
-Analogously, ${\bar{p}_i}$ a value affected by the reaction's *products*:
+Analogously, ${\bar{p}_i}$ is a value affected by the reaction's *products*:
 
-$$ {\bar{p}_j} = \prod_{k \in 𝖯_i} (c_k ⋅ K_{M,k,i}) ^ {N_{i,k}}$$
+$$ {\bar{p}_i} = \prod_{k \in 𝖯_i} (c_k ⋅ K_{M,k,i}) ^ {N_{i,k}}$$
 
 where $k$ is the index of the product, taken from the set of reaction product indices $𝖯_i$.
 
@@ -100,22 +102,22 @@ In conclusion, $V^{+}_i$ determines the maximally possible reaction flux. Both $
 
 ## Nonlinear kinetic constraints
 
-Now that we know the formulas of the Michaelis-Menten kinetics, we want to efficiently integrate them in our framework of constriant-based modeling. From CBM, we are at least still using:
+Now that we know the formulas of the Michaelis-Menten kinetics, we want to efficiently integrate them in our framework of constraint-based modeling. From CBM, we are at least still using:
 
 * the steady-state constraints (see LP chapter)
 * extra linear constraints (see LP chapter)
 * the logarithmic concentrations and their bounds (see MILP chapter)
 * the reaction driving forces $f_i$ (see MILP chapter)
 
-For our further CBM integration, "efficently integrating the kinetic formulas" means that we relax the kinetic formulas as much as possible. This means that we do not treat them as equality but as *in*equality:
+For our further CBM integration, "efficiently integrating the kinetic formulas" means that we relax the kinetic formulas as much as possible. This means that we do not treat them as equality but as *in*equality:
 
 $$ v_i ≤ V^{+}_i ⋅ κ_i ⋅ γ_i $$
 
-Now, $v_i$ is allowed to become lower than what would be expected from the kinetics. However, we are also still using the central protein pool constrained introduced in the LP chapter:
+Now, $v_i$ is allowed to become lower than what would be expected from the kinetics. However, we are also still using the central protein pool constraint introduced in the LP chapter:
 
 $$ ∑_i W_i ⋅ E_i ≤ E_{tot} $$
 
-This means that, in a typical optimziation, the enzymes are still going to be used as efficiently as possible. I.e., typically, the lowest needed amount of enzymes is found, such that our inequality often becomes an equality :-) Conversely, in cases where this does not hold, the enzyme usage is not the major constraint for our optimization anyway.
+This means that, in a typical optimization, the enzymes are still going to be used as efficiently as possible. I.e., typically, the lowest needed amount of enzymes is found, such that our inequality often becomes an equality :-) Conversely, in cases where this does not hold, the enzyme usage is not the major constraint for our optimization anyway.
 
 Following our relaxation scheme, we also relax the maximally possible flux $V^{+}_i$ as inequality:
 
@@ -125,11 +127,11 @@ $ κ_i $ is also now an inequality and made dependent on our *logarithmic* conce
 
 $$ κ_i <= {e^{\tilde{s}_i} \over {( 1+e^{\tilde{s}_i}+e^{\tilde{p}_i} )}} $$
 
-where $\tilde{s}_i$ and $\tilde{p}_i$ are the logarithmic variants of $\bar{s}_i$ and $\bar{p}_i$ (see above) and are using our logarithmic concentration vector $\mathbf{\tilde{x}}$ (see previous chapter):
+where $\tilde{s}_i$ and $\tilde{p}_i$ are the logarithmic variants of $\bar{s}_i$ and $\bar{p}_i$ (see above) and are using our logarithmic concentration vector $\mathbf{x̃}$ (see previous chapter):
 
 $$ \tilde{s}_i = \ln ( \bar{s} ) = \sum_{j ∈ 𝖲_i} ( |N_{j,i}| ⋅ x̃_j ) - \sum_{j ∈ 𝖲_i} ( |N_{j,i}| ⋅  \ln K_{M,j,i} ) $$
 
-$$ \tilde{p}_i ≥ \ln ( \bar{p} ) = \sum_{k ∈ 𝖯_i} ( N_{k,i} ⋅ x̃ ) - \sum_{k ∈ 𝖯_i} ( N_{k,i} ⋅  \ln K_{M,k,i} ) $$
+$$ \tilde{p}_i ≥ \ln ( \bar{p} ) = \sum_{k ∈ 𝖯_i} ( N_{k,i} ⋅ x̃_k ) - \sum_{k ∈ 𝖯_i} ( N_{k,i} ⋅  \ln K_{M,k,i} ) $$
 
 Note that $\tilde{p}$ is even further relaxed, as lower $\tilde{p}$ could only restrict a reaction flux even further (see formula for $κ_i$).
 
@@ -137,7 +139,7 @@ $$ γ_i ≤ (1-e^{f_i / (R ⋅ T)})$$
 
 whereby we also relax $f_i$, again in a direction which could only lower the flux, as (using the definitions from the previous chapter)
 
-$$ f_i ≤ -(Δ_r G^{´°}_i + R ⋅ T ⋅ \mathbf{N_{⋅,i}} ⋅ \mathbf{x̃}) $$
+$$ f_i ≤ -(Δ_r G^{'°}_i + R ⋅ T ⋅ \mathbf{N_{⋅,i}} ⋅ \mathbf{x̃}) $$
 
 And that's it :D With these additional constraints, on top of our mentioned constrained-based constrained that we introduced in earlier chapters, we could now run constraint-based analyses with full reaction kinetics :-)
 
@@ -151,7 +153,7 @@ $$ Μ_{tot} ≤ \sum{e^(x̃_j)} $$
     We don't need any of the linear approximation tricks used for MILPs (see last chapter) here :-)
 
 !!! warning
-    Adding concentration sum constraints can cause a heavy load on a non-linear solver. Hence, if you are expereiencing very slow solving times, they might be caused by this constraint if you have set ```max_conc_sum``` to a value lower than its default ```float("inf")```.
+    Adding concentration sum constraints can cause a heavy load on a non-linear solver. Hence, if you are experiencing very slow solving times, they might be caused by this constraint if you have set ```max_conc_sum``` to a value lower than its default ```float("inf")```.
 
 ## Preparatory Variability Analysis
 
@@ -161,17 +163,17 @@ Luckily, we still use our pre-set logarithmic concentration bounds (see previous
 
 * reaction fluxes $\mathbf{v}$
 * enzyme concentrations $\mathbf{E}$
-* logarithmic concentrations $\mathbf{\tilde{x}}$
+* logarithmic concentrations $\mathbf{x̃}$
 * driving forces $\mathbf{f}$
 * logarithmic saturation values $\mathbf{\tilde{s}}$ and $\mathbf{\tilde{p}}$
 
 ...solves our problem with too high and too low values. Mathematically, the ecTFVA-based preparatory variability analysis can be written as
 
-$$ \operatorname*{\mathbf{min}}_{\mathbf{v, E, x̃, f, z, \tilde{p}, \tilde{s}, κ, γ}, B}  \mathbf{β_i, β ∈ \{ \mathbf{v}, \mathbf{E}, \mathbf{\tilde{x}}, \mathbf{f}, \mathbf{\tilde{s}}, \mathbf{\tilde{p}} \}} \\ s.t. \space CBM \space \& \space thermodynamic \space \& \space saturation \space term \space  constraints $$
+$$ \operatorname*{\mathbf{min}}_{\mathbf{v, E, x̃, f, z, \tilde{p}, \tilde{s}, κ, γ}, B}  \mathbf{β_i, β ∈ \{ \mathbf{v}, \mathbf{E}, \mathbf{x̃}, \mathbf{f}, \mathbf{\tilde{s}}, \mathbf{\tilde{p}} \}} \\ s.t. \space CBM \space \& \space thermodynamic \space \& \space saturation \space term \space  constraints $$
 
 and
 
-$$ \operatorname*{\mathbf{max}}_{\mathbf{v, E, x̃, f, z, \tilde{p}, \tilde{s}, κ, γ}, B}  \mathbf{β_i, β ∈ \{ \mathbf{v}, \mathbf{E}, \mathbf{\tilde{x}}, \mathbf{f}, \mathbf{\tilde{s}}, \mathbf{\tilde{p}} \}} \\ s.t. \space CBM \space \& \space thermodynamic \space \& \space saturation \space term \space  constraints $$
+$$ \operatorname*{\mathbf{max}}_{\mathbf{v, E, x̃, f, z, \tilde{p}, \tilde{s}, κ, γ}, B}  \mathbf{β_i, β ∈ \{ \mathbf{v}, \mathbf{E}, \mathbf{x̃}, \mathbf{f}, \mathbf{\tilde{s}}, \mathbf{\tilde{p}} \}} \\ s.t. \space CBM \space \& \space thermodynamic \space \& \space saturation \space term \space  constraints $$
 
 
 In COBRA-k, we can run (and let us pretty-print) such a preparatory variability analysis analogously as how we did it in the previous chapter:
@@ -212,6 +214,7 @@ In COBRA-k, we can run a MINLP on toy model (which is small enough for it to run
 from cobrak.example_models import toy_model
 from cobrak.printing import print_optimization_result
 from cobrak.lps import perform_lp_variability_analysis
+
 # Import MINLP functionality in our *NLP* package
 # The "reversible" means that driving forces can become negative, but
 # reactions still have to be split as irreversible ones (v_i>=0)
@@ -227,7 +230,7 @@ variability_dict = perform_lp_variability_analysis(
 # Run MINLP (by default, with the SCIP solver)
 minlp_result = perform_nlp_reversible_optimization(
     cobrak_model=toy_model,
-    objective_target="ATP_Consumption", # Let's maximize ATP production
+    objective_target="ATP_Consumption",  # Let's maximize ATP production
     objective_sense=+1,
     # Set the variable bounds from our preparatory variability analysis
     variability_dict=variability_dict,
@@ -243,7 +246,7 @@ print_optimization_result(toy_model, minlp_result)
 ```
 
 !!! info
-    Just like all other optimization functions, ```perform_nlp_reversible_optimization``` has many other optional arguments, including the possibility to use other solvers, solver and pyomo solve funtion options. For more information, see this documentation's "API reference".
+    Just like all other optimization functions, ```perform_nlp_reversible_optimization``` has many other optional arguments, including the possibility to use other solvers, solver and pyomo solve function options. For more information, see this documentation's "API reference".
 
 
 ## Local NLP (fast, but restricted)
@@ -266,6 +269,7 @@ In COBRA-k, you can find a suitable set of thermodynamically feasible reactions 
 from cobrak.example_models import toy_model
 from cobrak.printing import print_optimization_result
 from cobrak.lps import perform_lp_optimization, perform_lp_variability_analysis
+
 # Import NLP functionality in our NLP package
 # The "irreversible" means that driving forces can*not* become negative
 from cobrak.nlps import perform_nlp_irreversible_optimization_with_active_reacs_only
@@ -308,7 +312,7 @@ nlp_result = perform_nlp_irreversible_optimization_with_active_reacs_only(
 print_optimization_result(toy_model, nlp_result)
 ```
 
-Again, ```perform_nlp_reversible_optimization``` has many further optional arguments that you can find in this documentation's "API reference" chapter. By default, COBRA-k uses the non-linear solver IPOPT for NLPs.
+Again, ```perform_nlp_irreversible_optimization_with_active_reacs_only``` has many further optional arguments that you can find in this documentation's "API reference" chapter. By default, COBRA-k uses the non-linear solver IPOPT for NLPs.
 
 ### Extra non-linear flux constraints
 
@@ -323,7 +327,10 @@ from cobrak.dataclasses import ExtraNonlinearConstraint
 toy_model.extra_nonlinear_constraints = [
     ExtraNonlinearConstraint(
         stoichiometries={
-            "EX_P": (1.0, "same"),  # first the stoichiometry, second the function application
+            "EX_P": (
+                1.0,
+                "same",
+            ),  # first the stoichiometry, second the function application
             f"{LNCONC_VAR_PREFIX}C": (-2.0, "exp"),
         },
         upper_value=0.0,
@@ -339,7 +346,7 @@ Optionally, you can also introduce extra non-linear *watch variables* (correspon
 # ...using the code imports from above
 from cobrak.dataclasses import ExtraNonlinearWatch
 
-# Let's define v_EX_P <= 2 * exp(x_C)
+# Let's define a watch for the logarithm of EX_S flux
 toy_model.extra_nonlinear_watches = {
     "log_EX_S": ExtraNonlinearWatch(
         stoichiometries={

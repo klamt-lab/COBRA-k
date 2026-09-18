@@ -48,10 +48,10 @@ def analyze_metabolite_correction(  # noqa: D103
             continue
         if original_result[reac_id] < 1e-9:
             continue
-        original_kappa = original_result.get(KAPPA_VAR_PREFIX + reac_id, None)
-        corrected_kappa = corrected_result.get(KAPPA_VAR_PREFIX + reac_id, None)
-        original_gamma = original_result.get(KAPPA_VAR_PREFIX + reac_id, None)
-        corrected_gamma = corrected_result.get(KAPPA_VAR_PREFIX + reac_id, None)
+        original_kappa = original_result.get(KAPPA_VAR_PREFIX + reac_id)
+        corrected_kappa = corrected_result.get(KAPPA_VAR_PREFIX + reac_id)
+        original_gamma = original_result.get(KAPPA_VAR_PREFIX + reac_id)
+        corrected_gamma = corrected_result.get(KAPPA_VAR_PREFIX + reac_id)
         if None in (original_kappa, original_gamma, corrected_kappa, corrected_gamma):
             continue
 

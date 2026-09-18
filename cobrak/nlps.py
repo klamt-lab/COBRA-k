@@ -40,6 +40,7 @@ from .constants import (
     MDF_VAR_ID,
     OBJECTIVE_VAR_NAME,
     PROT_POOL_REAC_NAME,
+    QUASI_INF,
     STANDARD_MIN_MDF,
     Z_VAR_PREFIX,
 )
@@ -48,7 +49,7 @@ from .lps import (
     _add_concentration_vars_and_constraints,
     _add_df_and_dG0_var_for_reaction,
     _add_error_sum_to_model,
-    _add_extra_watches_and_constraints_to_lp,
+    _add_extra_variables_and_watches_and_constraints_to_lp,
     _add_kappa_substrates_and_products_vars,
     _apply_error_scenario,
     _get_dG0_highbound,
@@ -351,8 +352,10 @@ def get_nlp_from_cobrak_model(
         has_gamma = True
         has_kappa = True
         if not have_all_unignored_km(
-            reaction, cobrak_model.kinetic_ignored_metabolites,
-            reac_id, cobrak_model.kinetic_ignored_metabolite_exceptions,
+            reaction,
+            cobrak_model.kinetic_ignored_metabolites,
+            reac_id,
+            cobrak_model.kinetic_ignored_metabolite_exceptions,
         ):
             has_kappa = False
         if reaction.dG0 is None:
@@ -439,8 +442,10 @@ def get_nlp_from_cobrak_model(
                 gamma_rhs = approximation_value + (1 - exp(-f_by_RT))
             else:
                 gamma_rhs = (
-                    approximation_value
-                    + (f_by_RT**2) / (1 + (f_by_RT**2))) # would be a rough approximation
+                    approximation_value + (1 - exp(-f_by_RT))
+                    # + (f_by_RT**2)
+                    # / (1 + (f_by_RT**2))  # would be a rough approximation
+                )
 
             if strict_mode or reac_id in single_strict_reacs:
                 gamma_var_constraint_0 = getattr(model, gamma_var_name) == gamma_rhs
@@ -456,7 +461,10 @@ def get_nlp_from_cobrak_model(
         if with_iota and has_iota:
             iota_product = 1.0
             for met_id, k_i in reaction.enzyme_reaction_data.k_is.items():
-                if (met_id in cobrak_model.kinetic_ignored_metabolites) and ((reac_id, met_id) not in cobrak_model.kinetic_ignored_metabolite_exceptions):
+                if (met_id in cobrak_model.kinetic_ignored_metabolites) and (
+                    (reac_id, met_id)
+                    not in cobrak_model.kinetic_ignored_metabolite_exceptions
+                ):
                     continue
                 var_id = f"{LNCONC_VAR_PREFIX}{met_id}"
                 if var_id not in model_var_names:
@@ -528,7 +536,10 @@ def get_nlp_from_cobrak_model(
         if with_alpha and has_alpha:
             alpha_product = 1.0
             for met_id, k_a in reaction.enzyme_reaction_data.k_as.items():
-                if (met_id in cobrak_model.kinetic_ignored_metabolites) and ((reac_id, met_id) not in cobrak_model.kinetic_ignored_metabolite_exceptions):
+                if (met_id in cobrak_model.kinetic_ignored_metabolites) and (
+                    (reac_id, met_id)
+                    not in cobrak_model.kinetic_ignored_metabolite_exceptions
+                ):
                     continue
                 var_id = f"{LNCONC_VAR_PREFIX}{met_id}"
                 if var_id not in model_var_names:
@@ -629,7 +640,7 @@ def get_nlp_from_cobrak_model(
                 Constraint(rule=getattr(model, reac_id) <= kinetic_rhs),
             )
 
-    model = _add_extra_watches_and_constraints_to_lp(
+    model = _add_extra_variables_and_watches_and_constraints_to_lp(
         model, cobrak_model, ignore_nonlinear_terms=False
     )
     if is_any_error_term_active(correction_config):
@@ -647,66 +658,88 @@ def get_nlp_from_cobrak_model(
             )
 
     ########################
-    if (
-        cobrak_model.max_conc_sum < float("inf")
-        or cobrak_model.include_mets_in_prot_pool
-    ):
-        met_sum_ids: list[str] = []
-        for var_id in get_model_var_names(model):
-            if not var_id.startswith(LNCONC_VAR_PREFIX):
-                continue
-            if not any(
-                var_id.endswith(suffix)
-                for suffix in cobrak_model.conc_sum_include_suffixes
-            ):
-                continue
-            if any(
-                var_id.replace(LNCONC_VAR_PREFIX, "").startswith(prefix)
-                for prefix in cobrak_model.conc_sum_ignore_prefixes
-            ):
-                continue
-            met_sum_ids.append(var_id)
+    met_sum_ids: list[str] = []
+    for var_id in get_model_var_names(model):
+        if not var_id.startswith(LNCONC_VAR_PREFIX):
+            continue
+        if not any(
+            var_id.endswith(suffix) for suffix in cobrak_model.conc_sum_include_suffixes
+        ):
+            continue
+        if any(
+            var_id.replace(LNCONC_VAR_PREFIX, "").startswith(prefix)
+            for prefix in cobrak_model.conc_sum_ignore_prefixes
+        ):
+            continue
+        met_sum_ids.append(var_id)
 
+    if cobrak_model.max_conc_sum < float("inf"):
         conc_sum_expr = 0.0
         for met_sum_id in met_sum_ids:
-            met_id = met_sum_id[len(LNCONC_VAR_PREFIX) :]
-            if (
-                cobrak_model.include_mets_in_prot_pool
-                and cobrak_model.metabolites[met_id].molar_mass
-            ):
-                conc_sum_expr += (
-                    (1 / cobrak_model.cell_density)
-                    * cobrak_model.metabolites[met_id].molar_mass
-                    * exp(getattr(model, met_sum_id))
-                )
-            else:
-                conc_sum_expr += exp(getattr(model, met_sum_id))
+            conc_sum_expr += exp(getattr(model, met_sum_id))
 
         setattr(
             model,
-            "met_sum_var",
+            "met_conc_sum_var",
             Var(
                 within=Reals,
-                bounds=(1e-5, cobrak_model.max_conc_sum)
-                if not cobrak_model.include_mets_in_prot_pool
-                else (1e-5, 1e3),
+                bounds=(1e-5, cobrak_model.max_conc_sum),
             ),
         )
         setattr(
             model,
-            "met_sum_constraint",
-            Constraint(rule=conc_sum_expr <= getattr(model, "met_sum_var")),
+            "met_conc_sum_constraint",
+            Constraint(rule=conc_sum_expr <= getattr(model, "met_conc_sum_var")),
         )
-        if cobrak_model.include_mets_in_prot_pool:
-            setattr(
-                model,
-                GENERALIZED_SUM_CONSTRAINT_NAME,
-                Constraint(
-                    rule=getattr(model, PROT_POOL_REAC_NAME)
-                    + getattr(model, "met_sum_var")
-                    <= cobrak_model.max_prot_pool
-                ),
+
+    # Mass sum constraint
+    if (
+        cobrak_model.max_met_mass_sum < float("inf")
+        or cobrak_model.include_mets_in_prot_pool
+    ):
+        mass_sum_expr = 0.0
+        for met_sum_id in met_sum_ids:
+            met_id = met_sum_id[len(LNCONC_VAR_PREFIX) :]
+            if met_id not in cobrak_model.metabolites:
+                continue
+            if not cobrak_model.metabolites[met_id].molar_mass:
+                continue
+            mass_sum_expr += (
+                (1 / cobrak_model.cell_density)
+                * cobrak_model.metabolites[met_id].molar_mass
+                * exp(getattr(model, met_sum_id))
             )
+
+        setattr(
+            model,
+            "met_mass_sum_var",
+            Var(
+                within=Reals,
+                bounds=(
+                    1e-5,
+                    cobrak_model.max_met_mass_sum
+                    if cobrak_model.max_met_mass_sum < float("inf")
+                    else QUASI_INF,
+                ),
+            ),
+        )
+
+        setattr(
+            model,
+            "met_mass_sum_constraint",
+            Constraint(rule=mass_sum_expr <= getattr(model, "met_mass_sum_var")),
+        )
+
+    if cobrak_model.include_mets_in_prot_pool:
+        setattr(
+            model,
+            GENERALIZED_SUM_CONSTRAINT_NAME,
+            Constraint(
+                rule=getattr(model, PROT_POOL_REAC_NAME)
+                + getattr(model, "met_mass_sum_var")
+                <= cobrak_model.max_prot_pool
+            ),
+        )
     ################
 
     return model

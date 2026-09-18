@@ -5,7 +5,7 @@ COBRA-k is a Python package [hosted on PyPI](https://pypi.org/project/cobrak/), 
 ```sh
 pip install cobrak
 ```
-*Note:* If you encounter any trouble due to a missing SCIP installation (which may happen on some systems), you have to install the free and open-source mixed-integer linear solver on your system. To do so, follow the SCIP download or compilation instructions on [its website](https://scipopt.org/).
+*Note:* If you encounter any trouble due to a missing SCIP installation (which may happen on some systems), you have to install the free and open-source (mixed-integer) linear solver on your system. To do so, follow the SCIP download or compilation instructions on [its website](https://scipopt.org/).
 
 ??? info "Optional alternative installation for conda or mamba users"
     If you're using conda or mamba and want to have a clean COBRA-k environment, create an empty environment with Python and pip, activate it and install COBRA-k afterwards. E.g., on a plain bash console, the steps are as follows (again, any Python≥3.10 should work):
@@ -26,17 +26,18 @@ pip install cobrak
 COBRA-k always comes pre-packaged with the quite capable open source linear (mixed-integer) solver [HiGHS](https://github.com/ERGO-Code/HiGHS) and the linear and non-linear program solver [IPOPT](https://github.com/coin-or/Ipopt) (and on some systems, also automatically the solver SCIP). With IPOPT, all optimizations without integer variables (e.g., the NLP optimizations) provided by COBRA-k can be run.
 
 !!! note
-    IPOPT comes pre-packages with the free linear subsolver MA27. However, for larger models, the much faster linear subsolver MA57 or one of its alternatives are highly recommended. See here on how to obtain them (e.g. a free academic license is provided):
+    IPOPT comes pre-packaged with the free linear subsolver MA27. However, for larger models, the much faster linear subsolver MA57 or one of its alternatives are highly recommended. See here on how to obtain them (e.g. a free academic license is provided):
 
     [https://licences.stfc.ac.uk/product/coin-hsl](https://licences.stfc.ac.uk/product/coin-hsl)
 
-    In the ```cobrak.standard_solvers```subpackage (which is further explained in later chapters), you can find ```IPOPT_MA57```, an example on how to configure a ```Solver```instance for MA57. The standard solver ```IPOPT```uses the slow MA27.
+    In the ```cobrak.standard_solvers``` subpackage (which is further explained in later chapters), you can find ```IPOPT_MA57```, an example on how to configure a ```Solver``` instance for MA57. The standard solver ```IPOPT```
+    uses the slow MA27.
 
-Additionally, all solvers supported by [pyomo](https://github.com/Pyomo/pyomo) can be used. These include the very fast commercial mixed-integer linear solvers CPLEX and Gurobi. However, as both of these solvers are not automatically bundled with COBRA-k, these solvers *and* their Python bindings have to be installed seperately. Thereby, the Python bindings have to be installed in your COBRA-k Python environment.
+Additionally, all solvers supported by [pyomo](https://github.com/Pyomo/pyomo) can be used. These include the very fast commercial (mixed-integer) linear solvers CPLEX and Gurobi. However, as both of these solvers are not automatically bundled with COBRA-k, these solvers *and* their Python bindings have to be installed seperately. Thereby, the Python bindings have to be installed in your COBRA-k Python environment.
 
 For CPLEX, you can find installation instructions here:
 
-* [CPLEX itself](https://www.ibm.com/de-de/products/ilog-cplex-optimization-studio)
+* [CPLEX itself](https://www.ibm.com/en-en/products/ilog-cplex-optimization-studio)
 
 * [CPLEX Python bindings](https://www.ibm.com/docs/en/icos/22.1.1?topic=cplex-setting-up-python-api)
 

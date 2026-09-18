@@ -5,7 +5,7 @@
         <td>
             <div style="background-color: #2E4053; padding: 4px 8px; border-radius: 4px; cursor: pointer; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
             <a style="color: #FFFFFF; text-decoration: none; font-weight: bold;" href="https://pypi.org/project/cobrak/">
-            pip &#124; version 0.0.11
+            pip &#124; version 0.0.12
             </a>
             </div>
         </td>
@@ -131,10 +131,7 @@ lp_result: dict[str, float] = perform_lp_optimization(
 )
 
 # Pretty print enzyme-constrained Flux Balance Analysis result
-print_optimization_result(
-    cobrak_model=toy_model,
-    optimization_dict=lp_result
-)
+print_optimization_result(cobrak_model=toy_model, optimization_dict=lp_result)
 ```
 
 Regarding its programming philosophy, COBRA-k aims to be i) composable (e.g. all main classes are "just" [dataclasses](https://docs.python.org/3/library/dataclasses.html) - also known as ```struct```) and ii) explicitly typed (with some type checks provided by [pydantic](https://github.com/pydantic/pydantic)) thus trying to help you when coding in your favourite editor or IDE.

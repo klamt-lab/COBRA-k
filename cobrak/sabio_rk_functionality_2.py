@@ -1,16 +1,13 @@
 """Functions and associated dataclasses for retrieving kinetic data from SABIO-RK"""
 
 # IMPORT SECTION #
-import threading
 from ast import literal_eval
 from dataclasses import dataclass
-from io import StringIO
 from math import sqrt
 from os.path import exists
-from shutil import rmtree
 from statistics import median
-from time import sleep, time
-from zipfile import ZIP_LZMA, ZipFile
+from time import sleep
+from typing import Any
 
 import cobra
 import requests
@@ -27,6 +24,7 @@ from .io import (
     get_files,
     json_load,
     json_zip_load,
+    json_zip_write,
     standardize_folder,
 )
 from .ncbi_taxonomy_functionality import (
@@ -67,8 +65,6 @@ class SabioEntry:
     """The list of substrate names"""
     products: list[str]
     """The list of product names"""
-    chebi_ids: list[str]
-    """The list of all CHEBI IDs"""
 
 
 @dataclass_json
@@ -89,79 +85,6 @@ class SabioDict:
 
 
 # CLASS SECTION #
-class SabioThread(threading.Thread):
-    """Represents a single Sabio-RK connection, ready for multi-threading (on one CPU core) using the threading module"""
-
-    def __init__(self, temp_folder: str, start_number: int, end_number: int) -> None:
-        """Initializes a SabioThread instance.
-
-        Args:
-            temp_folder (str): The path to the temporary folder where the results will be saved.
-            start_number (int): The starting number for the query range.
-            end_number (int): The ending number for the query range.
-        """
-        super().__init__()
-
-        self.temp_folder = standardize_folder(temp_folder)
-        self.start_number = start_number
-        self.end_number = end_number
-
-    def run(self) -> None:
-        """Executes the thread's SABIO-RK data request
-
-        Constructs a query string, sends a POST request to the SABIO-RK web service,
-        and writes the response to a file in the temporary folder.
-        """
-        txt_path = f"{self.temp_folder}zzz{self.start_number}.txt"
-        if exists(txt_path):
-            return
-
-        query_numbers = " OR ".join(
-            [str(i + 1) for i in range(self.start_number, self.end_number + 1)]
-        )
-        query_dict = {"EntryID": f"({query_numbers})"}
-        query_string = " AND ".join([f"{k}:{v}" for k, v in query_dict.items()])
-        query_string += ' AND Parametertype:("activation constant" OR "Ki" OR "kcat" OR "km" OR "Hill coefficient") AND EnzymeType:"wildtype"'
-        query = {
-            "fields[]": [
-                "EntryID",
-                "Organism",
-                "IsRecombinant",
-                "ECNumber",
-                "KineticMechanismType",
-                "SabioCompoundID",
-                "ChebiID",
-                "Parameter",
-                "Substrate",
-                "Product",
-                "Temperature",
-                "pH",
-            ],
-            "q": query_string,
-        }
-        try:
-            t0 = time()
-            request = requests.post(
-                "https://sabiork.h-its.org/sabioRestWebServices/kineticlawsExportTsv",
-                params=query,
-                timeout=120,
-            )
-            t1 = time()
-            print(
-                f"SABIO-ID REQUEST FROM {self.start_number} TO {self.end_number} FINISHED IN {t1 - t0}"
-            )
-        except requests.exceptions.ReadTimeout:
-            print(
-                f"TIMEOUT :O IN REQUEST FROM {self.start_number} TO {self.end_number} IN 120 SEC. YOU MAY TRY THIS AGAIN BY RESTARTING YOUR SCRIPT..."
-            )
-            return
-        request.raise_for_status()
-        with open(  # noqa: FURB103
-            txt_path, "w", encoding="utf-8"
-        ) as f:
-            f.write(request.text)
-
-
 # "PRIVATE" FUNCTIONS SECTION #
 def _get_ec_code_entries(
     sabio_entries: dict[str, list[SabioEntry]],
@@ -223,8 +146,6 @@ def _get_ec_code_entries(
             for substrate in sabio_entry.substrates:
                 substrate_bigg_id = _search_metname_in_bigg_ids(
                     met_id=substrate.lower(),
-                    bigg_id="",
-                    entry=sabio_entry,
                     name_to_bigg_id_dict=name_to_bigg_id_dict,
                 )
                 if substrate_bigg_id in substrate_bigg_ids:
@@ -234,8 +155,6 @@ def _get_ec_code_entries(
                 for product in sabio_entry.products:
                     product_bigg_id = _search_metname_in_bigg_ids(
                         met_id=product.lower(),
-                        bigg_id="",
-                        entry=sabio_entry,
                         name_to_bigg_id_dict=name_to_bigg_id_dict,
                     )
                     if product_bigg_id in product_bigg_ids:
@@ -249,94 +168,8 @@ def _get_ec_code_entries(
     return ec_code_entries
 
 
-def _get_sabio_tsv_str(target_folder: str) -> str:
-    """Retrieves the SABIO-RK TSV string from the target folder.
-
-    If the a zipped TSV cache does not exist, it downloads the data in threaded SabioThread instances,
-    processes it, and stores it in a zip file cache.
-
-    Args:
-        target_folder (str): The path to the folder where the TSV file or zip file should be stored.
-
-    Returns:
-        str: The content of the SABIO-RK TSV file as a string.
-
-    Example:
-        target_folder = "/path/to/target/folder"
-        tsv_str = _get_sabio_tsv_str(target_folder)
-        print(tsv_str)
-    """
-    target_folder = standardize_folder(target_folder)
-    ensure_folder_existence(target_folder)
-    zip_filename = f"{target_folder}sabio_single_tsvs.zip"
-    tsv_zip_filename = f"{target_folder}sabio_full_tsv.zip"
-    sabio_tsv_filename = "sabio.tsv"
-
-    starts = [0 + 250 * i for i in range(80_000 // 250)]
-
-    if not exists(zip_filename):
-        print(
-            f"SABIO-RK CACHE FILE {zip_filename} NOT FOUND IN GIVEN FOLDER {target_folder}"
-        )
-        print("THEREFORE, WE READ OUT SABIO-RK ONLINE...")
-
-        temp_folder = f"{target_folder}sabiotemp/"
-        ensure_folder_existence(temp_folder)
-
-        start_and_end_numbers = [(start, start + 249) for start in starts]
-
-        threads = [
-            SabioThread(temp_folder, start_number, end_number)
-            for start_number, end_number in start_and_end_numbers
-        ]
-        for thread in threads:
-            thread.start()
-            sleep(
-                1.5
-            )  # A little above SABIO-RK rate limit of 60 requests à minute à IP address
-        for thread in threads:
-            thread.join()
-
-        tsv_filenames = get_files(temp_folder)
-        with ZipFile(zip_filename, "w", ZIP_LZMA) as zipf:
-            for filename in tsv_filenames:
-                zipf.write(temp_folder + filename, arcname=filename)
-
-        rmtree(temp_folder)
-
-    if not exists(tsv_zip_filename):
-        full_tsv_lines = []
-        first = True
-        with ZipFile(zip_filename, "r") as zipf:
-            file_names = zipf.namelist()
-            for file_name in file_names:
-                with zipf.open(file_name) as file:
-                    lines = file.readlines()
-                    for line in lines:
-                        decoded_line = line.decode("utf-8")
-                        if (not first) and ("EntryID	Organism" in decoded_line):
-                            continue
-                        if len(decoded_line) <= 1:
-                            continue
-                        full_tsv_lines.append(decoded_line.replace("\n", ""))
-                first = False
-
-        with ZipFile(tsv_zip_filename, "w", ZIP_LZMA) as zipf:
-            zipf.writestr(
-                sabio_tsv_filename, StringIO("\n".join(full_tsv_lines)).getvalue()
-            )
-
-    with ZipFile(tsv_zip_filename, "r") as zipf:  # noqa: SIM117
-        with zipf.open(sabio_tsv_filename) as file:
-            tsv_content = file.read().decode("utf-8")
-
-    return tsv_content.replace("\r", "")
-
-
 def _search_metname_in_bigg_ids(
     met_id: str,
-    bigg_id: str,
-    entry: SabioEntry,
     name_to_bigg_id_dict: dict[str, str],
 ) -> str:
     entry_bigg_id: str = ""
@@ -346,13 +179,49 @@ def _search_metname_in_bigg_ids(
             if addition_name in name_to_bigg_id_dict:
                 entry_bigg_id = name_to_bigg_id_dict[addition_name]
                 break
-    if bigg_id:
-        for chebi_id in entry.chebi_ids:
-            if chebi_id in name_to_bigg_id_dict:
-                entry_bigg_id = name_to_bigg_id_dict[chebi_id]
-                if entry_bigg_id == bigg_id:
-                    break
     return entry_bigg_id
+
+
+def _get_sabio_database_entries_and_get_raw_sabio_entries_list(
+    sabio_target_folder: str,
+):
+    sabio_target_folder = standardize_folder(sabio_target_folder)
+    get_files(sabio_target_folder)
+    ensure_folder_existence(sabio_target_folder)
+
+    writepath = f"{sabio_target_folder}full_sabio_data.json"
+    if exists(writepath + ".zip"):
+        return json_zip_load(writepath)
+
+    raw_sabio_entries_list = []
+    current_page = 1
+    while True:
+        try:
+            # See https://sabio.h-its.org/ui/export-api (accessed on May 26 2026) for more about SABIO-RK's export API
+            print(f"DOWNLOADING SABIO-RK PAGE {current_page}...")
+            response = requests.get(
+                "https://sabio.h-its.org/export-api/sabio/kinlaw-entry/json",
+                params={
+                    "q": "",
+                    "pageSize": 1000,
+                    "page": current_page,
+                },
+            )
+            sleep(1.5)
+        except requests.exceptions.ReadTimeout:
+            print()
+        data = response.json()
+        if not data["data"]:  # Empty data → We exceeded the maximal page
+            if data["meta"]["total_pages"] > current_page:
+                print(f"PROBLEM WITH {current_page}...")
+            else:
+                break
+        raw_sabio_entries_list += data["data"]
+        current_page += 1
+    print("ZIPPING SABIO-RK DATA (MAY TAKE SOME TIME)...")
+    json_zip_write(writepath, raw_sabio_entries_list)
+    print("ZIPPING SUCCESFUL :D")
+    return raw_sabio_entries_list
 
 
 # "PUBLIC" FUNCTIONS SECTION #
@@ -360,80 +229,85 @@ def get_full_sabio_dict(sabio_target_folder: str) -> SabioDict:
     """Parses a SABIO-RK web query TSV file from the target folder to create a SabioDict instance containing SABIO-RK entries.
 
     Args:
-        sabio_target_folder (str): The path to the folder containing the TSV file.
+        sabio_target_folder (str): The path to the folder containing the full JSON file.
 
     Returns:
         SabioDict: A SabioDict instance whichm in turn, contains SabioEntry instances
     """
-    tsv_str = _get_sabio_tsv_str(sabio_target_folder)
-
-    tsv_lines = tsv_str.split("\n")
-    titles = tsv_lines[0].split("\t")
-    del tsv_lines[0]
-
+    sabio_entries: list[dict[str, Any]] = (
+        _get_sabio_database_entries_and_get_raw_sabio_entries_list(sabio_target_folder)
+    )
     sabio_dict = SabioDict({}, {}, {}, {}, {})
-    for tsv_line in tsv_lines:
-        line = tsv_line.split("\t")
+    for sabio_entry in sabio_entries:
+        entry_id = sabio_entry["id"]
+        organism = sabio_entry["general"]["organism"]["name"]
+        ec_number = sabio_entry["enzyme_description"]["ec_number"]
+        is_recombinant = sabio_entry["enzyme_description"]["is_recombinant"]
+        kinetics_mechanism_type = sabio_entry["kineticlaw"]["kinlaw_type"]["name"]
+        ph = sabio_entry["experimental_conditions"]["envvar_ph"]["start_value"]
+        temperature = sabio_entry["experimental_conditions"]["envvar_temperature"][
+            "start_value"
+        ]
+        substrates = [
+            species_entry["compound"]["name"]
+            for species_entry in sabio_entry["reaction"]["species"]
+            if species_entry["role"] == "Substrate"
+        ]
+        products = [
+            species_entry["compound"]["name"]
+            for species_entry in sabio_entry["reaction"]["species"]
+            if species_entry["role"] == "Product"
+        ]
 
-        parameter_value_str = line[titles.index("parameter.startValue")]
-        if not parameter_value_str:
-            continue
-        parameter_value = float(parameter_value_str)
-        if parameter_value <= 0.0:
-            continue  # There is no kinetic parameter that is just 0 or below
+        for parameter in sabio_entry["kineticlaw"]["parameter"]:
+            parameter_name = parameter["name"].lower()
+            match parameter_name:
+                case "kcat":
+                    sabio_dict_pointer = sabio_dict.kcat_entries
+                case "km":
+                    sabio_dict_pointer = sabio_dict.km_entries
+                case "ki":
+                    sabio_dict_pointer = sabio_dict.ki_entries
+                case "activation constant":
+                    sabio_dict_pointer = sabio_dict.ka_entries
+                case "hill coefficient":
+                    sabio_dict_pointer = sabio_dict.hill_entries
+                case _:
+                    continue
 
-        parameter_type_str = line[titles.index("parameter.type")]
-        match parameter_type_str.lower():
-            case "kcat":
-                sabio_dict_pointer = sabio_dict.kcat_entries
-            case "km":
-                sabio_dict_pointer = sabio_dict.km_entries
-            case "ki":
-                sabio_dict_pointer = sabio_dict.ki_entries
-            case "activation constant":
-                sabio_dict_pointer = sabio_dict.ka_entries
-            case "hill coefficient":
-                sabio_dict_pointer = sabio_dict.hill_entries
-            case _:
+            parameter_unit = parameter["unit"]["name"]
+            parameter_value = parameter["start_value"]
+            if parameter_unit == "-" or not parameter_value:
+                continue
+            if parameter_value <= 0.0:
+                continue  # There is no kinetic parameter that is just 0 or below
+
+            species_key = parameter["species"]["species_key"]
+            if species_key is not None:
+                parameter_associated_species = species_key.split(" | ")[1]
+            elif parameter_name == "kcat":
+                parameter_associated_species = ""
+            else:
                 continue
 
-        ec_number = line[titles.index("ECNumber")]
-        entry_id = int(line[titles.index("EntryID")])
-        organism = line[titles.index("Organism")]
-        is_recombinant = line[titles.index("IsRecombinant")].lower() == "true"
-        kinetics_mechanism_type = line[titles.index("KineticMechanismType")]
-        parameter_unit = line[titles.index("parameter.unit")]
-        parameter_associated_species = line[titles.index("parameter.associatedSpecies")]
-        substrates = line[titles.index("Substrate")].split(";")
-        products = line[titles.index("Product")].split(";")
-        chebi_ids = line[titles.index("ChebiID")].split(";")
-        try:
-            temperature = float(line[titles.index("Temperature")])
-        except (ValueError, IndexError):
-            temperature = None
-        try:
-            ph = float(line[titles.index("pH")])
-        except (ValueError, IndexError):
-            ph = None
-
-        if ec_number not in sabio_dict_pointer:
-            sabio_dict_pointer[ec_number] = []
-        sabio_dict_pointer[ec_number].append(
-            SabioEntry(
-                entry_id=entry_id,
-                is_recombinant=is_recombinant,
-                kinetics_mechanism_type=kinetics_mechanism_type,
-                organism=organism,
-                temperature=temperature,
-                ph=ph,
-                parameter_unit=parameter_unit,
-                parameter_value=parameter_value,
-                parameter_associated_species=parameter_associated_species,
-                substrates=substrates,
-                products=products,
-                chebi_ids=chebi_ids,
+            if ec_number not in sabio_dict_pointer:
+                sabio_dict_pointer[ec_number] = []
+            sabio_dict_pointer[ec_number].append(
+                SabioEntry(
+                    entry_id=entry_id,
+                    is_recombinant=is_recombinant,
+                    kinetics_mechanism_type=kinetics_mechanism_type,
+                    organism=organism,
+                    temperature=temperature,
+                    ph=ph,
+                    parameter_unit=parameter_unit,
+                    parameter_value=parameter_value,
+                    parameter_associated_species=parameter_associated_species,
+                    substrates=substrates,
+                    products=products,
+                )
             )
-        )
+
     return sabio_dict
 
 
@@ -537,7 +411,6 @@ def sabio_select_enzyme_kinetic_data_for_sbml(
                 ec_codes = literal_eval(ec_codes)
             else:
                 ec_codes = [ec_codes]
-
         reaction_transfered_ec_codes = [
             transfered_ec_codes[ec_code]
             for ec_code in ec_codes
@@ -545,11 +418,11 @@ def sabio_select_enzyme_kinetic_data_for_sbml(
         ]
         ec_codes += reaction_transfered_ec_codes
 
-        all_entries = (
+        all_entries = tuple(
             (
-                "kcat",
+                key,
                 _get_ec_code_entries(
-                    sabio_dict.kcat_entries,
+                    entries,
                     ec_codes,
                     min_ph,
                     max_ph,
@@ -561,71 +434,14 @@ def sabio_select_enzyme_kinetic_data_for_sbml(
                     product_bigg_ids,
                     name_to_bigg_id_dict,
                 ),
-            ),
-            (
-                "km",
-                _get_ec_code_entries(
-                    sabio_dict.km_entries,
-                    ec_codes,
-                    min_ph,
-                    max_ph,
-                    accept_nan_ph,
-                    min_temperature,
-                    max_temperature,
-                    accept_nan_temperature,
-                    substrate_bigg_ids,
-                    product_bigg_ids,
-                    name_to_bigg_id_dict,
-                ),
-            ),
-            (
-                "ki",
-                _get_ec_code_entries(
-                    sabio_dict.ki_entries,
-                    ec_codes,
-                    min_ph,
-                    max_ph,
-                    accept_nan_ph,
-                    min_temperature,
-                    max_temperature,
-                    accept_nan_temperature,
-                    substrate_bigg_ids,
-                    product_bigg_ids,
-                    name_to_bigg_id_dict,
-                ),
-            ),
-            (
-                "ka",
-                _get_ec_code_entries(
-                    sabio_dict.ka_entries,
-                    ec_codes,
-                    min_ph,
-                    max_ph,
-                    accept_nan_ph,
-                    min_temperature,
-                    max_temperature,
-                    accept_nan_temperature,
-                    substrate_bigg_ids,
-                    product_bigg_ids,
-                    name_to_bigg_id_dict,
-                ),
-            ),
-            (
-                "hill",
-                _get_ec_code_entries(
-                    sabio_dict.hill_entries,
-                    ec_codes,
-                    min_ph,
-                    max_ph,
-                    accept_nan_ph,
-                    min_temperature,
-                    max_temperature,
-                    accept_nan_temperature,
-                    substrate_bigg_ids,
-                    product_bigg_ids,
-                    name_to_bigg_id_dict,
-                ),
-            ),
+            )
+            for key, entries in (
+                ("kcat", sabio_dict.kcat_entries),
+                ("km", sabio_dict.km_entries),
+                ("ki", sabio_dict.ki_entries),
+                ("ka", sabio_dict.ka_entries),
+                ("hill", sabio_dict.hill_entries),
+            )
         )
 
         # {'mol', 'katal*g^(-1)', 'M', 'M^2', 'g', 'mol/mol', 'J/mol', '-',
@@ -717,8 +533,6 @@ def sabio_select_enzyme_kinetic_data_for_sbml(
                         else:
                             entry_bigg_id = _search_metname_in_bigg_ids(
                                 met_id=entry_met_id,
-                                bigg_id="",
-                                entry=entry,
                                 name_to_bigg_id_dict=name_to_bigg_id_dict,
                             )
                             if not entry_bigg_id:

@@ -2,7 +2,7 @@
 
 ??? abstract "Quickstart code"
     ```py
-    #% Thermodynamic Flux Balance Analysis
+    # % Thermodynamic Flux Balance Analysis
     from cobrak.example_models import toy_model
     from cobrak.lps import perform_lp_optimization
     from cobrak.printing import print_dict, print_optimization_result
@@ -22,7 +22,7 @@
     print_optimization_result(toy_model, tfba_result)
 
 
-    #% OptMDFpathway
+    # % OptMDFpathway
     from cobrak.constants import MDF_VAR_ID
 
     # Perform OptMDFpathway
@@ -37,23 +37,29 @@
     print(optmdfpathway_result[MDF_VAR_ID])
 
 
-    #% Thermodynamic Bottleneck Analysis
+    # % Thermodynamic Bottleneck Analysis
     from cobrak.lps import perform_lp_thermodynamic_bottleneck_analysis
 
     # Use model with extreme standard Gibbs free energy and enforced ATP production
     with toy_model as tba_model:
-        tba_model.reactions["Glycolysis"].dG0 = 100 # A bottleneck :O
+        # Something has to be enforced to run, as with trivial 0 fluxes everywhere,
+        # thermodynamics would not be able to play a role (with no active reactions,
+        # there would be also no need for thermodynamically feasible reactions xD)
+        tba_model.reactions["Glycolysis"].min_flux = 500
+
+        # Let's set the bottleneck :O
+        tba_model.reactions["Glycolysis"].dG0 = 100
 
         # Perform TBA
         list_of_bottleneck_reactions, _ = perform_lp_thermodynamic_bottleneck_analysis(
             tba_model,
-        ) # The second returned value is the full solution (with fluxes, concentrations, ...) which we don't need here
+        )  # The second returned value is the full solution (with fluxes, concentrations, ...) which we don't need here
 
     # Print list of thermodynamic bottlenecks
     print(list_of_bottleneck_reactions)
 
 
-    #% Thermodynamic Variability Analysis
+    # % Thermodynamic Variability Analysis
     from cobrak.example_models import toy_model
     from cobrak.lps import perform_lp_variability_analysis
     from cobrak.printing import print_variability_result
@@ -68,7 +74,7 @@
     print_variability_result(toy_model, variability_dict)
 
 
-    #% Perform enzyme-constrained TFBA
+    # % Perform enzyme-constrained TFBA
     # Run ecTFBA
     ectfba_result = perform_lp_optimization(
         cobrak_model=toy_model,
@@ -92,7 +98,7 @@
 
 We used plain Linear Programming in the last chapter, where every variable is *rational* (which includes not only whole numbers (such as $2$) but also fractions (such as $7.31$)). Now, we use concepts based on Mixed-Integer Linear Programming (MILP), where a user-selected set of binary variables which can be *either* 0 or 1, nothing in-between.
 
-MILPs are much more difficult to solve than LPs. While the latter may contain hundreds of thousands of parameters and still be quickly solved, MILPs are restricted, at very best, to a few thousand parameters. Fortunately, that's still good enough for large genome-scale metabolic models.
+MILPs are much more difficult to solve than LPs. While LPs may contain hundreds of thousands of parameters and can still be quickly solved, MILPs are restricted, at very best, to a few tens of thousands of variables. Fortunately, that's still good enough for large genome-scale metabolic models.
 
 ??? excursion "Excursion: MILPs"
     Based on our definitions from the previous chapter, a general form of a maximizing MILP is:
@@ -111,7 +117,7 @@ MILPs are much more difficult to solve than LPs. While the latter may contain hu
 
 ### Thermodynamic measures
 
-Binary variables allow us to introduce *thermodynamic* constraints in our constraint-based model. Thermodynamic constraints make sure that our solution is thermodynamically feasible. This means that the concentration(s) of any active reaction's substrate are somehow high enough in comparison to the reaction's products. In exact form, whether this neccessary substrate(s)-to-product(s) concentration ratio is reached can be deduced with the driving force $f_i$ (side note: this is the negative Gibbs energy $Δ_r G^{´}$ [[Wikipedia]](https://en.wikipedia.org/wiki/Gibbs_free_energy)) with the unit kJ⋅mol⁻¹. $f_i$ is for a reaction $i$:
+Binary variables allow us to introduce *thermodynamic* constraints in our constraint-based model. Thermodynamic constraints make sure that our solution is thermodynamically feasible. This means that the concentration(s) of any active reaction's substrate are somehow high enough in comparison to the reaction's products. In exact form, whether this necessary substrate(s)-to-product(s) concentration ratio is reached can be deduced with the driving force $f_i$ (side note: this is the negative Gibbs energy $Δ_r G^{´}$ [[Wikipedia]](https://en.wikipedia.org/wiki/Gibbs_free_energy)) with the unit kJ⋅mol⁻¹. $f_i$ is for a reaction $i$:
 
 $$ f_i = -Δ_r G^{´°}_i + R ⋅ T ⋅ Q_i $$
 
@@ -121,7 +127,7 @@ $Δ_r G^{´°}_i$ (with the ° at the end) is the physiologic *standard* Gibbs e
 
 The main value of the standard Gibbs energy is its following meaning:
 
-* If $Δ_r G^{´°}_i < 0$, it means that energy is *released* when all substrates and products have the standard concentration of 1 M. As every working reaction needs energy to be released, this means that under standard concentrations, the reaction would be thermodynamically *feasible*. In other works, it could run.
+* If $Δ_r G^{´°}_i < 0$, it means that energy is *released* when all substrates and products have the standard concentration of 1 M. As every working reaction needs energy to be released, this means that under standard concentrations, the reaction would be thermodynamically *feasible*. In other words, it could run.
 
 * If $Δ_r G^{´°}_i ≥ 0$, *no* energy is released at standard concentrations. This would mean that with the given standard concentrations, the reaction would be thermodynamically *infeasible*, it could not run.
 
@@ -132,7 +138,7 @@ $f_i$ means the following:
 
 * The *higher* the $f_i$, the more energy is released by a reaction.
 
-* The *lower* the $f_i$, the less energy is released by a reaction.
+* Conversely, the *lower* the $f_i$, the less energy is released by a reaction.
 
 ⇒ if $f_i>0$, a reaction is thermodynamically *feasible*; if $f_i≤0$, a reaction is thermodynamically *in*feasible
 
@@ -168,7 +174,7 @@ $ln$ is the natural logarithm, $c_j$ the concentration of metabolite $j$ and $N_
 
 $$ \ln (c_j^{min} ) ≤ x̃_j ≤ \ln ( c_j^{max} ) $$
 
-$c_j^{min}$ is the minimal metabolite concentration in M, $c_j^{max}$ the respective maximal concentration in M. $x̃_j$, an element of the vector $\mathbf{x̃}$, stands for a variable that holds the *logaritmic* concentration of metabolite $j$.
+$c_j^{min}$ is the minimal metabolite concentration in M, $c_j^{max}$ the respective maximal concentration in M. $x̃_j$, an element of the vector $\mathbf{x̃}$, stands for a variable that holds the *logarithmic* concentration of metabolite $j$.
 
 !!! info "How to set concentration ranges"
     Typical standard minimal and maximal concentrations are 10⁻⁶ M up to 0.02 M for intracellular metabolites, with higher maximal concentrations for extracellular metabolites. The concentrations for water ($H_2 O$) and protons ($H^+$) are often set to 0 M (i.e. their logarithm is 1). This is because both water (with a fixed "active" concentration) and proton (as pH) concentrations are integrated in the calculation of the physiologic standard Gibbs energy $Δ_r G^{´°}$. For more details of how e.g. the fantastic eQuilibrator does this, read their FAQ [here](https://equilibrator.weizmann.ac.il/static/classic_rxns/faq.html#why-can-t-i-change-the-concentration-of-water).
@@ -179,7 +185,7 @@ $$ f_i = -(Δ_r G^{´°}_i + R ⋅ T ⋅ \mathbf{N_{⋅,i}} ⋅ \mathbf{x̃}) $$
 
 Again, $Δ_r G^{´°}_i$ is the reaction's standard Gibbs energy, R the gas constant, T the temperature. The term $\mathbf{N_{⋅,i}} ⋅ \mathbf{x̃}$ is equivalent to the formulation of $Q_i$ above and means the following: We take the stoichiometries of all (⋅) metabolites in reaction i through $\mathbf{N_{⋅,i}}$, i.e. we take the $i$-th row of the stoichiometric matrix $\mathbf{N}$. Then, we multiply these stoichiometries with the logarithmic concentration vector $\mathbf{x̃}$. This effectively gives us - as for $Q_i$ - the sum of stoichiometries multiplied with the logarithmic concentrations.
 
-While we now have the driving force, we did not enforce it yet to be positive (i.e. to indicate feasiblity). For this, we also introduce a controlling binary variable vector $\mathbf{z}$ which holds a binary value for any reaction $i$ with thermodynamic constraints:
+While we now have the driving force, we did not enforce it yet to be positive (i.e. to indicate feasibility). For this, we also introduce a controlling binary variable vector $\mathbf{z}$ which holds a binary value for any reaction $i$ with thermodynamic constraints:
 
 $$ z_i ∈ \{0,1 \} $$
 
@@ -200,7 +206,7 @@ The constant $f^{min}>0$ is the lower bound for $B$. $f^{min}>0$ must hold if we
 And that's it! Through the two constraints utilizing $z_i$, we ensure that any thermodynamically infeasible reaction is inactive (its flux is 0), while any thermodynamically feasible reaction may be active.
 
 !!! note
-    Through our formulation over all reactions, we ensure the *network-wide* thermodynamic feasiblity of any solution with thermodynamic constraints as long as we set $f^{min}>0$.
+    Through our formulation over all reactions, we ensure the *network-wide* thermodynamic feasibility of any solution with thermodynamic constraints as long as we set $f^{min}>0$.
 
 ### Optional concentration sum constraints
 
@@ -210,7 +216,7 @@ $$ Μ_{tot} ≤ \sum{e^{x̃_j}} $$
 
 whereby $Μ_{tot}$ stands for the maximal concentration sum we set, and $e^{x̃_j}$ for a exponentiated logarithmic concentration. As $e^{x̃_j}$ is *non*-linear, we cannot use them directly in our MILP. Hence, we need a linearized approximation (whereby we use most of the formulation from [[this preprint](https://doi.org/10.1101/2024.03.19.585265)]).
 
-This works as, luckily, the exponential function is monotonically rising :D This means that we can always draw a "minimum" linear constraint underneath the exponential function's curve without cutting this curve. Even more lucky, we have to set $x̃_j$ concentration bounds anyway for thermodynamic constraints (see above), so that we know for which range of logarithmic concentrations we apply the exponential function. I.e. we know the possible minimal and maximal logarithmic concentration and only have to approximate the exponential function for these values.
+This works as, luckily, the exponential function is monotonically rising :D This means that we can always draw a "minimum" linear constraint underneath the exponential function's curve without cutting this curve. Even luckier, we have to set $x̃_j$ concentration bounds anyway for thermodynamic constraints (see above), so that we know for which range of logarithmic concentrations we apply the exponential function. I.e. we know the possible minimal and maximal logarithmic concentration and only have to approximate the exponential function for these values.
 
 Now, mathematically, the exponential function's linear approximation is built as follows:
 
@@ -261,14 +267,16 @@ tfba_result = perform_lp_optimization(
     with_thermodynamic_constraints=True,
 )
 
-# Pretty print result as dictionary
+# Pretty print result as dictionary,
+# now with logarithmized metabolite concentrations :D
 print_dict(tfba_result)
 
-# Pretty print result as tables
+# Pretty print result as tables,
+# now with reaction driving forces and metabolite concentrations :D
 print_optimization_result(toy_model, tfba_result)
 ```
 
-Note that the printed results now also show reaction driving forces and metabolite concentrations in a solution.
+Note that the printed results now also show reaction driving forces and metabolite concentrations in a solution. So, a lot more was calculated than is indicated by the "boring" result of 1000 mmol/(gDW⋅h) that are the objective result, which is the same as for plain FBA when `ATP_Consumption` is maximized.
 
 !!! info Metabolite legarithmic concentration variables
     In COBRA-k result dictionaries, logarithmic metabolite concentration variables start with ```cobrak.constant.LNCONC_PREFIX```, by default ```x_```. E.g., the logarithmic metabolite concentration of metabolite ```atp_c``` (cytosolic ATP) would be called ```x_atp_c```.
@@ -303,6 +311,8 @@ optmdfpathway_result = perform_lp_optimization(
 print(optmdfpathway_result[MDF_VAR_ID])
 ```
 
+Here, in our toy model, we get an absurdly high MDF as result, but in realistic metabolic models, it can reach regions of just a few kJ/mol, or be even negative beacause of thermodynamic bottlenecks - in case of such bottlencks, follow the following chapter...
+
 ## Thermodynamic Bottleneck Analysis (TBA)
 
 Often, reactions such as growth are thermodynamically infeasible in our model with a given set of $Δ_r G^{´°}_i$ and concentration ranges. This is typically caused by thermodynamic *bottleneck* reactions, i.e. reactions whose $Δ_r G^{´°}_i$ is so high that the equation
@@ -329,14 +339,20 @@ from cobrak.lps import perform_lp_thermodynamic_bottleneck_analysis
 
 # Use model with extreme standard Gibbs free energy and enforced ATP production
 with toy_model as tba_model:
-    tba_model.reactions["Glycolysis"].dG0 = 100 # A bottleneck :O
+    # Something has to be enforced to run, as with trivial 0 fluxes everywhere,
+    # thermodynamics would not be able to play a role (with no active reactions,
+    # there would be also no need for thermodynamically feasible reactions xD)
+    tba_model.reactions["Glycolysis"].min_flux = 500
+
+    # Let's set the bottleneck :O
+    tba_model.reactions["Glycolysis"].dG0 = 100
 
     # Perform TBA
     list_of_bottleneck_reactions, _ = perform_lp_thermodynamic_bottleneck_analysis(
         tba_model,
-    ) # The second returned value is the full solution (with fluxes, concentrations, ...) which we don't need here
+    )  # The second returned value is the full solution (with fluxes, concentrations, ...) which we don't need here
 
-# Print list of thermodynamic bottlenecks
+# Print list of thermodynamic bottlenecks, i.e. here our "Glycolysis" reaction
 print(list_of_bottleneck_reactions)
 ```
 
@@ -370,7 +386,8 @@ variability_dict = perform_lp_variability_analysis(
     with_thermodynamic_constraints=True,
 )
 
-# Pretty print result as tables
+# Pretty print result as tables, now (compared to "plain" FVAs)
+# with driving force and metabolite concentration ranges
 print_variability_result(toy_model, variability_dict)
 ```
 
@@ -397,5 +414,6 @@ print_dict(ectfba_result)
 
 # Pretty print result as tables,
 # now with enzyme concentrations *and* metabolite concentrations
+# as well as driving forces
 print_optimization_result(toy_model, ectfba_result)
 ```

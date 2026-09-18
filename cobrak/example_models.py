@@ -36,7 +36,7 @@ def __getattr__(name: str) -> Any:  # called only for missing attrs  # noqa: ANN
 
 
 # DIRECT EXAMPLE MODEL DEFINITION SECTION
-toy_model = Model(
+toy_model: Model = Model(
     reactions={
         # Metabolic reactions
         "Glycolysis": Reaction(

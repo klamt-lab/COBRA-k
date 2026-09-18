@@ -11,7 +11,7 @@ from equilibrator_api import Q_, ComponentContribution, Reaction
 from equilibrator_cache import Compound
 from pydantic import ConfigDict, validate_call
 
-from .constants import USED_IDENTIFIERS_FOR_EQUILIBRATOR
+from .constants import PROTONS_PER_ELEMENT, USED_IDENTIFIERS_FOR_EQUILIBRATOR
 
 
 # PUBLIC FUNCTIONS #
@@ -86,7 +86,7 @@ def equilibrator_get_model_dG0_and_uncertainty_values_for_sbml(
             if metabolite.id in ignored_metabolites:
                 continue
             stoichiometries.append(reaction.metabolites[metabolite])
-            compartments.append(metabolite.compartment)
+            compartments.append(metabolite.compartment or "N/A")
             identifier = ""
             for used_identifier in USED_IDENTIFIERS_FOR_EQUILIBRATOR:
                 if used_identifier not in metabolite.annotation:
@@ -207,8 +207,8 @@ def equilibrator_get_model_dG0_and_uncertainty_values_for_sbml(
                 print("ERROR")
                 continue
 
-            inner_reaction_dict: dict[str, float] = {}
-            outer_reaction_dict: dict[str, float] = {}
+            inner_reaction_dict: dict[Compound, float] = {}
+            outer_reaction_dict: dict[Compound, float] = {}
             for i in range(len(stoichiometries)):
                 key = identifiers[i]
                 stoichiometry = stoichiometries[i]
@@ -259,56 +259,45 @@ def equilibrator_get_model_dG0_and_uncertainty_values_for_sbml(
 
     return reaction_dG0s, reaction_dG0_uncertainties
 
-PROTONS = {
-    "H": 1,
-    "C": 6,
-    "N": 7,
-    "O": 8,
-    "Na": 11,
-    "Mg": 12,
-    "P": 15,
-    "S": 16,
-    "Cl": 17,
-    "K": 19,
-    "Ca": 20,
-    "V": 23,
-    "Cr": 24,
-    "Mn": 25,
-    "Fe": 26,
-    "Co": 27,
-    "Ni": 28,
-    "Cu": 29,
-    "Zn": 30,
-    "Se": 34,
-    "Mo": 42,
-    "I": 53,
-    "Bi": 83
-}
 
 def get_charge_of_atom_bag(atom_bag: dict) -> int:
+    """Returns the electron charge of an atom bag."""
     charge: int = 0
-    for k,v in atom_bag.items():
-        if k == 'e-':
+    for k, v in atom_bag.items():
+        if k == "e-":
             charge -= v
         else:
-            charge += PROTONS[k] * v
+            charge += PROTONS_PER_ELEMENT[k] * v
     return charge
 
+
 def same_formula(m: cobra.Metabolite, cmpd: Compound) -> bool:
+    """Tries to elucidate whether the chemical formula of m is the same of cmpd."""
     if cmpd.atom_bag is None:
         return False
     elements: dict = cmpd.atom_bag.copy()
-    elements.pop('e-', None)
+    elements.pop("e-", None)
     return elements == m.elements
 
+
 def protonation_difference_only(m: cobra.Metabolite, cmpd: Compound) -> bool:
+    """Returns whether or not the difference between m and cmpd is 'just' a protonation difference.
+
+    Arguments
+    =========
+    m: cobra.Metabolite ∼ The COBRApy model Metabolite
+    cmpd: Compound ∼ The eQuilibator Compound
+    """
     h_diff_only: bool = False
-    if cmpd.atom_bag is not None:
-        if m.charge - get_charge_of_atom_bag(cmpd.atom_bag) == m.elements.get('H', 0) - cmpd.atom_bag.get('H', 0):
-            cpmd_elements: dict = cmpd.atom_bag.copy()
-            m_emelents: dict = m.elements.copy()
-            cpmd_elements.pop('e-', None)
-            cpmd_elements.pop('H', None)
-            m_emelents.pop('H', None)
-            h_diff_only = cpmd_elements == m_emelents
+    if cmpd.atom_bag is None or m.charge is None or m.elements is None:
+        return False
+    if m.charge - get_charge_of_atom_bag(cmpd.atom_bag) == m.elements.get(
+        "H", 0
+    ) - cmpd.atom_bag.get("H", 0):
+        cpmd_elements: dict = cmpd.atom_bag.copy()
+        m_emelents: dict = m.elements.copy()
+        cpmd_elements.pop("e-", None)
+        cpmd_elements.pop("H", None)
+        m_emelents.pop("H", None)
+        h_diff_only = cpmd_elements == m_emelents
     return h_diff_only

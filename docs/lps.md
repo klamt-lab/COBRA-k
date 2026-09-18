@@ -2,18 +2,19 @@
 
 ??? abstract "Quickstart code"
     ```py
-    #%
+    # %
     # Print stoichiometric matrix
     from cobrak.example_models import toy_model
     from cobrak.utilities import get_stoichiometric_matrix
 
     print(get_stoichiometric_matrix(toy_model))
 
-    #%
+    # %
     # Perform Flux Balance Analysis with simple objective
     # Load the general Linear Program optimization function of COBRA-k
     # which can be found in COBRA-k's submodule 'lps'
     from cobrak.lps import perform_lp_optimization
+
     # Load some pretty-print functions (can be found in submodule 'printing')
     from cobrak.printing import print_dict, print_optimization_result
 
@@ -22,7 +23,7 @@
         toy_model,
         "Glycolysis",
         +1,
-    ) # fba_result is a dict[str, float]
+    )  # fba_result is a dict[str, float]
 
     # Pretty print result as dictionary
     print_dict(fba_result)
@@ -30,23 +31,24 @@
     # Pretty print the result as (nicer-looking :-) tables
     print_optimization_result(toy_model, fba_result)
 
-    #%
+    # %
     # Load the name of the variable that holds the objective name
     from cobrak.constants import OBJECTIVE_VAR_NAME
 
     print(fba_result[OBJECTIVE_VAR_NAME])
 
-    #%
+    # %
     # Perform FBA with more complex objective
     perform_lp_optimization(
         toy_model,
-        {"Glycolysis": -1.5, "Overflow": 2.0}, # No str anymore
+        {"Glycolysis": -1.5, "Overflow": 2.0},  # No str anymore
         +1,
     )
 
-    #%
+    # %
     # Perform pFBA
     from cobrak.constants import FLUX_SUM_VAR_ID
+
     # We perform a pFBA on our Glycolysis optimization example
     # 1) We set the objective value as minimum
     toy_model.reactions["Glycolysis"].min_flux = fba_result["Glycolysis"]
@@ -57,7 +59,7 @@
         FLUX_SUM_VAR_ID,
         -1,
         with_flux_sum_var=True,
-    ) # Again, pfba_result is a dict[str, float]
+    )  # Again, pfba_result is a dict[str, float]
 
     # Let's print our pFBA result
     print_optimization_result(toy_model, pfba_result)
@@ -65,10 +67,11 @@
     # Reset model for the next calculations
     toy_model.reactions["Glycolysis"].min_flux = 0.0
 
-    #%
+    # %
     # Perform Flux Variability Analysis
     from cobrak.lps import perform_lp_variability_analysis
     from cobrak.printing import print_variability_result
+
     # Perform general FVA (we did not set the previous objective value as minimum)
     var_result = perform_lp_variability_analysis(
         toy_model,
@@ -80,7 +83,7 @@
     # Print a minimal value
     print(var_result["Overflow"][0])
 
-    #%
+    # %
     # Perform enzyme-constrained ecFBA
     ecfba_result = perform_lp_optimization(
         toy_model,
@@ -92,34 +95,33 @@
     # Pretty-print result, now also with actual enzyme usage :-)
     print_optimization_result(toy_model, ecfba_result)
 
-    #%
+    # %
     # Perform general enzyme-constrained ecFVA
-    var_result = perform_lp_variability_analysis(
-        toy_model
-    )
+    var_result = perform_lp_variability_analysis(toy_model)
 
     # Pretty print result as tables - again, now with enzyme usages :-)
     print_variability_result(toy_model, var_result)
 
-    #%
+    # %
     from cobrak.utilities import get_reaction_enzyme_var_id
+
     # Get an enzyme variable name
-    enzyme_name_of_glycolysis = get_reaction_enzyme_var_id("Glycolysis", toy_model.reactions["Glycolysis"])
+    enzyme_name_of_glycolysis = get_reaction_enzyme_var_id(
+        "Glycolysis", toy_model.reactions["Glycolysis"]
+    )
     print(enzyme_name_of_glycolysis)
 
-    #%
+    # %
     # Create XLSX spreadsheet with variability and optimization results
     from cobrak.spreadsheet_functionality import (
-        OptimizationDataset, # Here, we set the optimization result and its wished shown data
-        VariabilityDataset, # Here, we set the variability result and its wished shown data
-        create_cobrak_spreadsheet, # The function to generate the XLSX
+        OptimizationDataset,  # Here, we set the optimization result and its wished shown data
+        VariabilityDataset,  # Here, we set the variability result and its wished shown data
+        create_cobrak_spreadsheet,  # The function to generate the XLSX
     )
 
     # We're going to create an XLSX with the following three results:
     # 1. General FVA
-    var_result = perform_lp_variability_analysis(
-        toy_model
-    )
+    var_result = perform_lp_variability_analysis(toy_model)
     # 2. ATP optimization
     max_atp_result = perform_lp_optimization(
         toy_model,
@@ -138,22 +140,22 @@
     # The keys are the dataset titles in the spreadsheet
     variability_datasets: dict[str, VariabilityDataset] = {
         "FVA result": VariabilityDataset(
-            data=var_result, # Obligatory argument
-            with_df=False, # Optional, default False; Do we show driving forces (see MILP chapter)?
+            data=var_result,  # Obligatory argument
+            with_df=False,  # Optional, default False; Do we show driving forces (see MILP chapter)?
         )
-    } # This is a list as we could add multiple variability results
+    }  # This is a list as we could add multiple variability results
 
     # Now let's wrap the optimization results into a
     # create_cobrak_spreadsheet()-compatible format 🎁
     # The keys are the dataset titles in the spreadsheet
     optimization_datasets: dict[str, OptimizationDataset] = {
         "Max ATP": OptimizationDataset(
-            data=max_atp_result, # Obligatory argument
-            with_df=False, # Optional, default False; Do we show driving forces (see MILP chapter)?
-            with_vplus=False, # Optional, default False; Do we show V+ (see enzyme constraints)?
-            with_kappa=False, # Optional, default False; Do we show kappa values (see NLP chapter)?
-            with_gamma=False, # Optional, default False; Do we show gamma values (see NLP chapter)?
-            with_kinetic_differences=False, # Optional, default False; Do we show NLP approximation differences (see corrections chapter)?
+            data=max_atp_result,  # Obligatory argument
+            with_df=False,  # Optional, default False; Do we show driving forces (see MILP chapter)?
+            with_vplus=False,  # Optional, default False; Do we show V+ (see enzyme constraints)?
+            with_kappa=False,  # Optional, default False; Do we show kappa values (see NLP chapter)?
+            with_gamma=False,  # Optional, default False; Do we show gamma values (see NLP chapter)?
+            with_kinetic_differences=False,  # Optional, default False; Do we show NLP approximation differences (see corrections chapter)?
             with_error_corrections=False,  # Optional, default False; Do we show corrections (see corrections chapter)?
         ),
         "Max Overflow": OptimizationDataset(
@@ -165,7 +167,8 @@
     # file system, as temporary file)
     import tempfile
     from cobrak.io import json_write
-    with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as temp:
+
+    with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as temp:
         json_write(temp.name, fba_result)
         create_cobrak_spreadsheet(
             temp.name,
@@ -173,10 +176,12 @@
             variability_datasets,
             optimization_datasets,
         )
-    print(f"Spreadsheet created! You can now load it in your favorite spreadsheet viewer at {temp.name}")
+    print(
+        f"Spreadsheet created! You can now load it in your favorite spreadsheet viewer at {temp.name}"
+    )
 
 
-    #%
+    # %
     # Store optimization result as JSON (you can do the same for variability results)
     from cobrak.io import json_load, json_write
 
@@ -190,7 +195,8 @@
     # Store ecFBA result as JSON (for this example, to not pollute your
     # file system, as temporary file)
     import tempfile
-    with tempfile.NamedTemporaryFile(suffix='.json') as temp:
+
+    with tempfile.NamedTemporaryFile(suffix=".json") as temp:
         json_write(temp.name, fba_result)
 
         # Load the ecFBA result again
@@ -199,7 +205,7 @@
         # Print one flux value of the ecFBA result
         print(loaded_fba_result["Glycolysis"])
 
-    #%
+    # %
     # Export optimization result as CNApy scenario file
     from cobrak.utilities import create_cnapy_scenario_out_of_optimization_dict
 
@@ -213,6 +219,7 @@
     # Store ecFBA result as CNApy scenario (for this example, to not pollute your
     # file system, as temporary file)
     import tempfile
+
     with tempfile.NamedTemporaryFile(suffix=".scen", delete=False) as temp:
         create_cnapy_scenario_out_of_optimization_dict(
             path=temp.name,
@@ -222,15 +229,17 @@
 
         # Print one flux value of the ecFBA result
         print("The .scen file is in:", temp.name, "and can now be loaded in CNApy")
-        print("Use the CNApy default model 'cobrak_toymodel.cna' for a succesful visualization of the result")
+        print(
+            "Use the CNApy default model 'cobrak_toymodel.cna' for a succesful visualization of the result"
+        )
 
-    #%
+    # %
     # Run optimization with different solver
     from cobrak.dataclasses import Solver
 
     ipopt = Solver(
-        name="ipopt", # This must be the same name as given in pyomo
-        solver_options={ # Options for the called solver itself
+        name="ipopt",  # This must be the same name as given in pyomo
+        solver_options={  # Options for the called solver itself
             "max_iter": 100_000,
             # Note that these options are solver-specific, i.e. they
             # typically won't work for other solvers
@@ -253,7 +262,7 @@
         "ATP_Consumption",
         +1,
         solver=ipopt,
-        verbose=True, # Show explicitly the IPOPT output
+        verbose=True,  # Show explicitly the IPOPT output
     )
     ```
 
@@ -288,28 +297,41 @@ In this chapter, we concentrate on Constraint-Based Analyses based on Linear Pro
 
 ## The stoichiometric matrix $\mathbf{N}$
 
-To use COBRA-k's optimization methods with our metabolic model, we have to convert the model and  to a mathematic form. One central form to do so it the *stoichiometric matrix* which we call $\mathbf{N}$:
+To use COBRA-k's optimization methods with our metabolic model, we have to convert the model to a mathematic form. One central form to do so is the *stoichiometric matrix* which we call $\mathbf{N}$:
 
-* $\mathbf{N}$ has as many columns as metabolites in the model, and as many rows as reactions in the model. Calling the metabolite number $m$ and the reaction number $n$, $\mathbf{N}$ can be said of being of size $m 𝐱 n$.
-* Each single element $N_{i,j}$, i.e. any single number in the matrix in a given column $i$ and row $j$, represents the stoichiometry of the $i$-th metabolite in the $j$-th reaction.
+* $\mathbf{N}$ has as many rows as metabolites in the model, and as many columns as reactions in the model. Calling the metabolite number $m$ and the reaction number $n$, $\mathbf{N}$ can be said of being of size $m 𝐱 n$.
+* Each single element $N_{i,j}$, i.e. any single number in the matrix in a given row $i$ and column $j$, represents the stoichiometry of the $i$-th metabolite in the $j$-th reaction.
 * Any metabolite that is consumed in a reaction (any substrate) has a *negative* stoichiometry. Any metabolite that is produced in a reaction (any product) has a *positive* stoichiometry.
 
-Let's visualize this for our toy model!
+Let's visualize this for our toy model:
 
-<img src="img/toymodel.png" alt="Toymodel visualization" class="img-border img-half">
+<img src="img/toymodel.png" alt="Toymodel visualization" class="img-border" style="width: 80%;">
 
-As a table, its stoichiometries would look as follows:
-$$
-$$
+For this toy model, as a table, its stoichiometries would look as follows:
 
 $$
- \begin{array}{c|ccc} & S & M & C & P & ATP & ADP \\ \hline EX_S & +1 & 0 & 0 & 0 & 0 & 0  \\ EX_C & 0 & 0 & -1 & 0 & 0 & 0 \\ EX_P & 0 & 0 & 0 & -1 & 0 & 0 \\ ATP\_Consumption & 0 & 0 & 0 & 0 & -1 & +1 \\ Glycolysis & -1 & +1 & 0 & 0 & +2 & -2 \\ Respiration & 0 & -1 & +1 & 0 & +4 & -4 \\ Fermentation & 0 & 0 & -1 & +1 & 0 & 0 \end{array}
+\begin{array}{c|ccccccc}
+ & EX_S & EX_C & EX_P & ATP\_Consumption & Glycolysis & Respiration & Fermentation \\ \hline
+S & +1 & 0 & 0 & 0 & -1 & 0 & 0 \\
+M & 0 & 0 & 0 & 0 & +1 & -1 & 0 \\
+C & 0 & -1 & 0 & 0 & 0 & +1 & -1 \\
+P & 0 & 0 & -1 & 0 & 0 & 0 & +1 \\
+ATP & 0 & 0 & 0 & -1 & +2 & +4 & 0 \\
+ADP & 0 & 0 & 0 & +1 & -2 & -4 & 0
+\end{array}
 $$
 
 The stoichiometric matrix $\mathbf{N}$ of our toy model is therefore (just remove the column and row headings in your mind):
 
 $$
-\mathbf{N} = \left[ \begin{array}{ccc} +1 & 0 & 0 & 0 & 0 & 0 \\ 0 & 0 & -1 & 0 & 0 & 0 \\ 0 & 0 & 0 & -1 & 0 & 0 \\ 0 & 0 & 0 & 0 & -1 & +1 \\ -1 & +1 & 0 & 0 & +2 & -2 \\ 0 & -1 & +1 & 0 & +4 & -4 \\ 0 & 0 & -1 & +1 & 0 & 0 \end{array} \right]
+\mathbf{N} = \left[ \begin{array}{ccccccc}
++1 & 0 & 0 & 0 & -1 & 0 & 0 \\
+0 & 0 & 0 & 0 & +1 & -1 & 0 \\
+0 & -1 & 0 & 0 & 0 & +1 & -1 \\
+0 & 0 & -1 & 0 & 0 & 0 & +1 \\
+0 & 0 & 0 & -1 & +2 & +4 & 0 \\
+0 & 0 & 0 & +1 & -2 & -4 & 0
+\end{array} \right]
 $$
 
 You can also show a model's stoichiometric matrix using COBRA-k:
@@ -321,7 +343,7 @@ from cobrak.utilities import get_stoichiometric_matrix
 print(get_stoichiometric_matrix(toy_model))
 ```
 
-## Constrained-based modeling (CBM)
+## Constraint-based modeling (CBM)
 
 Now that we have the stoichiometric matrix $\mathbf{N}$, we can construct the three major constraints of Constraint-based modeling (CBM):
 
@@ -348,7 +370,7 @@ Optionally, you can also introduce extra linear constraints (corresponding to th
 
 $$ \mathbf{A} ⋅ \mathbf{v} ≤ \mathbf{b} $$
 
-$\mathbf{A}$ is a matrix that has as many columns as extra constraints and as many rows as reactions. Every element $A_{i,j}$ of $\mathbf{A}$ represents a weight - a value that is multiplied with a flux - in the $i$-th extra constraint for the $j$-th reaction.
+$\mathbf{A}$ is a matrix that has as many rows as extra constraints and as many columns as reactions. Every element $A_{i,j}$ of $\mathbf{A}$ represents a weight - a value that is multiplied with a flux - in the $i$-th extra constraint for the $j$-th reaction.
 
 A common example for a flux extra constraint is making the flux of two reactions identical, or setting a minimal yield for a substrate-to-product ratio.
 
@@ -357,12 +379,13 @@ A common example for a flux extra constraint is making the flux of two reactions
 
 ### Extra linear watches
 
-Optionally, you can also introduce extra linear *watch variables* (corresponding to the ```ExtraLinearWatch``` dataclass, used in ```Model```) that add a variable with a fixed relationships to single fluxes. E.g., if you want a variable that represents the sum of the exchange reactions EX_A, EX_C and EX_P in our toy model, you could set a linear watch. Just like linear flux constraints (explained above), linear watches represent a weighted sum of other variable values Here's an example where we set a watch to the  doubled of the flux of EX_S:
+Optionally, you can also introduce extra linear *watch variables* (corresponding to the ```ExtraLinearWatch``` dataclass, used in ```Model```) that add a variable with a fixed relationships to single fluxes. E.g., if you want a variable that represents the sum of the exchange reactions EX_A, EX_C and EX_P in our toy model, you could set a linear watch. Just like linear flux constraints (explained above), linear watches represent a weighted sum of other variable values Here's an example where we set a watch to the twice the flux of EX_S:
 
 ```py
+from cobrak.example_models import toy_model
 from cobrak.dataclasses import ExtraLinearWatch
 
-# Let's define v_EX_P <= 2 * exp(x_C)
+# Let's define a watch for twice the logarithmized concentration of S
 toy_model.extra_linear_watches = {
     "two_times_EX_S": ExtraLinearWatch(
         stoichiometries={
@@ -372,11 +395,11 @@ toy_model.extra_linear_watches = {
 }
 ```
 
-...now, we have a variable ```two_times_EX_S``` that is also added to results after LP (or NLP) optimizations.
+...now, we have a variable `two_times_EX_S` that is also added to results after LP (or NLP) optimizations.
 
 !!! info
-    Watches are added to the model in the order given through the directory. I.e.,
-    if you would define a watch after ```two_times_EX_S``` in this example, this watch could use ```two_times_EX_S```
+    Watches are added to the model in the order given through the member dictionary. I.e.,
+    if you would define a watch after `two_times_EX_S` in this example, this watch could use `two_times_EX_S`
     as a variable, too :-) Also, constraints can be defined on watches.
 
 
@@ -393,9 +416,11 @@ In COBRA-k, we don't have the hassle of finding the index $i$ of a reaction. E.g
 ```py
 # Load our toy model from the previous chapter, conveniently, it is shipped with COBRA-k :-)
 from cobrak.example_models import toy_model
+
 # Load the general Linear Program optimization function of COBRA-k
 # which can be found in COBRA-k's submodule 'lps'
 from cobrak.lps import perform_lp_optimization
+
 # Load some pretty-print functions (can be found in submodule 'printing')
 from cobrak.printing import print_dict, print_optimization_result
 
@@ -404,7 +429,7 @@ fba_result = perform_lp_optimization(
     toy_model,
     "Glycolysis",
     +1,
-) # fba_result is a dict[str, float]
+)  # fba_result is a dict[str, float]
 
 # Pretty print result as dictionary
 print_dict(fba_result)
@@ -419,10 +444,12 @@ Now, we got the ```fba_result```, which is a ```dict[str, float]```, where the k
 
 To showcase the result's nature as dictionary, we print it using ```print_dict```. But, as shown in the code, there's also a nicer way to present a result as pretty colored tables using ```print_optimization_result``` :-)
 
+You can find the objective value in the printed table next to `OBJECTIVE VALUE:` as well as in the printed dict for the key `"OBJECTIVE_VAR"`. As you can see, we get a high flux of 500 mmol/(gDW⋅h) as objective value. This value will get lower in the following chapters when we also introduce enzyme-kinetic and thermodynamic constraints :D
+
 !!! info "Finding out more about COBRA-k functions"
     In our examples, we do not use all options provided by COBRA-k's functions. For example, the ```print_optimization_result``` function has many extra arguments for a fine-grained control of the output. To find out more about any COBRA-k function, search it using this site's search bar or in the "API" chapter of this documentation.
 
-As mentioned, there is also a special objective variable which represent's the objective's value (e.g. if ```objective_sense=+2```, it would be 2 times the sum of the maximized flux of Glycolysis). You can access this objective variable's value as follows:
+As mentioned, there is also a special objective variable which represents the objective's value (e.g. if `objective_sense=+2`, it would be 2 times the sum of the maximized flux of Glycolysis). You can access this objective variable's value as follows:
 
 ```py
 # ...using the code from the previous snippet...
@@ -439,7 +466,7 @@ If you want to set a more complex objective, say:
 
 $$ maximize \space -1.5 ⋅ v_{Glycolysis} + 2 ⋅ v_{Overflow} $$
 
-i.e. -1.5 times Glycolysis's flux plus 2 time Overflow's flux, you can do this by setting the objective target as dictionary with the given weights as follows:
+i.e. -1.5 times Glycolysis's flux plus 2 times Overflow's flux, you can do this by setting the objective target as dictionary with the given weights as follows:
 
 ```py
 from cobrak.example_models import toy_model
@@ -449,7 +476,7 @@ from cobrak.printing import print_optimization_result
 # Perform FBA with more complex objective
 complex_fba_result = perform_lp_optimization(
     toy_model,
-    {"Glycolysis": -1.5, "Overflow": 2.0}, # No str anymore
+    {"Glycolysis": -1.5, "Overflow": 2.0},  # No str anymore
     +1,
 )
 
@@ -460,7 +487,7 @@ print_optimization_result(toy_model, complex_fba_result)
 In fact, you can freely set the objective dictionary to any combination of flux and any other kind of variables that occur in extended COBRA-k optimization problems. These variables are gradually introduced at the end of this chapter and the next chapters.
 
 !!! info "Solvers"
-    By default, COBRA-k uses the open-source and pre-bundled Linear Programming solver SCIP. To use other solvers or change the SCIP settings, you can set the ```solver``` (and, if wished) argument of ```perform_lp_optimization```. This parameter requires an instance of the COBRA-k dataclass ```Solver``` and is explained at the end of this chapter :-), together with a list of preconfigured solvers provided by COBRA-k.
+    By default, COBRA-k uses the open-source and pre-bundled Linear Programming solver SCIP. To use other solvers or change the SCIP settings, you can set the `solver` (and, if wished) argument of `perform_lp_optimization`. This parameter requires an instance of the COBRA-k dataclass `Solver` and is explained at the end of this chapter :-), together with a list of preconfigured solvers provided by COBRA-k.
 
 
 ## Parsimonious Flux Balance Analysis (pFBA)
@@ -469,9 +496,9 @@ As mentioned, FBA solutions do not have to be unique. One way to find a virtuall
 
 $$ \operatorname*{\mathbf{min}}_{\mathbf{v}} \space ∑_i v_i \\ s.t. \space CBM \space constraints $$
 
-i.e. a minimization of the *flux sum*. This subsequent minimization may stand for a crude proxy e.g. of enzyme costs, where we assume that the lower the flux sum of a solution is, the lower the amount of needed enzymes are (for a more realistic approximation of enzyme costs, see this chapter's last subchapter).
+i.e. a minimization of the *flux sum*. This subsequent minimization may stand for a crude proxy e.g. of enzyme costs, where we assume that the lower the flux sum of a solution is, the lower the amount of needed enzymes is (for a more realistic approximation of enzyme costs, see this chapter's last subchapter).
 
-In COBRA-k, we can do this using the toggle ```with_flux_sum_var``` in ```perform_lp_optimization```, which adds a variable called ```cobrak.constants.FLUX_SUM_VAR_ID``` (by default, "FLUX_SUM_VAR") to our optimization problem. This variable represents $∑_i v_i$ and can be used as follows following our FBA:
+In COBRA-k, we can do this using the toggle `with_flux_sum_var` in `perform_lp_optimization`, which adds a variable called `cobrak.constants.FLUX_SUM_VAR_ID` (by default, "FLUX_SUM_VAR") to our optimization problem. This variable represents $∑_i v_i$ and can be used as follows after our FBA:
 
 ```py
 from cobrak.example_models import toy_model
@@ -480,8 +507,8 @@ from cobrak.printing import print_optimization_result
 from cobrak.constants import FLUX_SUM_VAR_ID
 
 # We perform a pFBA on our Glycolysis optimization example
-# 1) We set the objective value as minimum
-toy_model.reactions["Glycolysis"].min_flux = fba_result["Glycolysis"]
+# 1) We set the objective value of our previous non-complex FBA as minimum
+toy_model.reactions["Glycolysis"].min_flux = 500.0
 
 # 2) Now, the flux sum minimization
 pfba_result = perform_lp_optimization(
@@ -489,7 +516,7 @@ pfba_result = perform_lp_optimization(
     FLUX_SUM_VAR_ID,
     -1,
     with_flux_sum_var=True,
-) # Again, pfba_result is a dict[str, float]
+)  # Again, pfba_result is a dict[str, float]
 
 # Let's print our pFBA result
 print_optimization_result(toy_model, pfba_result)
@@ -497,6 +524,8 @@ print_optimization_result(toy_model, pfba_result)
 # Reset model for the next calculations
 toy_model.reactions["Glycolysis"].min_flux = 0.0
 ```
+
+As you can see, the minimal total flux sum is 3000.0 mmol/(gDW⋅h).
 
 ## Flux Variability Analysis (FVA)
 
@@ -517,18 +546,19 @@ In COBRA-k, we can perform an FVA for our toy model as follows:
 ```py
 from cobrak.example_models import toy_model
 from cobrak.lps import perform_lp_variability_analysis
-from cobrak.printing import print_variability_result
+from cobrak.printing import print_variability_result, print_dict
 
 # Perform general FVA (we did not set the previous objective value as minimum)
-var_result = perform_lp_variability_analysis(
-    toy_model
-)
+var_result = perform_lp_variability_analysis(toy_model)
+
+# Pretty print result as dict[str, tuple[float, float]]
+print_dict(var_result)
 
 # Pretty print result as tables
 print_variability_result(toy_model, var_result)
 ```
 
-In COBRA-k, the type of variability results is ```dict[str, tuple[float, float]]```. I.e. the variable names are the keys, and the values are tuples whose first entry is the minimal and the second entry is the maximal entry. E.g. if we want to print the minimal value of reaction Overflow, we ran
+In COBRA-k, the type of variability results is `dict[str, tuple[float, float]]`. I.e. the variable names are the keys, and the values are tuples whose first entry is the minimal and the second entry is the maximal entry. E.g. if we want to print the minimal value of reaction Overflow, we would run
 
 ```py
 # ...using the code snippet from above...
@@ -540,7 +570,7 @@ print(var_result["Overflow"][0])
 
 ## Analyses with Enzyme Constraints: ecFBA & ecFVA
 
-Up to now, we only used *stoichiometric* constraints. I.e. we looked for solutions which fulfilled the CBM constraints such as the steady-state, all which depend on reaction fluxes ($\mathbf{v}$) and the stoichiometries of metabolites in reactions ($\mathbf{N}$).
+Up to now, we only used *stoichiometric* constraints. I.e. we looked for solutions which fulfilled the CBM constraints such as the steady-state, all of which depend on reaction fluxes ($\mathbf{v}$) and the stoichiometries of metabolites in reactions ($\mathbf{N}$).
 
 Now, we introduce "classic" linear *enzyme* constraints as already described by methods such as MOMENT [[Paper]](https://doi.org/10.1371/journal.pcbi.1002575), GECKO [[Paper]](https://doi.org/10.15252/msb.20167411) or sMOMENT [[Paper]](https://doi.org/10.1186/s12859-019-3329-9). They are all based on the observation that the fraction of metabolically active enzymes on a cell's biomass is restricted. I.e. only a maximal percentage of a cell's biomass can be metabolically active enzymes, as the rest is occupied by non-metabolic enzymes, lipids, DNA, RNA etc..
 
@@ -564,38 +594,43 @@ $$ v_i ≤ E_i ⋅ k_{cat}^+ $$
 $$ ∑_i W_i ⋅ E_i ≤ E_{tot} $$
 
 !!! note
-    A alternative formulation is also available which introduces new pseudo-metabolites and pseudo-reactions, as done in GECKO and sMOMENT. This formulation can optionally be used when exporting a COBRA-k model as annotated SBML and setting the ```add_enzyme_constraints``` parameter of ```save_cobrak_model_as_annotated_sbml_model``` to ```True```.
+    An alternative formulation is also available which introduces new pseudo-metabolites and pseudo-reactions, as done in GECKO and sMOMENT. This formulation can optionally be used when exporting a COBRA-k model as annotated SBML and setting the `add_enzyme_constraints` parameter of `save_cobrak_model_as_annotated_sbml_model` to `True`.
 
-Look again in chapter "Create Model from Scratch" to see where we defined the $k_{cat}$, $W$ and $E_{tot}$ values in our toy model. When we do not want a ```Reaction``` instance to be affected by enzyme constraints, we simply set its ```enzyme_reaction_data``` value to ```None```.
+Look again in chapter "Create Model from Scratch" to see where we defined the $k_{cat}$, $W$ and $E_{tot}$ values in our toy model. When we do not want a `Reaction` instance to be affected by enzyme constraints, we simply set its `enzyme_reaction_data` value to `None`.
 
 !!! info
 
-    In COBRA-k, we make the simplifying assumption that there is a single enzyme (complex) for each single reaction. I.e. even if an enzyme catalyzes multiple reactions (isozyme), this enzyme is copied for each single reaction. To introduce concentration constraints for such isozymes, you may utilize ```ExtraLinearConstraint``` instances in the model's ```extra_linear_constraint```.
+    In COBRA-k, we make the simplifying assumption that there is a single enzyme (complex) for each single reaction. I.e. even if an enzyme catalyzes multiple reactions (isozyme), this enzyme is copied for each single reaction. To introduce concentration constraints for such isozymes, you may utilize `ExtraLinearConstraint` instances in the model's `extra_linear_constraints`.
 
 Now, to perform an enzyme-constrained FBA - an *ec*FBA - i.e.
 
 $$ \operatorname*{\mathbf{max}}_{\mathbf{v}, \mathbf{E}} \mathbf{g^\top} \\ s.t. \space CBM \space and \space enzyme \space constraints $$
 
-we simply set the associated argument ```with_enzyme_constraints``` in ```perform_lp_optimization``` to ```True```, e.g.
+we simply set the associated argument `with_enzyme_constraints` in `perform_lp_optimization` to `True`, e.g.
 
 ```py
 from cobrak.example_models import toy_model
 from cobrak.lps import perform_lp_optimization
-from cobrak.printing import print_optimization_result
+from cobrak.printing import print_optimization_result, print_dict
 
 # Perform ecFBA
 ecfba_result = perform_lp_optimization(
     toy_model,
-    {"Glycolysis": +1.0}, # No str anymore
+    {"Glycolysis": +1.0},  # Example of dict[str, float] instead of str for objective
     +1,
-    with_enzyme_constraints=True, # Activate linear enzyme constraints
+    with_enzyme_constraints=True,  # Activate linear enzyme constraints
 )
+
+# Print enzyme result as dict, not with enzyme concentrations :-)
+print_dict(ecfba_result)
 
 # Pretty-print result, now also with actual enzyme usage :-)
 print_optimization_result(toy_model, ecfba_result)
 ```
 
-Similarly, we can run an ecFVA (an enzyme-constrained Flux *Variability* Analysis) - i.e.
+Note, for Now, with the `max_prot_pool` of our `toy_model` of 0.4 g/gDW, we get an objective value of 37.33 mmol/(gDW⋅h).
+
+We can also run an ecFVA (an enzyme-constrained Flux *Variability* Analysis) - i.e.
 
 $$ \operatorname*{\mathbf{min}}_{\mathbf{v,E}} \space v_i \\ s.t. \space CBM \space and \space enzyme \space constraints $$
 
@@ -605,6 +640,10 @@ $$ \operatorname*{\mathbf{max}}_{\mathbf{v,E}} \space v_i \\ s.t. \space CBM \sp
 as follows:
 
 ```py
+from cobrak.example_models import toy_model
+from cobrak.lps import perform_lp_variability_analysis
+from cobrak.printing import print_variability_result
+
 # Perform general ecFVA
 var_result = perform_lp_variability_analysis(
     toy_model,
@@ -618,7 +657,7 @@ print_variability_result(toy_model, var_result)
 !!! info "Enzyme constraint variables"
     In any COBRA-k results, you can identify enzyme concentration variables as follows:
 
-    They start with ```cobrak.constants.ENZYME_VAR_PREFIX``` (default is ```"enzyme_"```), followed by the enzyme's ID, followed by ```cobrak.constants.ENZYME_VAR_INFIX``` (default is ```"_of__"```), followed by the reaction's ID (remember that we give each reaction its own enzyme in COBRA-k). E.g., if a reaction "R1" has the enzyme "E1", its concentration variable would be called by default ```"enzyme_E1_of_R1"```.
+    They start with `cobrak.constants.ENZYME_VAR_PREFIX` (default is `"enzyme_"`), followed by the enzyme's ID, followed by `cobrak.constants.ENZYME_VAR_INFIX` (default is `"_of__"`), followed by the reaction's ID (remember that we give each reaction its own enzyme in COBRA-k). E.g., if a reaction "R1" has the enzyme "E1", its concentration variable would be called by default `"enzyme_E1_of_R1"`.
 
     To find out a reaction's enzyme concentration name, you can also use the following utility function, e.g.:
 
@@ -626,30 +665,30 @@ print_variability_result(toy_model, var_result)
     from cobrak.example_models import toy_model
     from cobrak.utilities import get_reaction_enzyme_var_id
 
-    enzyme_name_of_glycolysis = get_reaction_enzyme_var_id("Glycolysis", toy_model.reactions["Glycolysis"])
+    enzyme_name_of_glycolysis = get_reaction_enzyme_var_id(
+        "Glycolysis", toy_model.reactions["Glycolysis"]
+    )
     print(enzyme_name_of_glycolysis)
     ```
 
 ## Pretty-printing optimization and/or variability results as an XLSX spreadsheet
 
-Up to now, we just pretty-printed optimization (e.g. (ec)FBA) and variability (e.g. (ec)FVA) results in the console. But you can also export these results as a pretty-printed XLSX spreadsheet :-) This spreadsheet has different sheets for e.g. reaction data (e.g. their IDs and fluxes), metabolite data (useful with thermodynamic constraints, see MILP chapter), enzyme data (including complexes, i.e. the enzymes associated with a single reactions and the single enzymes with their given concentration ranges) and more. Results are colored and sorted alphabetically.
+Up to now, we just pretty-printed optimization (e.g. (ec)FBA) and variability (e.g. (ec)FVA) results in the console. But you can also export these results as a pretty-printed XLSX spreadsheet :-) This spreadsheet has different sheets for e.g. reaction data (e.g. their IDs and fluxes), metabolite data (useful with thermodynamic constraints, see MILP chapter), enzyme data (including complexes, i.e. the enzymes associated with a single reaction and the single enzymes with their given concentration ranges) and more. Results are colored and sorted alphabetically.
 
-Each spreadsheet can contain multiple optimization *and/or* variability results. To create such an XLSX , we can use the associated methods in COBRA-k's module ```spreadsheet_functionality``` and its associated dataclasses ```OptimizationData``` and ```VariabilityData``` as follows:
+Each spreadsheet can contain multiple optimization *and/or* variability results. To create such an XLSX, we can use the associated methods in COBRA-k's module `spreadsheet_functionality` and its associated dataclasses `OptimizationData` and `VariabilityData` as follows:
 
 ```py
 from cobrak.example_models import toy_model
 from cobrak.lps import perform_lp_optimization, perform_lp_variability_analysis
 from cobrak.spreadsheet_functionality import (
-    OptimizationDataset, # Here, we set the optimization result and its wished shown data
-    VariabilityDataset, # Here, we set the variability result and its wished shown data
-    create_cobrak_spreadsheet, # The function to generate the XLSX
+    OptimizationDataset,  # Here, we set the optimization result and its wished shown data
+    VariabilityDataset,  # Here, we set the variability result and its wished shown data
+    create_cobrak_spreadsheet,  # The function to generate the XLSX
 )
 
 # We're going to create an XLSX with the following three results:
 # 1. General FVA
-var_result = perform_lp_variability_analysis(
-    toy_model
-)
+var_result = perform_lp_variability_analysis(toy_model)
 # 2. ATP optimization
 max_atp_result = perform_lp_optimization(
     toy_model,
@@ -668,22 +707,22 @@ max_overflow_result = perform_lp_optimization(
 # The keys are the dataset titles in the spreadsheet
 variability_datasets: dict[str, VariabilityDataset] = {
     "FVA result": VariabilityDataset(
-        data=var_result, # Obligatory argument
-        with_df=False, # Optional, default False; Do we show driving forces (see MILP chapter)?
+        data=var_result,  # Obligatory argument
+        with_df=False,  # Optional, default False; Do we show driving forces (see MILP chapter)?
     )
- } # This is a list as we could add multiple variability results
+}  # This is a list as we could add multiple variability results
 
 # Now let's wrap the optimization results into a
 # create_cobrak_spreadsheet()-compatible format 🎁
 # The keys are the dataset titles in the spreadsheet
 optimization_datasets: dict[str, OptimizationDataset] = {
     "Max ATP": OptimizationDataset(
-        data=max_atp_result, # Obligatory argument
-        with_df=False, # Optional, default False; Do we show driving forces (see MILP chapter)?
-        with_vplus=False, # Optional, default False; Do we show V+ (see enzyme constraints)?
-        with_kappa=False, # Optional, default False; Do we show kappa values (see NLP chapter)?
-        with_gamma=False, # Optional, default False; Do we show gamma values (see NLP chapter)?
-        with_kinetic_differences=False, # Optional, default False; Do we show NLP approximation differences (see corrections chapter)?
+        data=max_atp_result,  # Obligatory argument
+        with_df=False,  # Optional, default False; Do we show driving forces (see MILP chapter)?
+        with_vplus=False,  # Optional, default False; Do we show V+ (see enzyme constraints)?
+        with_kappa=False,  # Optional, default False; Do we show kappa values (see NLP chapter)?
+        with_gamma=False,  # Optional, default False; Do we show gamma values (see NLP chapter)?
+        with_kinetic_differences=False,  # Optional, default False; Do we show NLP approximation differences (see corrections chapter)?
         with_error_corrections=False,  # Optional, default False; Do we show corrections (see corrections chapter)?
     ),
     "Max Overflow": OptimizationDataset(
@@ -694,21 +733,22 @@ optimization_datasets: dict[str, OptimizationDataset] = {
 # Create XLSX spreadsheet (for this example, to not pollute your
 # file system, as temporary file)
 import tempfile
-from cobrak.io import json_write
-with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as temp:
-    json_write(temp.name, fba_result)
+
+with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as temp:
     create_cobrak_spreadsheet(
         temp.name,
         toy_model,
         variability_datasets,
         optimization_datasets,
     )
-    print(f"Spreadsheet created! You can now load it in your favorite spreadsheet viewer at {temp.name}")
+    print(
+        f"Spreadsheet created! You can now load it in your favorite spreadsheet viewer at {temp.name}"
+    )
 ```
 
 ## Export/Import optimization or variability result as JSON file
 
-Instead of the shown pretty-printing options, you can also save and load COBRA-k optimization and variability results in the form of a human- and machine-readable JSON [[Wikipedia]](https://en.wikipedia.org/wiki/JSON) file. The respective functionality can be found in COBRA-k's ```io``` submodule, whereby all associated functions start with ```json```. Let's run an ecFBA and store its result as JSON (here, in a temporary file) and then load it again:
+Instead of the shown pretty-printing options, you can also save and load COBRA-k optimization and variability results in the form of a human- and machine-readable JSON [[Wikipedia]](https://en.wikipedia.org/wiki/JSON) file. The respective functionality can be found in COBRA-k's ```io``` submodule, whereby all associated functions start with ```json```. Let's run an FBA and store its result as JSON (here, in a temporary file) and then load it again:
 
 ```py
 from cobrak.example_models import toy_model
@@ -725,8 +765,8 @@ fba_result = perform_lp_optimization(
 # Store FBA result as JSON (for this example, to not pollute your
 # file system, as temporary file)
 import tempfile
-from cobrak.io import json_write
-with tempfile.NamedTemporaryFile(suffix='.json') as temp:
+
+with tempfile.NamedTemporaryFile(suffix=".json") as temp:
     json_write(temp.name, fba_result)
 
     # Load the FBA result again
@@ -755,7 +795,7 @@ with tempfile.NamedTemporaryFile(suffix='.json') as temp:
 
 ## Export optimization or variability result as CNApy scenario
 
-In addition to storing an optimization optimization (e.g. FBA) or variability (e.g. FVA) result as an XLSX spreadsheet or JSON file, you can also export a result as a CNApy [[GitHub]](https://github.com/cnapy-org/CNApy) scenario file. Such files can be loaded by CNApy and directly displayed in an interactive CNApy map. To export an optimization or variability result, we can use the respective functions in the ```utilities``` package:
+In addition to storing an optimization (e.g. FBA) or variability (e.g. FVA) result as an XLSX spreadsheet or JSON file, you can also export a result as a CNApy [[GitHub]](https://github.com/cnapy-org/CNApy) scenario file. Such files can be loaded by CNApy and directly displayed in an interactive CNApy map. To export an optimization or variability result, we can use the respective functions in the `utilities` package:
 
 ```py
 from cobrak.example_models import toy_model
@@ -772,6 +812,7 @@ fba_result = perform_lp_optimization(
 # Store ecFBA result as CNApy scenario (for this example, to not pollute your
 # file system, as temporary file)
 import tempfile
+
 with tempfile.NamedTemporaryFile(suffix=".scen", delete=False) as temp:
     create_cnapy_scenario_out_of_optimization_dict(
         path=temp.name,
@@ -781,20 +822,21 @@ with tempfile.NamedTemporaryFile(suffix=".scen", delete=False) as temp:
 
     # Print one flux value of the ecFBA result
     print("The .scen file is in:", temp.name, "and can now be loaded in CNApy")
-    print("Use the CNApy default model 'cobrak_toymodel.cna' for a succesful visualization of the result")
+    print(
+        "Use the CNApy default model 'cobrak_toymodel.cna' for a successful visualization of the result"
+    )
 ```
 
 For variability results, we can use the function ```create_cnapy_scenario_out_of_variability_dict``` which just takes a different input but also exports a .scen file.
 
 !!! info "CNApy map compatibility"
-    Usually, CNApy maps are made for models where the forward and reverse direction of a single reaction are *not* separated. Using the ```fwd_suffix``` and ```rev_suffix``` of the Model dataclass (see above), COBRA-k automatically converts its optimization (or variability) result back into a model where
-    forward and reverse directions.
+    Usually, CNApy maps are made for models where the forward and reverse direction of a single reaction are *not* separated. Using the ```fwd_suffix``` and ```rev_suffix``` of the Model dataclass (see above), COBRA-k automatically converts its optimization (or variability) result back into a model where forward and reverse directions are merged.
 
     If you do not wish the behaviour, set the optional "desplit_reactions" argument in ```create_cnapy_scenario_out_of_optimization_dict``` to ```False```.
 
 ## Changing and setting solvers with the dataclass Solver
 
-Up to now, we just used COBRA-k's default solver SCIP [[Website](https://scipopt.org/)]. However, you can set your own solver using the dataclass Solver. E.g., if we wanted to use the local (and also open-source) solver IPOPT and make it possible to run for a large amount of internal optimization steps, we would define a Solver instance as follows:
+Up to now, we just used COBRA-k's default solver SCIP [[Website]](https://scipopt.org/). However, you can set your own solver using the dataclass Solver. E.g., if we wanted to use the local (and also open-source) solver IPOPT and make it possible to run for a large amount of internal optimization steps, we would define a Solver instance as follows:
 
 ```py
 from cobrak.example_models import toy_model
@@ -802,8 +844,8 @@ from cobrak.lps import perform_lp_optimization
 from cobrak.dataclasses import Solver
 
 ipopt = Solver(
-    name="ipopt", # This must be the same name as given in pyomo
-    solver_options={ # Options for the called solver itself
+    name="ipopt",  # This must be the same name as given in pyomo
+    solver_options={  # Options for the called solver itself
         "max_iter": 100_000,
         # Note that these options are solver-specific, i.e. they
         # typically won't work for other solvers
@@ -815,7 +857,7 @@ ipopt = Solver(
         # SCIP call
     },
     solve_extra_options={
-        # These would be extra argument's to pyomo's solve function
+        # These would be extra arguments to pyomo's solve function
         # Consult pyomo's documentation on the possible arguments
     },
 )
@@ -826,9 +868,10 @@ perform_lp_optimization(
     "ATP_Consumption",
     +1,
     solver=ipopt,
-    verbose=True, # Show explicitly the IPOPT output :-)
+    verbose=True,  # Show explicitly the IPOPT output :-)
 )
+print("You should see an objective value of 1000 mmol/(gDW⋅h) ;-)")
 ```
 
-All solvers supported by the optimziation framework pyomo [[GitHub]](https://github.com/Pyomo/pyomo) are supported by COBRA-k, too.
+All solvers supported by the optimiziation framework pyomo [[GitHub]](https://github.com/Pyomo/pyomo) are supported by COBRA-k, too.
 Please refer to pyomo's documentation for possible solver object and solve function attributes, as well as the list of supported solvers and their names in pyomo code. For the solver-specific options, please consult the solver's own documentation.

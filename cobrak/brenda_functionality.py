@@ -5,6 +5,7 @@ import contextlib
 import copy
 import json
 import tarfile
+from ast import literal_eval
 from math import isnan
 from statistics import median
 from typing import Any
@@ -82,7 +83,12 @@ def _brenda_get_all_enzyme_kinetic_data_for_model(
 
         ec_numbers_of_reaction = reaction.annotation["ec-code"]
         if isinstance(ec_numbers_of_reaction, str):
-            ec_numbers_of_reaction = [ec_numbers_of_reaction]
+            if ec_numbers_of_reaction.startswith(
+                "["
+            ) and ec_numbers_of_reaction.endswith("]"):
+                ec_numbers_of_reaction = literal_eval(ec_numbers_of_reaction)
+            else:
+                ec_numbers_of_reaction = [ec_numbers_of_reaction]
 
         reaction_transfered_ec_codes = []
         for ec_code in ec_numbers_of_reaction:
@@ -411,8 +417,14 @@ def _brenda_parse_full_json(
                         if "?" in reac_string:
                             continue
                         substrates_list = reac_string.split(" = ")[0].split(" + ")
-                        if "value" in kinetics_entry and "{" in kinetics_entry["value"] and "}" in kinetics_entry["value"]:
-                            substrates_list = [kinetics_entry["value"].split("{")[1].split("}")[0]]
+                        if (
+                            "value" in kinetics_entry
+                            and "{" in kinetics_entry["value"]
+                            and "}" in kinetics_entry["value"]
+                        ):
+                            substrates_list = [
+                                kinetics_entry["value"].split("{")[1].split("}")[0]
+                            ]
                         for substrate_id in substrates_list.copy():
                             bigg_id = _search_metname_in_bigg_ids(
                                 substrate_id.lower(),
@@ -659,7 +671,10 @@ def brenda_select_enzyme_kinetic_data_for_sbml(
         for metabolite in cobra_model.metabolites:
             idx_last_underscore = metabolite.id.rfind("_")
             met_id = metabolite.id[:idx_last_underscore]
-            if (metabolite.id in kinetic_ignored_metabolites) and ((reaction.id, metabolite.id) not in kinetic_ignored_metabolite_exceptions):
+            if (metabolite.id in kinetic_ignored_metabolites) and (
+                (reaction.id, metabolite.id)
+                not in kinetic_ignored_metabolite_exceptions
+            ):
                 continue
             if met_id not in metabolite_entries:
                 continue
@@ -831,8 +846,13 @@ def brenda_select_enzyme_kinetic_data_for_sbml(
                 has_found_ignored_enzyme = True
                 break
 
-        if taxonomically_best_kcats or reaction_kms or reaction_kis and not has_found_ignored_enzyme:
-            if (len(taxonomically_best_kcats) > 0):
+        if (
+            taxonomically_best_kcats
+            or reaction_kms
+            or reaction_kis
+            and not has_found_ignored_enzyme
+        ):
+            if len(taxonomically_best_kcats) > 0:
                 reaction_kcat = median(taxonomically_best_kcats)  # or max(), min(), ...
             else:
                 reaction_kcat = 1e20

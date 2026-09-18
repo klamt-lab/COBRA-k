@@ -941,7 +941,7 @@ def plot_objvalue_evolution(
     plt.gca().yaxis.set_major_formatter(FuncFormatter(format_decimal))
 
     # Save the plot
-    plt.savefig(output_path)
+    plt.savefig(output_path, dpi=300)
 
     # Close the plot to free up memory
     plt.close()
@@ -1069,7 +1069,7 @@ def plot_variabilities(
 
     # Save or show the plot
     if save_path is not None:
-        plt.savefig(save_path)
+        plt.savefig(save_path, dpi=300)
     else:
         plt.show()
 
@@ -1088,7 +1088,7 @@ def scatterplot_with_labels(
     xlim_overwrite: None | tuple[float, float] = None,
     ylim_overwrite: None | tuple[float, float] = None,
     ax: plt.Axes = None,
-    save_path: str = None,
+    save_path: str = "",
     title: str | None = None,
     extratext: str | None = None,
     x_labelsize: float = 13,
@@ -1151,11 +1151,6 @@ def scatterplot_with_labels(
 
     n_points = len(x_drawn)
     colors = get_cmap("viridis")(np.linspace(0, 1, n_points))
-
-    _created_fig = False
-    if ax is None:
-        fig, ax = plt.subplots(figsize=(10, 6))
-        _created_fig = True
 
     # Plot each point individually to assign different colors
     for i in range(n_points):
@@ -1239,11 +1234,11 @@ def scatterplot_with_labels(
     ax.tick_params(axis="both", which="minor", labelsize=minor_tick_labelsize)
     ax.yaxis.set_major_locator(ax.xaxis.get_major_locator())
 
-    if _created_fig:
-        plt.tight_layout()
-        if save_path is not None:
-            plt.savefig(save_path)
-        else:
-            plt.show()
-        plt.close(fig)
+    plt.tight_layout()
+    if save_path:
+        plt.savefig(save_path, dpi=300)
+    else:
+        plt.show()
+        plt.close()
+
     return ax

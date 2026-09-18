@@ -1,6 +1,16 @@
 from copy import deepcopy
+
 from cobrak.io import ExtraLinearWatch, ExtraNonlinearConstraint
-from .dataclasses import Model, Reaction, Metabolite, Enzyme, ExtraNonlinearWatch, ExtraLinearConstraint, CommunitySpeciesSetting
+
+from .dataclasses import (
+    CommunitySpeciesSetting,
+    Enzyme,
+    ExtraLinearConstraint,
+    ExtraNonlinearWatch,
+    Metabolite,
+    Model,
+    Reaction,
+)
 
 
 def create_multiplied_model(
@@ -25,7 +35,10 @@ def create_multiplied_model(
             }
             if reaction.enzyme_reaction_data:
                 reactions[f"{reac_id}_{model_id}"].enzyme_reaction_data.identifiers = [
-                    f"{identifier}_{model_id}" for identifier in reactions[f"{reac_id}_{model_id}"].enzyme_reaction_data.identifiers
+                    f"{identifier}_{model_id}"
+                    for identifier in reactions[
+                        f"{reac_id}_{model_id}"
+                    ].enzyme_reaction_data.identifiers
                 ]
                 reactions[f"{reac_id}_{model_id}"].enzyme_reaction_data.k_ms = {
                     f"{key}_{model_id}": value
@@ -66,18 +79,18 @@ def create_multiplied_model(
             )
         for watch_name, extra_linear_watch in model.extra_linear_watches.items():
             extra_linear_watches[watch_name] = ExtraLinearWatch(
-                    stoichiometries={
-                        f"{key}_{model_id}": stoich
-                        for key, stoich in extra_linear_watch.stoichiometries.items()
-                    },
-                )
+                stoichiometries={
+                    f"{key}_{model_id}": stoich
+                    for key, stoich in extra_linear_watch.stoichiometries.items()
+                },
+            )
         for watch_name, extra_nonlinear_watch in model.extra_nonlinear_watches.items():
             extra_nonlinear_watches[watch_name] = ExtraNonlinearWatch(
-                    stoichiometries={
-                        f"{key}_{model_id}": stoich
-                        for key, stoich in extra_nonlinear_watch.stoichiometries.items()
-                    },
-                )
+                stoichiometries={
+                    f"{key}_{model_id}": stoich
+                    for key, stoich in extra_nonlinear_watch.stoichiometries.items()
+                },
+            )
 
     first_model: Model = list(models.values())[0]
     return Model(
@@ -107,7 +120,7 @@ def create_multiplied_model(
                 include_mets_in_prot_pool=species_model.include_mets_in_prot_pool,
             )
             for species_id, species_model in models.items()
-        }
+        },
     )
 
 
@@ -135,8 +148,13 @@ def _add_exchange_compartment_to_community_model(
                         f"{affected_met}_{exchange_id}": 1.0,
                     },
                 )
-                if f"OUT_{model_id}_{affected_met}_{exchange_id}" not in exchange_reactions:
-                    exchange_reactions[f"OUT_{model_id}_{affected_met}_{exchange_id}"] = Reaction(
+                if (
+                    f"OUT_{model_id}_{affected_met}_{exchange_id}"
+                    not in exchange_reactions
+                ):
+                    exchange_reactions[
+                        f"OUT_{model_id}_{affected_met}_{exchange_id}"
+                    ] = Reaction(
                         stoichiometries={
                             affected_met: -1.0,
                         },
@@ -148,8 +166,13 @@ def _add_exchange_compartment_to_community_model(
                         affected_met: 1.0,
                     },
                 )
-                if f"IN_{model_id}_{affected_met}_{exchange_id}" not in exchange_reactions:
-                    exchange_reactions[f"IN_{model_id}_{affected_met}_{exchange_id}"] = Reaction(
+                if (
+                    f"IN_{model_id}_{affected_met}_{exchange_id}"
+                    not in exchange_reactions
+                ):
+                    exchange_reactions[
+                        f"IN_{model_id}_{affected_met}_{exchange_id}"
+                    ] = Reaction(
                         stoichiometries={
                             affected_met: 1.0,
                         },
@@ -170,8 +193,7 @@ def create_community_model_with_fixed_growth(
     max_considered_flux: float = 1000.0,
 ) -> Model:
     models: dict[str, Model] = {
-        key: value[0]
-        for key, value in models_and_biomass_reacs.items()
+        key: value[0] for key, value in models_and_biomass_reacs.items()
     }
     community_model = create_multiplied_model(
         models=models,
@@ -183,7 +205,8 @@ def create_community_model_with_fixed_growth(
 
     # Biomass reaction handling
     biomass_reac_ids: list[str] = [
-        f"{biomass_reac_id}_{model_id}" for model_id, (_, biomass_reac_id) in models_and_biomass_reacs.items()
+        f"{biomass_reac_id}_{model_id}"
+        for model_id, (_, biomass_reac_id) in models_and_biomass_reacs.items()
     ]
     community_model.reactions[community_growth_reac_id] = Reaction(
         stoichiometries={community_growth_met_id: -1.0},
@@ -192,7 +215,9 @@ def create_community_model_with_fixed_growth(
         name="Community fixed growth reaction",
     )
     for biomass_reac_id in biomass_reac_ids:
-        community_model.reactions[biomass_reac_id].stoichiometries[community_growth_met_id] = 1.0
+        community_model.reactions[biomass_reac_id].stoichiometries[
+            community_growth_met_id
+        ] = 1.0
         community_model.kinetic_ignored_metabolites.append(community_growth_met_id)
 
     # Inhomogenous constraint handling
@@ -201,8 +226,12 @@ def create_community_model_with_fixed_growth(
             if reaction.min_flux > 0.0:
                 pseudo_met_id = f"Rsnake_LOWER_{reac_id}_{model_id}"
                 community_model.metabolites[pseudo_met_id] = Metabolite()
-                community_model.reactions[f"{reac_id}_{model_id}"].stoichiometries[pseudo_met_id] = 1.0
-                community_model.reactions[f"{biomass_reac_id}_{model_id}"].stoichiometries[pseudo_met_id] = -reaction.min_flux / growth_rate
+                community_model.reactions[f"{reac_id}_{model_id}"].stoichiometries[
+                    pseudo_met_id
+                ] = 1.0
+                community_model.reactions[
+                    f"{biomass_reac_id}_{model_id}"
+                ].stoichiometries[pseudo_met_id] = -reaction.min_flux / growth_rate
                 community_model.reactions[f"EX_{pseudo_met_id}"] = Reaction(
                     stoichiometries={pseudo_met_id: -1.0},
                     min_flux=0.0,
@@ -212,8 +241,12 @@ def create_community_model_with_fixed_growth(
             if reaction.max_flux < max_considered_flux:
                 pseudo_met_id = f"Rsnake_UPPER_{reac_id}_{model_id}"
                 community_model.metabolites[pseudo_met_id] = Metabolite()
-                community_model.reactions[f"{reac_id}_{model_id}"].stoichiometries[pseudo_met_id] = 1.0
-                community_model.reactions[f"{biomass_reac_id}_{model_id}"].stoichiometries[pseudo_met_id] = -reaction.max_flux / growth_rate
+                community_model.reactions[f"{reac_id}_{model_id}"].stoichiometries[
+                    pseudo_met_id
+                ] = 1.0
+                community_model.reactions[
+                    f"{biomass_reac_id}_{model_id}"
+                ].stoichiometries[pseudo_met_id] = -reaction.max_flux / growth_rate
                 community_model.reactions[f"IN_{pseudo_met_id}"] = Reaction(
                     stoichiometries={pseudo_met_id: +1.0},
                     min_flux=0.0,
@@ -243,7 +276,12 @@ def create_community_model_with_fixed_species_fractions(
     )
 
     biomass_reac_ids: list[str] = [
-        f"{biomass_reac_id}_{model_id}" for model_id, (_, _, biomass_reac_id) in models_and_fractions_and_biomass_reac_ids.items()
+        f"{biomass_reac_id}_{model_id}"
+        for model_id, (
+            _,
+            _,
+            biomass_reac_id,
+        ) in models_and_fractions_and_biomass_reac_ids.items()
     ]
     community_model.reactions[community_growth_reac_id] = Reaction(
         stoichiometries={community_growth_met_id: -1.0},
@@ -252,9 +290,15 @@ def create_community_model_with_fixed_species_fractions(
         name="Community growth reaction",
     )
     for biomass_reac_id in biomass_reac_ids:
-        community_model.reactions[biomass_reac_id].stoichiometries[community_growth_met_id] = 1.0
+        community_model.reactions[biomass_reac_id].stoichiometries[
+            community_growth_met_id
+        ] = 1.0
 
-    for model_id, (model, fraction, _) in models_and_fractions_and_biomass_reac_ids.items():
+    for model_id, (
+        model,
+        fraction,
+        _,
+    ) in models_and_fractions_and_biomass_reac_ids.items():
         for reac_id, reaction in model.reactions.items():
             if reaction.min_flux > 0.0:
                 community_model.reactions[f"{reac_id}_{model_id}"].min_flux *= fraction
@@ -286,5 +330,5 @@ def remove_community_suffix(
 ) -> str:
     for community_suffix in community_suffixes:
         if var_id.endswith(f"_{community_suffix}"):
-            return var_id[:-len(f"_{community_suffix}")]
+            return var_id[: -len(f"_{community_suffix}")]
     return var_id

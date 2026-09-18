@@ -1,3 +1,5 @@
+"""Experimental! Not for usage currently"""
+
 from copy import deepcopy
 from random import choice
 

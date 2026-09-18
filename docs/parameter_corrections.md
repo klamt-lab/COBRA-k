@@ -14,7 +14,10 @@
     flux_and_concentration_error_scenario = {
         "Overflow": (1.0, 1.4),  # Overflow reaction flux between 1 and 1.4
         f"{LNCONC_VAR_PREFIX}M": (log(0.2), log(0.2)),  # M concentration fixed at .2 molar
-        f"{LNCONC_VAR_PREFIX}D": (log(0.23), log(0.25)),  # D concentration betwewen .23 and .25 molar
+        f"{LNCONC_VAR_PREFIX}D": (
+            log(0.23),
+            log(0.25),
+        ),  # D concentration between .23 and .25 molar
     }
 
     # With a CorrectionConfig as optional further argument,
@@ -35,7 +38,7 @@
 
     print_dict(correction_result_1)
 
-    #% k_cat*[E] correction
+    # % k_cat*[E] correction
     # Import relevant classes and functions
     from cobrak.lps import perform_lp_optimization
     from cobrak.example_models import toy_model
@@ -82,7 +85,7 @@
 Often, when you just created a COBRA-k model, you'll find out that known *in vivo* flux/concentration/etc. measurements do not work with your model.
 In other words, with your model, the given *in vivo* flux/concentration/etc. scenario is infeasible :-(
 
-This infeasibility can be caused by too restrictive parameters in your model. It is also possible that the measurements were perfomed with an error so that their resulting values need to be corrected. In other words, the following possibilities may have caused a scenario infeasibility:
+This infeasibility can be caused by too restrictive parameters in your model. It is also possible that the measurements were performed with an error so that their resulting values need to be corrected. In other words, the following possibilities may have caused a scenario infeasibility:
 
 1. [If reaction fluxes caused the infeasibility] The measurement fluxes contain an error and need to be corrected
 2. [If metabolite concentrations caused it] The measurement concentrations contain an error and need to be corrected
@@ -128,12 +131,12 @@ This way, $v_i$ is now able to be corrected such that the measured flux range ca
 
 If we have given logarithmic concentration measurements $\mathbf{\tilde{x}^{measured}}$, we can formulate our correction $corr^{concentrations}$ as follows for any metabolite $j$ that was measured and is included in $\mathbf{\tilde{x}^{measured}}$:
 
-$corr^{concentrations} = \sum_i {corr^{concentrations,+}_i + corr^{concentrations,-}_i} $
+$corr^{concentrations} = \sum_j {corr^{concentrations,+}_j + corr^{concentrations,-}_j} $
 
-So, for each measured metabolite $j$, we have an adding correction variable corr^{concentrations,+}_i and a subtracting variable corr^{concentrations,-}_i. In our optimization problem, they are introduced with the following constraints:
+So, for each measured metabolite $j$, we have an adding correction variable corr^{concentrations,+}_j and a subtracting variable corr^{concentrations,-}_j. In our optimization problem, they are introduced with the following constraints:
 
-$\tilde{x}_j ≤ \tilde{x}^{measured,min}_i - corr^{concentrations,-}_i$
-$\tilde{x}_j ≥ \tilde{x}^{measured,max}_i + corr^{concentrations,+}_i - corr^{concentrations,-}_i$
+$\tilde{x}_j ≤ \tilde{x}^{measured,min}_j - corr^{concentrations,-}_j$
+$\tilde{x}_j ≥ \tilde{x}^{measured,max}_j + corr^{concentrations,+}_j - corr^{concentrations,-}_j$
 
 This way, $\tilde{x}_j$ is now able to be corrected such that the measured concentrations can be reached :-)
 
@@ -205,7 +208,7 @@ $ \tilde{p}_i ≥ \ln ( \bar{p} ) = \sum_{k ∈ 𝖯_i} ( N_{k,i} ⋅ x̃ ) - \s
 
 becomes
 
-$ \tilde{s}_i = \ln ( \bar{s} ) = \sum_{j ∈ 𝖲_i} ( |N_{j,i}| ⋅ x̃_j ) - \sum_{j ∈ 𝖲_i} ( |N_{j,i}| ⋅  \ln K_{M,j,i} + corr^{k_{M,j,i}} ) $
+$ \tilde{p}_i = \ln ( \bar{p} ) = \sum_{k ∈ P_i} ( |N_{k,i}| ⋅ x̃_k ) - \sum_{k ∈ P_i} ( |N_{k,i}| ⋅  \ln K_{M,k,i} + corr^{k_{M,k,i}} ) $
 
 !!! warning
     All these $k_M$ corrections work in the logarithmic space. To get the "real" correction, you have to apply the exponential function on the respective correction value.
@@ -232,18 +235,18 @@ As an alternative to the linear correction value sum (see above), one can also u
 $corr^{fluxes} = \sum_i {(corr^{fluxes,+}_i)^2 + (corr^{fluxes,-}_i)^2} $
 
 !!! warning
-    Using a quadratic instead of a linear objective function makes the correction optmization much more computationally complex.
+    Using a quadratic instead of a linear objective function makes the correction optimization much more computationally complex.
 
 ## The CorrectionConfig dataclass
 
-Now, in COBRA-k, we can define a corrections scenario and the corrections options using the ```CorrectionConfig``` dataclass. It is defined as follows in COBRA-k's ```dataclass``` module:
+Now, in COBRA-k, we can define a corrections scenario and the corrections options using the `CorrectionConfig` dataclass. It is defined as follows in COBRA-k's `dataclasses` module:
 
 ```py
 @dataclass
 class CorrectionConfig:
     """Stores the configuration for corrections in a model (see parameter corrections chapter in documentation)."""
 
-    error_scenario: dict[str, tuple[float, float]] = Field(default_factory=list)
+    error_scenario: dict[str, tuple[float, float]] = Field(default_factory=dict)
     """A dictionary where keys are error scenarios and values are tuples representing the lower and upper bounds of the error. Defaults to {}."""
     add_flux_error_term: bool = False
     """Indicates whether to add flux error terms. Defaults to False."""
@@ -256,7 +259,7 @@ class CorrectionConfig:
     kcat_times_e_error_cutoff: PositiveFloat = 1.0
     """The cutoff value for the k_cat ⋅ [E] error term. Defaults to 1.0."""
     max_rel_kcat_times_e_correction: PositiveFloat = QUASI_INF
-    """Maximal relative correction for the k_cat ⋅ [E] error error term. Defaults to QUASI_INF."""
+    """Maximal relative correction for the k_cat ⋅ [E] error term. Defaults to QUASI_INF."""
     add_dG0_error_term: bool = False
     """Indicates whether to add ΔG'° error terms. Defaults to False."""
     dG0_error_cutoff: PositiveFloat = 1.0
@@ -266,7 +269,7 @@ class CorrectionConfig:
     add_km_error_term: bool = False
     """Indicates whether to add a km error term. Defaults to False."""
     km_error_cutoff: PositiveFloat = 1.0
-    """Cutoff value for the κ error term. Defaults to 1.0."""
+    """Cutoff value for the Km error term. Defaults to 1.0."""
     max_rel_km_correction: PositiveFloat = 0.999
     """Maximal relative correction for the κ error term. Defaults to 0.999."""
     error_sum_as_qp: bool = False
@@ -283,7 +286,7 @@ class CorrectionConfig:
     """The application method for variable lower and upper bounds. Either '' (x=x), 'exp' or 'log'. Defaults to ''."""
 ```
 
-While many of the member variables are self-explanatory in the context of the previous sub-chapters, some member variables still need to looked at in more detail:
+While many of the member variables are self-explanatory in the context of the previous sub-chapters, some member variables still need to be looked at in more detail:
 
 * ```error_scenario: dict[str, tuple[float, float]]```: This member variable describes the scenario for which you run the correction. E.g., if you have a scenario where the flux of a reaction A is measured to be between 1 and 2, ```error_scenario```would be set to ```{"A": (1, 2)}```.
 * ```max_rel_(...): float``` and ```max_abs_(...): float```variables: With these member variables, you can restrict the maximally possible relative (for $k_{cat}⋅[E]$ and $k_M$) or  absolute (for $Δ_r G^{´°}$) maximal correction for a parameter.
@@ -299,7 +302,7 @@ Now, after all this theory and the dataclass explanation, let's see some toy mod
 ### A flux and concentration scenario correction in a MILP
 
 Here, we try to find the minimal changes needed to the flux and concentration scenario
-so that it becomes feasible. I.e. no model parameters are changes.
+so that it becomes feasible. I.e. no model parameters are changed.
 
 ```py
 # Import relevant classes and functions
@@ -314,7 +317,10 @@ from math import log
 flux_and_concentration_error_scenario = {
     "Overflow": (1.0, 1.4),  # Overflow reaction flux between 1 and 1.4
     f"{LNCONC_VAR_PREFIX}M": (log(0.2), log(0.2)),  # M concentration fixed at .2 molar
-    f"{LNCONC_VAR_PREFIX}D": (log(0.23), log(0.25)),  # D concentration betwewen .23 and .25 molar
+    f"{LNCONC_VAR_PREFIX}D": (
+        log(0.23),
+        log(0.25),
+    ),  # D concentration betwewen .23 and .25 molar
 }
 
 # With a CorrectionConfig as optional further argument,
@@ -341,7 +347,7 @@ print_dict(correction_result_1)
 
 Here, we try to find the minimal changes needed to the model's $k_{cat}⋅[E]$, $ΔG'°$ and $k_M$
 such that the given scenario (a high Glycolysis flux) can be reached. We then apply (i.e. set the corrected parameters)
-using ```apply_error_correction_on_model```from COBRA-k's ```utilities``` submodule.
+using ```apply_error_correction_on_model``` from COBRA-k's ```utilities``` submodule.
 
 
 ```py

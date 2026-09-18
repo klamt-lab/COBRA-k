@@ -134,6 +134,33 @@ OBJECTIVE_CONSTRAINT_NAME = "objective_constraint"
 OBJECTIVE_VAR_NAME = "OBJECTIVE_VAR"
 """Name for variable that holds the objective value"""
 
+PROTONS_PER_ELEMENT = {
+    "H": 1,
+    "C": 6,
+    "N": 7,
+    "O": 8,
+    "Na": 11,
+    "Mg": 12,
+    "P": 15,
+    "S": 16,
+    "Cl": 17,
+    "K": 19,
+    "Ca": 20,
+    "V": 23,
+    "Cr": 24,
+    "Mn": 25,
+    "Fe": 26,
+    "Co": 27,
+    "Ni": 28,
+    "Cu": 29,
+    "Zn": 30,
+    "Se": 34,
+    "Mo": 42,
+    "I": 53,
+    "Bi": 83,
+}
+"""Protons per element (useful for eQulibrator compound searches)"""
+
 PROT_POOL_MET_NAME = "prot_pool"
 """Identifier of the protein pool representing pseudo-metabolite"""
 

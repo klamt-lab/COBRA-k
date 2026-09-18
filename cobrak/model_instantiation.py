@@ -411,7 +411,7 @@ def get_cobrak_model_from_sbml_and_thermokinetic_data(
 
         dG0_uncertainty = dG0_uncertainties.get(reaction.id)
 
-        used_enzyme_reaction_data = enzyme_reaction_data.get(reaction.id, None)
+        used_enzyme_reaction_data = enzyme_reaction_data.get(reaction.id)
         if used_enzyme_reaction_data is None:
             identifiers = reaction.gene_reaction_rule.split(" and ")
             used_enzyme_reaction_data = (

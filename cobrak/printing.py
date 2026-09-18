@@ -386,7 +386,10 @@ def print_model(
                     cobrak_model.kinetic_ignored_metabolites
                 ),
                 "Kinetic-ignored met exceptions": ", ".join(
-                    [f"{x[0]} {x[1]}" for x in cobrak_model.kinetic_ignored_metabolite_exceptions]
+                    [
+                        f"{x[0]} {x[1]}"
+                        for x in cobrak_model.kinetic_ignored_metabolite_exceptions
+                    ]
                 ),
             }
         )

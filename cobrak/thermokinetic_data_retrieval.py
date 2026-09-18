@@ -117,20 +117,20 @@ def add_thermokinetic_data_to_cobrak_model(
                 reaction.enzyme_reaction_data.k_cat = kcats[reac_id]
             if reac_id in kms:
                 for met_id, value in kms[reac_id].items():
-                    reaction.enzyme_reaction_data.kms[met_id] = value
+                    reaction.enzyme_reaction_data.k_ms[met_id] = value
             if reac_id in kis:
                 for met_id, value in kis[reac_id].items():
-                    reaction.enzyme_reaction_data.kis[met_id] = value
+                    reaction.enzyme_reaction_data.k_is[met_id] = value
             if reac_id in kas:
                 for met_id, value in kas[reac_id].items():
-                    reaction.enzyme_reaction_data.kas[met_id] = value
+                    reaction.enzyme_reaction_data.k_as[met_id] = value
 
     # concentration ranges
     for met_id, (min_log_conc, max_log_conc) in conc_ranges.items():
         if met_id not in cobrak_model.metabolites:
             continue
-        cobrak_model.metabolites[met_id].min_log_conc = min_log_conc
-        cobrak_model.metabolites[met_id].max_log_conc = max_log_conc
+        cobrak_model.metabolites[met_id].log_min_conc = min_log_conc
+        cobrak_model.metabolites[met_id].log_max_conc = max_log_conc
 
     return cobrak_model
 
@@ -422,7 +422,7 @@ def get_database_kcats_kms_kis_and_kas_for_cobrak_model(
             sbml_path=sbml_path,
             sabio_target_folder=database_data_path,
             bigg_metabolites_json_path=f"{database_data_path}bigg_models_metabolites.json",
-            base_species="Escherichia coli",
+            base_species=base_species,
             ncbi_parsed_json_path=f"{database_data_path}parsed_taxdmp.json",
             kinetic_ignored_metabolites=cobrak_model.kinetic_ignored_metabolites,
             kinetic_ignored_enzyme_ids=kinetic_ignored_enzyme_ids,
