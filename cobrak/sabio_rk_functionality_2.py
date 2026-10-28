@@ -2,6 +2,7 @@
 
 # IMPORT SECTION #
 from ast import literal_eval
+from copy import deepcopy
 from dataclasses import dataclass
 from math import sqrt
 from os.path import exists
@@ -239,10 +240,12 @@ def get_full_sabio_dict(sabio_target_folder: str) -> SabioDict:
     )
     sabio_dict = SabioDict({}, {}, {}, {}, {})
     for sabio_entry in sabio_entries:
+        is_recombinant = sabio_entry["enzyme_description"]["is_recombinant"]
+        if is_recombinant:
+            continue
         entry_id = sabio_entry["id"]
         organism = sabio_entry["general"]["organism"]["name"]
         ec_number = sabio_entry["enzyme_description"]["ec_number"]
-        is_recombinant = sabio_entry["enzyme_description"]["is_recombinant"]
         kinetics_mechanism_type = sabio_entry["kineticlaw"]["kinlaw_type"]["name"]
         ph = sabio_entry["experimental_conditions"]["envvar_ph"]["start_value"]
         temperature = sabio_entry["experimental_conditions"]["envvar_temperature"][
@@ -277,7 +280,9 @@ def get_full_sabio_dict(sabio_target_folder: str) -> SabioDict:
 
             parameter_unit = parameter["unit"]["name"]
             parameter_value = parameter["start_value"]
-            if parameter_unit == "-" or not parameter_value:
+            if (
+                parameter_name != "hill coefficient" and parameter_unit == "-"
+            ) or not parameter_value:
                 continue
             if parameter_value <= 0.0:
                 continue  # There is no kinetic parameter that is just 0 or below
@@ -395,17 +400,17 @@ def sabio_select_enzyme_kinetic_data_for_sbml(
 
         reac_met_ids = [met.id for met in reaction.metabolites]
         substrate_bigg_ids = [
-            met_id[: met_id.rfind("_")]
+            (met_id[: met_id.rfind("_")] if met_id.rfind("_") > 0 else met_id)
             for met_id in reac_met_ids
             if reaction.metabolites[cobra_model.metabolites.get_by_id(met_id)] < 0
         ]
         product_bigg_ids = [
-            met_id[: met_id.rfind("_")]
+            (met_id[: met_id.rfind("_")] if met_id.rfind("_") > 0 else met_id)
             for met_id in reac_met_ids
             if reaction.metabolites[cobra_model.metabolites.get_by_id(met_id)] > 0
         ]
 
-        ec_codes = reaction.annotation["ec-code"]
+        ec_codes = deepcopy(reaction.annotation["ec-code"])
         if isinstance(ec_codes, str):
             if ec_codes.startswith("[") and ec_codes.endswith("]"):
                 ec_codes = literal_eval(ec_codes)
@@ -464,6 +469,10 @@ def sabio_select_enzyme_kinetic_data_for_sbml(
                     match entry.parameter_unit:
                         case "s^(-1)":
                             multiplier = 3_600
+                        case "h^(-1)":
+                            multiplier = 1
+                        case "min^(-1)":
+                            multiplier = 60
                         case _:
                             continue
 
@@ -523,7 +532,9 @@ def sabio_select_enzyme_kinetic_data_for_sbml(
                         and kis_and_kas_only_for_same_compartments
                     ):
                         continue
-                    bigg_id = met.id[: met.id.rfind("_")]
+                    bigg_id = (
+                        met.id[: met.id.rfind("_")] if met.id.rfind("_") > 0 else met.id
+                    )
                     for entry in entries:
                         entry_met_id = (
                             entry.parameter_associated_species.lower().strip()
@@ -589,6 +600,7 @@ def sabio_select_enzyme_kinetic_data_for_sbml(
             (reaction.id not in kcat_overwrite) and (kcat_overwrite != {})
         ) or not k_cat_per_tax_score:
             k_cat = 1e20
+            k_cat_references = []
         else:
             min_k_cat_tax_score = min(k_cat_per_tax_score.keys())
             k_cat = median(k_cat_per_tax_score[min_k_cat_tax_score])
@@ -620,21 +632,21 @@ def sabio_select_enzyme_kinetic_data_for_sbml(
 
         hills: HillCoefficients = HillCoefficients()
         hill_references: dict[str, list[ParameterReference]] = {}
-        for met_id, hills_per_tax_score in hills_per_tax_score.items():
+        for met_id, hills_per_tax_score_value in hills_per_tax_score.items():
             hills.kappa[met_id] = median(
-                hills_per_tax_score[min(hills_per_tax_score.keys())]
+                hills_per_tax_score_value[min(hills_per_tax_score_value.keys())]
             )
             hills.iota[met_id] = median(
-                hills_per_tax_score[min(hills_per_tax_score.keys())]
+                hills_per_tax_score_value[min(hills_per_tax_score_value.keys())]
             )
             hills.alpha[met_id] = median(
-                hills_per_tax_score[min(hills_per_tax_score.keys())]
+                hills_per_tax_score_value[min(hills_per_tax_score_value.keys())]
             )
             hill_references[met_id] = hill_refs_per_tax_score[met_id][
-                min(hills_per_tax_score.keys())
+                min(hills_per_tax_score_value.keys())
             ]
 
-        if k_cat < 1e20 and (k_ms or k_is or k_as or hills):
+        if any([k_cat < 1e20, k_ms, k_is, k_as, hills.alpha, hills.iota, hills.kappa]):
             enzyme_reaction_data[reaction.id] = EnzymeReactionData(
                 identifiers=enzyme_identifiers,
                 k_cat=k_cat,

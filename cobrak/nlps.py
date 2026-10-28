@@ -12,18 +12,15 @@ from copy import deepcopy
 from itertools import chain
 from math import ceil, floor, log
 
-from joblib import Parallel, delayed
+from joblib import Parallel, cpu_count, delayed
 from pydantic import ConfigDict, NonNegativeFloat, validate_call
 from pyomo.environ import (
     Binary,
     ConcreteModel,
     Constraint,
-    Objective,
     Reals,
     Var,
     exp,
-    maximize,
-    minimize,
 )
 
 from .constants import (
@@ -210,11 +207,9 @@ def get_nlp_from_cobrak_model(
     # Returns
     * `ConcreteModel`: The created NLP model.
     """
-    cobrak_model = deepcopy(cobrak_model)
-
     reac_ids = list(cobrak_model.reactions.keys())
     enforced_reacs: list[str] = []
-    ignored_reacs = deepcopy(ignored_reacs)
+    ignored_reacs = list(ignored_reacs)
     for reac_id in variability_data:
         if reac_id not in reac_ids:
             continue
@@ -486,9 +481,12 @@ def get_nlp_from_cobrak_model(
                         ][-1]
                     ):
                         term_without_error = False
-                        ki_error_var = setattr(
+                        ki_error_varname = (
+                            f"{ERROR_VAR_PREFIX}____{reac_id}____{met_id}____iota"
+                        )
+                        setattr(
                             model,
-                            f"{ERROR_VAR_PREFIX}____{reac_id}____{met_id}____iota",
+                            ki_error_varname,
                             Var(
                                 within=Reals,
                                 bounds=(
@@ -497,6 +495,7 @@ def get_nlp_from_cobrak_model(
                                 ),
                             ),
                         )
+                        ki_error_var = getattr(model, ki_error_varname)
                         iota_product *= 1 / (
                             1
                             + exp(
@@ -564,9 +563,12 @@ def get_nlp_from_cobrak_model(
                         ][0]
                     ):
                         term_without_error = False
-                        ka_error_var = setattr(
+                        ka_error_varname = (
+                            f"{ERROR_VAR_PREFIX}____{reac_id}____{met_id}____alpha"
+                        )
+                        setattr(
                             model,
-                            f"{ERROR_VAR_PREFIX}____{reac_id}____{met_id}____alpha",
+                            ka_error_varname,
                             Var(
                                 within=Reals,
                                 bounds=(
@@ -575,6 +577,7 @@ def get_nlp_from_cobrak_model(
                                 ),
                             ),
                         )
+                        ka_error_var = getattr(model, ka_error_varname)
                         iota_product *= 1 / (
                             1
                             + exp(
@@ -702,11 +705,12 @@ def get_nlp_from_cobrak_model(
             met_id = met_sum_id[len(LNCONC_VAR_PREFIX) :]
             if met_id not in cobrak_model.metabolites:
                 continue
-            if not cobrak_model.metabolites[met_id].molar_mass:
+            molar_mass = cobrak_model.metabolites[met_id].molar_mass
+            if not molar_mass:
                 continue
             mass_sum_expr += (
                 (1 / cobrak_model.cell_density)
-                * cobrak_model.metabolites[met_id].molar_mass
+                * molar_mass
                 * exp(getattr(model, met_sum_id))
             )
 
@@ -1006,13 +1010,17 @@ def _batch_nlp_variability_optimization(
     with_iota: bool,
     with_alpha: bool,
     approximation_value: float,
-    tfba_variability_dict: dict[str, float],
+    tfba_variability_dict: dict[str, tuple[float, float]],
     strict_mode: bool,
     single_strict_reacs: list[str],
     min_mdf: float,
     solver: Solver,
 ) -> list[tuple[bool, str, float | None]]:
     """Performs a batch of non-linear program (NLP) variability optimizations on a COBRAk model.
+
+    The NLP is built only once for the whole batch. For each target, only the objective is exchanged
+    and the variables' start values are reset, so that each optimization starts exactly like
+    one with a freshly built NLP.
 
     # Parameters
     batch (list[tuple[str, str]]): List of tuples containing objective names and target IDs.
@@ -1022,39 +1030,56 @@ def _batch_nlp_variability_optimization(
     with_iota (bool): Whether to include ι terms.
     with_alpha (bool): Whether to include α terms.
     approximation_value (float): Approximation value for κ, γ, ι, and α terms.
-    tfba_variability_dict (dict[str, float]): Dictionary of reaction IDs and their TFBA variability.
+    tfba_variability_dict (dict[str, tuple[float, float]]): Dictionary of reaction IDs and their TFBA variability.
     strict_mode (bool): Whether to use strict mode.
     min_mdf (float): Minimum MDF value.
     solver (Solver): Used NLP name.
     """
-    i = 0
+    nlp_model = get_nlp_from_cobrak_model(
+        cobrak_model,
+        with_kappa=with_kappa,
+        with_gamma=with_gamma,
+        with_iota=with_iota,
+        with_alpha=with_alpha,
+        approximation_value=approximation_value,
+        irreversible_mode=True,
+        variability_data=tfba_variability_dict,
+        strict_mode=strict_mode,
+        single_strict_reacs=single_strict_reacs,
+        irreversible_mode_min_mdf=min_mdf,
+    )
+    nlp_model = apply_variability_dict(nlp_model, cobrak_model, tfba_variability_dict)
+    pyomo_solver = get_solver(solver)
+    start_values = [(var, var.value) for var in nlp_model.component_data_objects(Var)]
+
     resultslist: list[tuple[bool, str, float | None]] = []
     for objective_name, target_id in batch:
-        i += 1
-        objective_sense = +1 if objective_name.startswith("MAX_OBJ_") else -1
+        is_minimization = objective_name.startswith("MIN_OBJ_")
         try:
-            results = perform_nlp_irreversible_optimization(
-                deepcopy(cobrak_model),
-                objective_target=target_id,
-                objective_sense=objective_sense,
-                with_kappa=with_kappa,
-                with_gamma=with_gamma,
-                with_iota=with_iota,
-                with_alpha=with_alpha,
-                approximation_value=approximation_value,
-                variability_dict=deepcopy(tfba_variability_dict),
-                strict_mode=strict_mode,
-                single_strict_reacs=single_strict_reacs,
-                min_mdf=min_mdf,
-                solver=solver,
-                verbose=False,
+            for component_name in (
+                "obj",
+                OBJECTIVE_VAR_NAME,
+                f"constraint_of_{OBJECTIVE_VAR_NAME}",
+            ):
+                nlp_model.del_component(component_name)
+            nlp_model.obj = get_objective(
+                nlp_model, target_id, -1 if is_minimization else +1
+            )
+            results = pyomo_solver.solve(
+                nlp_model, tee=False, **solver.solve_extra_options
+            )
+            nlp_result = add_statuses_to_optimziation_dict(
+                get_pyomo_solution_as_dict(nlp_model), results
             )
         except Exception:
             print("EXCEPTION", objective_name)
-            resultslist.append((objective_name.startswith("MIN_OBJ_"), target_id, None))
+            resultslist.append((is_minimization, target_id, None))
             continue
-        result = None if not results[ALL_OK_KEY] else results[OBJECTIVE_VAR_NAME]
-        resultslist.append((objective_name.startswith("MIN_OBJ_"), target_id, result))
+        finally:
+            for var, start_value in start_values:
+                var.set_value(start_value)
+        result = None if not nlp_result[ALL_OK_KEY] else nlp_result[OBJECTIVE_VAR_NAME]
+        resultslist.append((is_minimization, target_id, result))
     return resultslist
 
 
@@ -1142,24 +1167,6 @@ def perform_nlp_irreversible_variability_analysis_with_active_reacs_only(
     max_values: dict[str, float] = {}
     objective_targets: list[tuple[int, str]] = []
 
-    """
-    min_flux_sum_result = perform_nlp_irreversible_optimization(
-        deepcopy(cobrak_model),
-        objective_target=FLUX_SUM_VAR_ID,
-        objective_sense=-1,
-        with_kappa=with_kappa,
-        with_gamma=with_gamma,
-        with_iota=with_iota,
-        with_alpha=with_alpha,
-        approximation_value=approximation_value,
-        variability_dict=deepcopy(tfba_variability_dict),
-        strict_mode=strict_mode,
-        min_mdf=min_mdf,
-        with_flux_sum_var=True,
-        solver=solver,
-    )
-    """
-
     if calculate_concs or calculate_rest:
         min_mdf_result = perform_nlp_irreversible_optimization(
             deepcopy(cobrak_model),
@@ -1191,16 +1198,7 @@ def perform_nlp_irreversible_variability_analysis_with_active_reacs_only(
                     objective_targets.append((+1, met_var_name))
 
     for reac_id, reaction in cobrak_model.reactions.items():
-        # min_flux_sum_flux = min_flux_sum_result[reac_id]
         if calculate_reacs:
-            # if reaction.min_flux in (min_flux_sum_flux,):
-            #    min_values[reac_id] = (
-            #        reaction.min_flux if reaction.min_flux >= min_flux_cutoff else 0.0
-            #    )
-            # else:
-            # if reaction.max_flux in (min_flux_sum_flux,):
-            #    max_values[reac_id] = reaction.max_flux
-            # else:
             objective_targets.extend(((-1, reac_id), (+1, reac_id)))
 
         if not calculate_rest:
@@ -1218,9 +1216,6 @@ def perform_nlp_irreversible_variability_analysis_with_active_reacs_only(
             )
             if full_enzyme_id:
                 enzyme_delivery_var_name = get_reaction_enzyme_var_id(reac_id, reaction)
-                # if 0.0 in (min_flux_sum_flux,):
-                #    min_values[enzyme_delivery_var_name] = 0.0
-                # else:
                 objective_targets.extend(
                     ((-1, enzyme_delivery_var_name), (+1, enzyme_delivery_var_name))
                 )
@@ -1235,25 +1230,11 @@ def perform_nlp_irreversible_variability_analysis_with_active_reacs_only(
             if extra_tested_var in model_var_names:
                 objective_targets.append((+1, extra_tested_var))
 
-    objectives_data: list[tuple[str, str]] = []
-    for obj_sense, target_id in objective_targets:
-        if obj_sense == -1:
-            objective_name = f"MIN_OBJ_{target_id}"
-            pyomo_sense = minimize
-        else:
-            objective_name = f"MAX_OBJ_{target_id}"
-            pyomo_sense = maximize
-        setattr(
-            model,
-            objective_name,
-            Objective(expr=getattr(model, target_id), sense=pyomo_sense),
-        )
-        getattr(model, objective_name).deactivate()
-        objectives_data.append((objective_name, target_id))
-
-    objectives_data_batches = split_list(
-        objectives_data, len(objectives_data)
-    )  # cpu_count())
+    objectives_data: list[tuple[str, str]] = [
+        (f"{'MIN' if obj_sense == -1 else 'MAX'}_OBJ_{target_id}", target_id)
+        for obj_sense, target_id in objective_targets
+    ]
+    objectives_data_batches = split_list(objectives_data, cpu_count())
 
     results_list = Parallel(n_jobs=-1, verbose=parallel_verbosity_level)(
         delayed(_batch_nlp_variability_optimization)(
@@ -1282,8 +1263,8 @@ def perform_nlp_irreversible_variability_analysis_with_active_reacs_only(
             max_values[target_id] = result_value
 
     for key, min_value in min_values.items():
-        if (key in cobrak_model.reactions) or (
-            key.startswith(ENZYME_VAR_PREFIX) and (min_value is not None)
+        if (min_value is not None) and (
+            (key in cobrak_model.reactions) or key.startswith(ENZYME_VAR_PREFIX)
         ):
             min_values[key] = min_value if min_value >= min_flux_cutoff else 0.0
 

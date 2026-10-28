@@ -60,7 +60,7 @@ FONT_BLACK = Font(name="Calibri", color="000000")
 BG_COLOR_DEFAULT = PatternFill(
     start_color="FFFFFF", end_color="FFFFFF", fill_type="solid"
 )
-BG_COLOR_GREEN = PatternFill(
+BG_COLOR_YELLOW = PatternFill(
     start_color="FFFF00", end_color="FFFF00", fill_type="solid"
 )
 BG_COLOR_RED = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")
@@ -326,7 +326,7 @@ def _get_optimization_bg_color(opt_value: float) -> PatternFill:
     """
     if abs(opt_value) <= ABS_EPSILON:
         return BG_COLOR_BLACK
-    return BG_COLOR_GREEN
+    return BG_COLOR_YELLOW
 
 
 @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
@@ -344,14 +344,14 @@ def _get_variability_bg_color(min_value: float, max_value: float) -> PatternFill
         return BG_COLOR_RED
     if abs(max_value) <= ABS_EPSILON:
         return BG_COLOR_BLACK
-    return BG_COLOR_GREEN
+    return BG_COLOR_YELLOW
 
 
 @validate_call(validate_return=True)
-def _na_str_or_value(
+def _void_str_or_value(
     value: str | float | int | bool | None,
 ) -> str | float | int | bool:
-    """Returns the value if it is not None, otherwise, 'N/A'
+    """Returns the value if it is not None, otherwise, ' '
 
     Args:
         value (str | float | int | bool | None): The value to check
@@ -402,7 +402,7 @@ def _set_cell(
         cell (SpreadsheetCell): An object containing the properties to be set for the cell, including value, background color, font, and border.
     """
     openpyxl_cell = sheet.cell(row=line, column=column)
-    openpyxl_cell.value = _na_str_or_value(cell.value)
+    openpyxl_cell.value = _void_str_or_value(cell.value)
     if cell.bg_color is not None:
         openpyxl_cell.fill = cell.bg_color
     if cell.font is not None:
@@ -595,7 +595,7 @@ def create_cobrak_spreadsheet(
         ],
         "H": [
             SpreadsheetCell("Maximal concentration sum [M]:", font=FONT_BOLD),
-            SpreadsheetCell(str(cobrak_model.max_conc_sum)),
+            SpreadsheetCell(cobrak_model.max_conc_sum),
         ],
         "I": [
             SpreadsheetCell("Metabolite pool [M]", font=FONT_BOLD),
@@ -1076,7 +1076,7 @@ def create_cobrak_spreadsheet(
         # Reac string
         reac_cells[reac_id].append(get_reaction_string(cobrak_model, reac_id))
         # Reac ΔG'°
-        reac_cells[reac_id].append(str(_na_str_or_value(reaction.dG0)))
+        reac_cells[reac_id].append(_void_str_or_value(reaction.dG0))
         enzyme_reaction_data = reaction.enzyme_reaction_data
         match enzyme_reaction_data:
             case None:
@@ -1135,8 +1135,8 @@ def create_cobrak_spreadsheet(
             if var_dataset.with_df:
                 df_var_id = f"{DF_VAR_PREFIX}{reac_id}"
                 if df_var_id in var_dataset.data:
-                    min_df = str(round(var_dataset.data[df_var_id][0], 4))
-                    max_df = str(round(var_dataset.data[df_var_id][1], 4))
+                    min_df = round(var_dataset.data[df_var_id][0], 4)
+                    max_df = round(var_dataset.data[df_var_id][1], 4)
                 else:
                     min_df = " "
                     max_df = " "
@@ -1171,7 +1171,7 @@ def create_cobrak_spreadsheet(
         if opt_dataset.with_efficiency_coefficient:
             reac_titles.append(
                 Title(
-                    f"Protein pool saving (in %) @ 10% better {'κ' if opt_dataset.with_kappa else ''}{'γ' if opt_dataset.with_gamma else ''}{'ι' if opt_dataset.with_iota else ''}{'α' if opt_dataset.with_kappa else ''}",
+                    f"Protein pool saving (in %) @ 10% better {'κ' if opt_dataset.with_kappa else ''}{'γ' if opt_dataset.with_gamma else ''}{'ι' if opt_dataset.with_iota else ''}{'α' if opt_dataset.with_alpha else ''}",
                     WIDTH_DEFAULT,
                 )
             )
@@ -1180,8 +1180,8 @@ def create_cobrak_spreadsheet(
             unoptimized_reactions = get_unoptimized_reactions_in_nlp_solution(
                 cobrak_model,
                 opt_dataset.data,
-                regard_alpha=True,
-                regard_iota=True,
+                regard_alpha=has_any_alpha,
+                regard_iota=has_any_iota,
             )
         opt_reac_ids = set(all_reac_ids) & set(opt_dataset.data.keys())
         reacs_with_too_low_flux = []
@@ -1205,7 +1205,7 @@ def create_cobrak_spreadsheet(
             if opt_dataset.with_df:
                 df_var_id = f"{DF_VAR_PREFIX}{reac_id}"
                 if df_var_id in opt_dataset.data:
-                    df_value = str(round(opt_dataset.data[df_var_id], 4))
+                    df_value = round(opt_dataset.data[df_var_id], 4)
                 else:
                     df_value = " "
                 reac_cells[reac_id].append(SpreadsheetCell(df_value, bg_color=bg_color))
@@ -1218,7 +1218,7 @@ def create_cobrak_spreadsheet(
                         for identifier in enzyme_reaction_data.identifiers
                     )
                 ):
-                    vplus = str(
+                    vplus = (
                         enzyme_reaction_data.k_cat
                         * opt_dataset.data[
                             get_reaction_enzyme_var_id(reac_id, reaction)
@@ -1230,7 +1230,7 @@ def create_cobrak_spreadsheet(
             if opt_dataset.with_kappa:
                 kappa_var_id = KAPPA_VAR_PREFIX + reac_id
                 if kappa_var_id in opt_dataset.data:
-                    kappa_value = str(round(opt_dataset.data[kappa_var_id], 4))
+                    kappa_value = round(opt_dataset.data[kappa_var_id], 4)
                 else:
                     kappa_value = " "
                 reac_cells[reac_id].append(
@@ -1239,7 +1239,7 @@ def create_cobrak_spreadsheet(
             if opt_dataset.with_gamma:
                 gamma_var_id = GAMMA_VAR_PREFIX + reac_id
                 if gamma_var_id in opt_dataset.data:
-                    gamma_value = str(round(opt_dataset.data[gamma_var_id], 4))
+                    gamma_value = round(opt_dataset.data[gamma_var_id], 4)
                 else:
                     gamma_value = " "
                 reac_cells[reac_id].append(
@@ -1248,7 +1248,7 @@ def create_cobrak_spreadsheet(
             if opt_dataset.with_iota:
                 iota_var_id = IOTA_VAR_PREFIX + reac_id
                 if iota_var_id in opt_dataset.data:
-                    iota_value = str(opt_dataset.data[iota_var_id])
+                    iota_value = opt_dataset.data[iota_var_id]
                 else:
                     iota_value = " "
                 reac_cells[reac_id].append(
@@ -1257,7 +1257,7 @@ def create_cobrak_spreadsheet(
             if opt_dataset.with_alpha:
                 alpha_var_id = ALPHA_VAR_PREFIX + reac_id
                 if alpha_var_id in opt_dataset.data:
-                    alpha_value = str(opt_dataset.data[alpha_var_id])
+                    alpha_value = opt_dataset.data[alpha_var_id]
                 else:
                     alpha_value = " "
                 reac_cells[reac_id].append(
@@ -1371,7 +1371,7 @@ def create_cobrak_spreadsheet(
                 bg_color = BG_COLOR_DEFAULT
 
         enzyme_cells[enzyme_id].append(SpreadsheetCell(min_conc, bg_color=bg_color))
-        enzyme_cells[enzyme_id].append(SpreadsheetCell(min_conc, bg_color=bg_color))
+        enzyme_cells[enzyme_id].append(SpreadsheetCell(max_conc, bg_color=bg_color))
 
     # Enzyme complexes sheet
     enzcomplex_titles: list[Title] = [
@@ -1409,7 +1409,7 @@ def create_cobrak_spreadsheet(
         enzcomplex_titles.extend(
             (
                 Title(f"→{var_dataset_name}: Min conc. [mmol⋅gDW⁻¹]", WIDTH_DEFAULT),
-                Title("Max conc. [mmolgDW⁻¹]", WIDTH_DEFAULT),
+                Title("Max conc. [mmol⋅gDW⁻¹]", WIDTH_DEFAULT),
             )
         )
         var_enzcomplex_ids = set(all_enzcomplex_ids) & set(var_dataset.data.keys())
@@ -1507,7 +1507,7 @@ def create_cobrak_spreadsheet(
             variability_tuple = var_dataset.data[met_var_id]
             min_conc = exp(variability_tuple[0])
             max_conc = exp(variability_tuple[1])
-            bg_color = BG_COLOR_RED if min_conc == max_conc else BG_COLOR_GREEN
+            bg_color = BG_COLOR_RED if min_conc == max_conc else BG_COLOR_YELLOW
             met_cells[_get_met_id_from_met_var_id(met_var_id)].append(
                 SpreadsheetCell(min_conc, bg_color=bg_color, border=BORDER_BLACK_LEFT)
             )

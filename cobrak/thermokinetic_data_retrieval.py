@@ -439,8 +439,8 @@ def get_database_kcats_kms_kis_and_kas_for_cobrak_model(
             else [sabio_enzyme_reaction_data, brenda_enzyme_reaction_data],
         )
     if use_brenda:
-        return sabio_enzyme_reaction_data
-    return brenda_enzyme_reaction_data
+        return brenda_enzyme_reaction_data
+    return sabio_enzyme_reaction_data
 
 
 @validate_call(validate_return=True)

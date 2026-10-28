@@ -63,6 +63,8 @@ build
 main_paper_calculations_jsons
 .venv
 
+.claude
+
 # Temporary ignores
 sabiocache
 cobrak/sabio_rk_functionality_new.py

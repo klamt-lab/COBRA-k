@@ -1,6 +1,8 @@
 """Utilities to work with pyomo ConcreteModel instances directly."""
 
 from collections.abc import Callable
+from functools import cache, wraps
+from hashlib import md5
 
 from numpy import linspace
 from pydantic.dataclasses import dataclass
@@ -37,43 +39,22 @@ class ApproximationPoint:
     x_point: float
 
 
-def add_linear_approximation_to_pyomo_model(
-    model: ConcreteModel,
+@cache
+def _get_linear_approximation(
     y_function: Callable[[float], float],
     y_function_derivative: Callable[[float], float],
-    x_reference_var_id: str,
-    new_y_var_name: str,
     min_x: float,
     max_x: float,
     max_rel_difference: float,
-    max_num_segments: int = float("inf"),
-    min_abs_error: float = 1e-6,
-) -> ConcreteModel:
-    """Add a linear approximation of a given function to a Pyomo model.
+    max_num_segments: int,
+    min_abs_error: float,
+) -> tuple[tuple[ApproximationPoint, ...], tuple[int, ...]]:
+    """Find the fitting approximation points (and the indices of the ignored ones) for add_linear_approximation_to_pyomo_model.
 
-    This function approximates the provided function `y_function` with a piecewise linear function
-    and adds the approximation to the given Pyomo model. The approximation is based on the derivative
-    of the function `y_function_derivative`. The approximation is added as a new variable and a set
-    of constraints to the model.
-
-    Parameters:
-    - model (ConcreteModel): The Pyomo model to which the approximation will be added.
-    - y_function (Callable[[float], float]): The function to be approximated.
-    - y_function_derivative (Callable[[float], float]): The derivative of the function to be approximated.
-    - x_reference_var_id (str): The name of the variable in the model that will be used as the independent variable for the approximation.
-    - new_y_var_name (str): The name of the new variable that will be added to the model to represent the approximation.
-    - min_x (float): The minimum value of the independent variable for the approximation.
-    - max_x (float): The maximum value of the independent variable for the approximation.
-    - max_rel_difference (float): The maximum allowed relative difference between the approximation and the original function.
-    - max_num_segments (int, optional): The maximum number of segments to use for the piecewise linear approximation. Defaults to infinity.
-    - min_abs_error (float, optional): The minimum absolute error allowed between the approximation and the original function. Defaults to 1e-6.
-
-    Returns:
-    - ConcreteModel: The Pyomo model with the added approximation.
+    The result is cached as many variables share the very same function and x range.
     """
-    # Find fitting approximation
     num_segments = 2
-    approximation_points: list[ApproximationPoint] = []
+    approximation_points: list[ApproximationPoint]
     while True:
         ignored_is = []
         x_points = linspace(min_x, max_x, num_segments)
@@ -133,13 +114,58 @@ def add_linear_approximation_to_pyomo_model(
             break
 
         num_segments += 1
+    return tuple(approximation_points), tuple(ignored_is)
+
+
+def add_linear_approximation_to_pyomo_model(
+    model: ConcreteModel,
+    y_function: Callable[[float], float],
+    y_function_derivative: Callable[[float], float],
+    x_reference_var_id: str,
+    new_y_var_name: str,
+    min_x: float,
+    max_x: float,
+    max_rel_difference: float,
+    max_num_segments: int = float("inf"),
+    min_abs_error: float = 1e-6,
+) -> ConcreteModel:
+    """Add a linear approximation of a given function to a Pyomo model.
+
+    This function approximates the provided function `y_function` with a piecewise linear function
+    and adds the approximation to the given Pyomo model. The approximation is based on the derivative
+    of the function `y_function_derivative`. The approximation is added as a new variable and a set
+    of constraints to the model.
+
+    Parameters:
+    - model (ConcreteModel): The Pyomo model to which the approximation will be added.
+    - y_function (Callable[[float], float]): The function to be approximated.
+    - y_function_derivative (Callable[[float], float]): The derivative of the function to be approximated.
+    - x_reference_var_id (str): The name of the variable in the model that will be used as the independent variable for the approximation.
+    - new_y_var_name (str): The name of the new variable that will be added to the model to represent the approximation.
+    - min_x (float): The minimum value of the independent variable for the approximation.
+    - max_x (float): The maximum value of the independent variable for the approximation.
+    - max_rel_difference (float): The maximum allowed relative difference between the approximation and the original function.
+    - max_num_segments (int, optional): The maximum number of segments to use for the piecewise linear approximation. Defaults to infinity.
+    - min_abs_error (float, optional): The minimum absolute error allowed between the approximation and the original function. Defaults to 1e-6.
+
+    Returns:
+    - ConcreteModel: The Pyomo model with the added approximation.
+    """
+    approximation_points, ignored_is = _get_linear_approximation(
+        y_function,
+        y_function_derivative,
+        min_x,
+        max_x,
+        max_rel_difference,
+        max_num_segments,
+        min_abs_error,
+    )
     # Add approximation to model
     min_approx_y = (
-        approximation_points[0].slope * x_points[0] + approximation_points[0].intercept
+        approximation_points[0].slope * min_x + approximation_points[0].intercept
     )
     max_approx_y = (
-        approximation_points[-1].slope * x_points[-1]
-        + approximation_points[-1].intercept
+        approximation_points[-1].slope * max_x + approximation_points[-1].intercept
     )
     setattr(
         model, new_y_var_name, Var(within=Reals, bounds=(min_approx_y, max_approx_y))
@@ -317,4 +343,42 @@ def get_solver(solver: Solver) -> SolverFactory:  # pyright: ignore[reportInvali
         setattr(pyomo_solver, attr_name, attr_value)
     for option_name, option_value in solver.solver_options.items():
         pyomo_solver.options[option_name] = option_value
+    for method_name in ("solve", "set_instance"):
+        if hasattr(pyomo_solver, method_name):
+            method = getattr(pyomo_solver, method_name)
+            setattr(pyomo_solver, method_name, _with_short_names(method))
     return pyomo_solver
+
+
+def _with_short_names(solver_method: Callable) -> Callable:
+    """Wraps a pyomo solver method (that gets a model as first argument) so that the solver never sees component names over 255 characters.
+
+    Solvers such as Gurobi and CPLEX do not accept names with more than 255 characters
+    (which matters if pyomo's 'symbolic_solver_labels' is on). Such names are therefore
+    deterministically replaced by the name's first 200 characters plus its MD5 hash for
+    the duration of the method call. Afterwards, the original names are restored, so
+    that the model's variables are still accessible and reported by their full names.
+    """
+
+    @wraps(solver_method)
+    def method_with_short_names(model: ConcreteModel = None, *args, **kwargs):  # noqa: ANN002, ANN003, ANN202
+        if model is None:
+            return solver_method(*args, **kwargs)
+        long_named_components = [
+            component
+            for component in model.component_objects(descend_into=True)
+            if len(component.name) > 255
+        ]
+        original_names = [component._name for component in long_named_components]  # noqa: SLF001
+        for component in long_named_components:
+            full_name = component.name
+            component._name = f"{full_name[:200]}_{md5(full_name.encode()).hexdigest()}"  # noqa: SLF001
+        try:
+            return solver_method(model, *args, **kwargs)
+        finally:
+            for component, original_name in zip(
+                long_named_components, original_names, strict=True
+            ):
+                component._name = original_name  # noqa: SLF001
+
+    return method_with_short_names
