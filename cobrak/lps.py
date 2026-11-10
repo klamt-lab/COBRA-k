@@ -32,8 +32,8 @@ from pyomo.environ import (
     minimize,
     value,
 )
+from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 
-from ._community import remove_community_suffix
 from .constants import (
     ALL_OK_KEY,
     BIG_M,
@@ -114,30 +114,29 @@ def _add_concentration_vars_and_constraints(
     Returns:
         ConcreteModel: The (N/MI)LP with added concentration variables and constraints.
     """
+    # Collect all metabolites that occur in at least one reaction with ΔG'° or kappa
+    mets_in_reacs_with_concentration_constraints: set[str] = set()
+    for reac_id, reaction in cobrak_model.reactions.items():
+        has_kappa = (reaction.enzyme_reaction_data is not None) and (
+            have_all_unignored_km(
+                reaction,
+                cobrak_model.kinetic_ignored_metabolites,
+                reac_id,
+                cobrak_model.kinetic_ignored_metabolite_exceptions,
+            )
+        )
+        has_gamma = reaction.dG0 is not None
+        if has_kappa or has_gamma:
+            mets_in_reacs_with_concentration_constraints.update(
+                reaction.stoichiometries
+            )
+
     # Add metabolite logarithmized concentration variables
     for met_id, metabolite in cobrak_model.metabolites.items():
         # Any enzymatic pseudo-metabolites are not regarded thermodynamically
         if met_id.startswith((ENZYME_VAR_PREFIX, PROT_POOL_MET_NAME)):
             continue
-
-        # Check if metabolite occurs in at least one reaction with ΔG'°
-        is_met_in_reac_with_concentration_constraints = False
-        for reac_id, reaction in cobrak_model.reactions.items():
-            has_kappa = (reaction.enzyme_reaction_data is not None) and (
-                have_all_unignored_km(
-                    reaction,
-                    cobrak_model.kinetic_ignored_metabolites,
-                    reac_id,
-                    cobrak_model.kinetic_ignored_metabolite_exceptions,
-                )
-            )
-            has_gamma = reaction.dG0 is not None
-            if (not has_kappa) and (not has_gamma):
-                continue
-            if met_id in reaction.stoichiometries:
-                is_met_in_reac_with_concentration_constraints = True
-                break
-        if not is_met_in_reac_with_concentration_constraints:
+        if met_id not in mets_in_reacs_with_concentration_constraints:
             continue
 
         # Finally, add the metabolite with given concentration bounds
@@ -215,14 +214,6 @@ def _add_conc_sum_constraints(
         met_sum_ids.append(var_id)
 
     conc_sum_expr = 0.0
-    metsumconstrained_community_species_ids: list[str] = [
-        species_id
-        for species_id, settings in cobrak_model.community_species_settings.items()
-        if settings.max_conc_sum < float("inf") or settings.include_mets_in_prot_pool
-    ]
-    community_conc_sum_exprs = dict.fromkeys(
-        metsumconstrained_community_species_ids, 0.0
-    )
     for met_sum_id in met_sum_ids:
         add_linear_approximation_to_pyomo_model(
             model=model,
@@ -236,51 +227,20 @@ def _add_conc_sum_constraints(
             min_abs_error=cobrak_model.conc_sum_min_abs_error,
         )
         met_id = met_sum_id[len(LNCONC_VAR_PREFIX) :]
-        if (
-            cobrak_model.include_mets_in_prot_pool
-            and cobrak_model.metabolites[met_id].molar_mass
-        ):
+        molar_mass = cobrak_model.metabolites[met_id].molar_mass
+        if cobrak_model.include_mets_in_prot_pool and molar_mass:
             conc_sum_expr += (
                 (1 / cobrak_model.cell_density)
-                * cobrak_model.metabolites[met_id].molar_mass
+                * molar_mass
                 * getattr(model, f"exp_{met_sum_id}")
             )
         else:
             conc_sum_expr += getattr(model, f"exp_{met_sum_id}")
-        for species_id in community_conc_sum_exprs:
-            if met_id.endswith(species_id):
-                if (
-                    cobrak_model.include_mets_in_prot_pool
-                    and cobrak_model.metabolites[met_id].molar_mass
-                ):
-                    community_conc_sum_exprs[species_id] += (
-                        (1 / cobrak_model.cell_density)
-                        * cobrak_model.metabolites[met_id].molar_mass
-                        * getattr(model, f"exp_{met_sum_id}")
-                    )
-                else:
-                    community_conc_sum_exprs[species_id] += getattr(
-                        model, f"exp_{met_sum_id}"
-                    )
-
     setattr(
         model,
         "met_sum_var",
         Var(within=Reals, bounds=(1e-12, cobrak_model.max_conc_sum)),
     )
-    for species_id in community_conc_sum_exprs:
-        setattr(
-            model,
-            f"met_sum_var_{species_id}",
-            Var(
-                within=Reals,
-                bounds=(
-                    1e-12,
-                    cobrak_model.community_species_settings[species_id].max_conc_sum,
-                ),
-            ),
-        )
-
     if cobrak_model.include_mets_in_prot_pool:
         setattr(
             model,
@@ -296,25 +256,6 @@ def _add_conc_sum_constraints(
             "met_sum_constraint",
             Constraint(rule=conc_sum_expr <= getattr(model, "met_sum_var")),
         )
-    for species_id in community_conc_sum_exprs:
-        if cobrak_model.include_mets_in_prot_pool:
-            setattr(
-                model,
-                f"{GENERALIZED_SUM_CONSTRAINT_NAME}_{species_id}",
-                Constraint(
-                    rule=getattr(model, f"{PROT_POOL_REAC_NAME}_{species_id}")
-                    + getattr(model, f"met_sum_var_{species_id}")
-                    <= cobrak_model.community_species_settings[species_id].max_prot_pool
-                ),
-            )
-        else:
-            setattr(
-                model,
-                f"met_sum_constraint_{species_id}",
-                Constraint(
-                    rule=conc_sum_expr <= getattr(model, f"met_sum_var_{species_id}")
-                ),
-            )
 
     return model
 
@@ -373,10 +314,7 @@ def _add_df_and_dG0_var_for_reaction(
     # <=> RT*ln([S]) + RT*ln([T]) - 2*RT*ln([A]) - RT*ln([B])
     f_expression_lhs = -getattr(model, dG0_var_name)
     if add_error_term:
-        error_var_id = remove_community_suffix(
-            list(cobrak_model.community_species_settings.keys()),
-            f"{ERROR_VAR_PREFIX}_dG0_{reac_id}",
-        )
+        error_var_id = f"{ERROR_VAR_PREFIX}_dG0_{reac_id}"
         if not hasattr(model, error_var_id):
             setattr(
                 model,
@@ -575,9 +513,13 @@ def _add_extra_variables_and_watches_and_constraints_to_lp(
         if missing_var and not extra_linear_constraint.include_with_missing_keys:
             continue
 
-        base_extra_constraint_name = (
-            f"Extra_linear_constraint_{extra_constraint_counter}_"
-        )
+        # Names might already be taken if extra constraints are added to an existing LP
+        constraint_number = extra_constraint_counter
+        while hasattr(
+            model, f"Extra_linear_constraint_{constraint_number}_LB"
+        ) or hasattr(model, f"Extra_linear_constraint_{constraint_number}_UB"):
+            constraint_number += 1
+        base_extra_constraint_name = f"Extra_linear_constraint_{constraint_number}_"
         if extra_linear_constraint.lower_value is not None:
             setattr(
                 model,
@@ -748,26 +690,6 @@ def _add_enzyme_constraints_to_lp(
         PROT_POOL_REAC_NAME,
         Var(within=Reals, bounds=(0.0, cobrak_model.max_prot_pool)),
     )
-    protconstrained_community_species_ids: list[str] = [
-        species_id
-        for species_id, settings in cobrak_model.community_species_settings.items()
-        if settings.max_prot_pool < float("inf")
-    ]
-    for protconstrained_community_species_id in protconstrained_community_species_ids:
-        setattr(
-            model,
-            f"{PROT_POOL_REAC_NAME}_{protconstrained_community_species_id}",
-            Var(
-                within=Reals,
-                bounds=(
-                    0.0,
-                    cobrak_model.community_species_settings[
-                        protconstrained_community_species_id
-                    ].max_prot_pool,
-                ),
-            ),
-        )
-
     # Collect all kcats and get error-eligible reactions
     if add_error_term:
         all_max_kcat_times_e_values = get_model_max_kcat_times_e_values(cobrak_model)
@@ -777,8 +699,6 @@ def _add_enzyme_constraints_to_lp(
 
     # Expression for the sum which describes thee used protein pool (in [g/gDW])
     prot_pool_sum = 0.0
-    # Expression for the protein pool sum in the single community species
-    species_prot_pool_sums = dict.fromkeys(protconstrained_community_species_ids, 0.0)
     # Go through each reaction, checking for the inclusion of enzyme constraints
     for reac_id, reaction in cobrak_model.reactions.items():
         # Ignore reactions where the user specifically said that no enzyme constraints
@@ -847,9 +767,8 @@ def _add_enzyme_constraints_to_lp(
                     / get_full_enzyme_mw(cobrak_model, reaction)
                 )
                 if max_k_cat_times_e <= max_kcat_times_e_lowbound:
-                    kcat_times_e_error_var_id = remove_community_suffix(
-                        list(cobrak_model.community_species_settings.keys()),
-                        f"{ERROR_VAR_PREFIX}_kcat_times_e_{reac_id}",
+                    kcat_times_e_error_var_id = (
+                        f"{ERROR_VAR_PREFIX}_kcat_times_e_{reac_id}"
                     )
                     if not hasattr(model, kcat_times_e_error_var_id):
                         setattr(
@@ -890,11 +809,6 @@ def _add_enzyme_constraints_to_lp(
 
         # Add current enzyme usage to total enzyme pool
         prot_pool_sum += full_enzyme_mw * getattr(model, full_enzyme_id)
-        for species_id in species_prot_pool_sums:
-            if full_enzyme_id.endswith(species_id):
-                species_prot_pool_sums[species_id] += full_enzyme_mw * getattr(
-                    model, full_enzyme_id
-                )
 
     # Finally, set the protein pool
     setattr(
@@ -902,15 +816,6 @@ def _add_enzyme_constraints_to_lp(
         f"{PROT_POOL_REAC_NAME}_constraint",
         Constraint(expr=getattr(model, PROT_POOL_REAC_NAME) >= prot_pool_sum),
     )
-    for species_id, species_prot_pool_sum in species_prot_pool_sums.items():
-        setattr(
-            model,
-            f"{PROT_POOL_REAC_NAME}_{species_id}_constraint",
-            Constraint(
-                expr=getattr(model, f"{PROT_POOL_REAC_NAME}_{species_id}")
-                >= species_prot_pool_sum
-            ),
-        )
 
     return model
 
@@ -997,9 +902,8 @@ def _add_kappa_substrates_and_products_vars(
             kappa_products_sum -= stoichiometry * log(k_m)
 
             if add_error_term and k_m <= kms_lowbound:
-                km_product_error_var_id = remove_community_suffix(
-                    list(cobrak_model.community_species_settings.keys()),
-                    f"{ERROR_VAR_PREFIX}_{reac_id}____{reac_met_id}_product",
+                km_product_error_var_id = (
+                    f"{ERROR_VAR_PREFIX}_{reac_id}____{reac_met_id}_product"
                 )
                 max_product_change = abs(
                     log(k_m) - log((1 + max_rel_km_correction) * k_m)
@@ -1027,9 +931,8 @@ def _add_kappa_substrates_and_products_vars(
             kappa_substrates_sum -= abs(stoichiometry) * log(k_m)
 
             if add_error_term and k_m >= kms_highbound:
-                km_substrate_error_var_id = remove_community_suffix(
-                    list(cobrak_model.community_species_settings.keys()),
-                    f"{ERROR_VAR_PREFIX}_{reac_id}____{reac_met_id}_substrate",
+                km_substrate_error_var_id = (
+                    f"{ERROR_VAR_PREFIX}_{reac_id}____{reac_met_id}_substrate"
                 )
                 max_substrate_change = abs(
                     log(k_m) - log((1 - max_rel_km_correction) * k_m)
@@ -1121,8 +1024,6 @@ def _add_thermodynamic_constraints_to_lp(
     Returns:
         ConcreteModel: The modified Pyomo model with added thermodynamic constraints.
     """
-    cobrak_model = deepcopy(cobrak_model)
-
     model = _add_concentration_vars_and_constraints(model, cobrak_model)
 
     # Set OptMDFpathway constraints and kappa vars
@@ -1355,58 +1256,124 @@ def _apply_scenario(
         var.setub(ub)
 
 
-@validate_call(config=ConfigDict(arbitrary_types_allowed=True), validate_return=True)
-def _batch_variability_optimization(
+def _get_variability_solver(solver: Solver, model: ConcreteModel) -> Any:  # noqa: ANN401
+    """Returns a pyomo solver for the given model, which is persistent (i.e. keeps the model in memory) if available.
+
+    Persistent solvers only transmit the changed objective between variability optimizations
+    instead of rewriting the whole model each time. For solvers without a persistent
+    counterpart (e.g. SCIP) or with symbolic solver labels (which persistent solvers
+    do not accept as solve option), the standard solver is returned.
+    """
+    pyomo_solver = get_solver(solver)
+    if solver.name.endswith("_direct") and (
+        "symbolic_solver_labels" not in solver.solve_extra_options
+    ):
+        persistent_solver_def = deepcopy(solver)
+        persistent_solver_def.name = solver.name.replace("_direct", "_persistent")
+        persistent_solver = get_solver(persistent_solver_def)
+        if persistent_solver.available(exception_flag=False):
+            pyomo_solver = persistent_solver
+    if isinstance(pyomo_solver, PersistentSolver):
+        pyomo_solver.set_instance(model)
+    return pyomo_solver
+
+
+def _optimize_variability_target(
     pyomo_solver: Any,  # noqa: ANN401
     model: ConcreteModel,
-    batch: list[tuple[str, str]],
-    solve_extra_options: dict[str, Any] = {},
+    target_id: str,
+    is_minimization: bool,
+    solve_extra_options: dict[str, Any],
+) -> float | None:
+    """Optimizes the given variable with the model's VARIABILITY_OBJECTIVE and returns its optimum (None if the solver reached its time limit)."""
+    objective = model.VARIABILITY_OBJECTIVE
+    objective.set_value(getattr(model, target_id))
+    objective.sense = minimize if is_minimization else maximize
+
+    solve_args = {"tee": False, **solve_extra_options}
+    if pyomo_solver.warm_start_capable():
+        solve_args["warmstart"] = True
+    if isinstance(pyomo_solver, PersistentSolver):
+        pyomo_solver.set_objective(objective)
+        results = pyomo_solver.solve(**solve_args)
+    else:
+        results = pyomo_solver.solve(model, **solve_args)
+
+    if results.solver.termination_condition == TerminationCondition.maxTimeLimit:
+        return None
+    return value(getattr(model, target_id))
+
+
+def _pop_variability_targets_at_bounds(
+    model: ConcreteModel, targets: list[tuple[bool, str]]
+) -> dict[tuple[bool, str], float]:
+    """Removes all targets from the given list whose variable sits at its bound in the model's current solution.
+
+    A variable that already is at its lower (minimization) or upper (maximization) bound in a
+    feasible solution cannot be optimized any further, so no solver call is needed for it.
+
+    Returns the removed targets together with their (bound) results.
+    """
+    at_bound: dict[tuple[bool, str], float] = {}
+    for is_minimization, target_id in targets:
+        var: Var = getattr(model, target_id)
+        bound = var.lb if is_minimization else var.ub
+        if (
+            bound is not None
+            and var.value is not None
+            and abs(var.value - bound) <= 1e-9 * max(1.0, abs(bound))
+        ):
+            at_bound[(is_minimization, target_id)] = bound
+    for target in at_bound:
+        targets.remove(target)
+    return at_bound
+
+
+@validate_call(config=ConfigDict(arbitrary_types_allowed=True), validate_return=True)
+def _batch_variability_optimization(
+    solver: Solver,
+    model: ConcreteModel,
+    batch: list[tuple[bool, str]],
     verbose: bool = False,
 ) -> list[tuple[bool, str, float | None]]:
     """Perform batch flux variability optimization on a given model. Used in (parallelized) Flux Variability analysis function.
 
-    This function iterates over a batch of objective-target pairs, activates the corresponding objective in the model for each batch member,
-    performs the optimization for each member, and collects the results.
-
-    When possible, warmstart is used.
+    This function iterates over a batch of (is minimization, target variable ID) pairs and optimizes each of them
+    with the model's single VARIABILITY_OBJECTIVE. The solver is persistent if possible (see _get_variability_solver),
+    and warmstart is used when supported. After each optimization, all remaining targets of the batch that are
+    already at their variable bounds in the found solution are resolved without further optimization.
 
     Parameters:
-    - pyomo_solver: The pyomo solver instance used to solve the model.
-    - model (Model): The pyomo model on which the optimization will be performed.
-    - batch (list[tuple[str, str]]): A list of tuples where each tuple contains an objective name and a target variable ID.
+    - solver (Solver): The COBRA-k solver to be used.
+    - model (ConcreteModel): The pyomo model (with a VARIABILITY_OBJECTIVE) on which the optimization will be performed.
+    - batch (list[tuple[bool, str]]): A list of tuples where each tuple contains a boolean (True: minimize,
+      False: maximize) and a target variable ID.
     - verbose (bool): If True, computational time and objective results are printed.
 
     Returns:
     - list[tuple[bool, str, float | None]]: A list of tuples containing:
-        - A boolean indicating if the objective name starts with "MIN_OBJ_".
+        - A boolean indicating if the target was minimized.
         - The target variable ID.
         - The optimization result (or None if the solver reached the maximum time limit).
-
-    Example:
-    ```
-    results = _batch_variability_optimization(solver, model, [('OBJ_1', 'var1'), ('OBJ_2', 'var2')])
-    ```
     """
+    pyomo_solver = _get_variability_solver(solver, model)
+    open_targets = list(batch)
     resultslist: list[tuple[bool, str, float | None]] = []
-    for objective_name, target_id in batch:
+    while open_targets:
+        is_minimization, target_id = open_targets.pop(0)
         if verbose:
             t0 = time()
-        getattr(model, objective_name).activate()
-        try:
-            results = pyomo_solver.solve(
-                model, tee=False, warmstart=True, **solve_extra_options
-            )
-        except Exception:
-            results = pyomo_solver.solve(model, tee=False, **solve_extra_options)
-        if results.solver.termination_condition == TerminationCondition.maxTimeLimit:
-            result = None
-        else:
-            result = value(getattr(model, target_id))
-        getattr(model, objective_name).deactivate()
-        resultslist.append((objective_name.startswith("MIN_OBJ_"), target_id, result))
+        result = _optimize_variability_target(
+            pyomo_solver, model, target_id, is_minimization, solver.solve_extra_options
+        )
+        resultslist.append((is_minimization, target_id, result))
         if verbose:
-            t1 = time()
-            print(f"{target_id}: {result} ({round(t1 - t0, 4)} s)")
+            print(f"{target_id}: {result} ({round(time() - t0, 4)} s)")
+        if result is not None:
+            for (is_min, at_bound_id), bound in _pop_variability_targets_at_bounds(
+                model, open_targets
+            ).items():
+                resultslist.append((is_min, at_bound_id, bound))
     return resultslist
 
 
@@ -1867,6 +1834,91 @@ def perform_lp_min_active_reactions_analysis(
     return minz_dict["extrazsum"]
 
 
+def _get_lp_for_optimization(
+    cobrak_model: Model,
+    with_enzyme_constraints: bool,
+    with_thermodynamic_constraints: bool,
+    with_loop_constraints: bool,
+    variability_dict: dict[str, tuple[float, float]],
+    ignored_reacs: list[str] = [],
+    min_mdf: float = STANDARD_MIN_MDF,
+    with_flux_sum_var: bool = False,
+    ignore_nonlinear_terms: bool = False,
+    correction_config: CorrectionConfig = CorrectionConfig(),
+    var_data_abs_epsilon: float = 1e-5,
+) -> ConcreteModel:
+    """Builds the LP (without objective) of perform_lp_optimization, see there for the arguments."""
+    optimization_cobrak_model = cobrak_model
+    if variability_dict != {}:
+        optimization_cobrak_model = delete_unused_reactions_in_variability_dict(
+            cobrak_model,
+            variability_dict,
+        )
+    optimization_model = get_lp_from_cobrak_model(
+        cobrak_model=optimization_cobrak_model,
+        with_enzyme_constraints=with_enzyme_constraints,
+        with_thermodynamic_constraints=with_thermodynamic_constraints,
+        with_loop_constraints=with_loop_constraints,
+        with_flux_sum_var=with_flux_sum_var,
+        min_mdf=min_mdf,
+        ignore_nonlinear_terms=ignore_nonlinear_terms,
+        correction_config=correction_config,
+    )
+
+    for deactivated_reaction in set(ignored_reacs):
+        try:
+            setattr(
+                optimization_model,
+                f"DEACTIVATE_{deactivated_reaction}",
+                Constraint(
+                    expr=getattr(optimization_model, deactivated_reaction) == 0.0
+                ),
+            )
+        except AttributeError:
+            continue
+
+    return apply_variability_dict(
+        optimization_model,
+        cobrak_model,
+        variability_dict,
+        correction_config.error_scenario,
+        abs_epsilon=var_data_abs_epsilon,
+    )
+
+
+def _optimize_lp(
+    optimization_model: ConcreteModel,
+    objective_target: str | dict[str, float],
+    objective_sense: int,
+    solver: Solver,
+    verbose: bool = False,
+) -> dict[str, float]:
+    """Sets the objective of a LP built by _get_lp_for_optimization, solves it and returns the result.
+
+    An LP can be optimized several times with different objectives, i.e. the objective
+    that was set by a previous call is replaced.
+    """
+    if hasattr(optimization_model, "obj"):
+        for component_name in (
+            "obj",
+            OBJECTIVE_VAR_NAME,
+            f"constraint_of_{OBJECTIVE_VAR_NAME}",
+        ):
+            optimization_model.del_component(component_name)
+    optimization_model.obj = get_objective(
+        optimization_model, objective_target, objective_sense
+    )
+
+    pyomo_solver = get_solver(solver)
+    results = pyomo_solver.solve(
+        optimization_model, tee=verbose, **solver.solve_extra_options
+    )
+
+    fba_dict = get_pyomo_solution_as_dict(optimization_model)
+
+    return add_statuses_to_optimziation_dict(fba_dict, results)
+
+
 @validate_call
 def perform_lp_optimization(
     cobrak_model: Model,
@@ -1916,54 +1968,22 @@ def perform_lp_optimization(
     Returns:
         dict[str, float]: A dictionary containing the flux distribution results for each reaction in the model.
     """
-    optimization_cobrak_model = deepcopy(cobrak_model)
-    if variability_dict != {}:
-        optimization_cobrak_model = delete_unused_reactions_in_variability_dict(
-            cobrak_model,
-            variability_dict,
-        )
-    optimization_model = get_lp_from_cobrak_model(
-        cobrak_model=optimization_cobrak_model,
+    optimization_model = _get_lp_for_optimization(
+        cobrak_model=cobrak_model,
         with_enzyme_constraints=with_enzyme_constraints,
         with_thermodynamic_constraints=with_thermodynamic_constraints,
         with_loop_constraints=with_loop_constraints,
-        with_flux_sum_var=with_flux_sum_var,
+        variability_dict=variability_dict,
+        ignored_reacs=ignored_reacs,
         min_mdf=min_mdf,
+        with_flux_sum_var=with_flux_sum_var,
         ignore_nonlinear_terms=ignore_nonlinear_terms,
         correction_config=correction_config,
+        var_data_abs_epsilon=var_data_abs_epsilon,
     )
-
-    for deactivated_reaction in set(ignored_reacs):
-        try:
-            setattr(
-                optimization_model,
-                f"DEACTIVATE_{deactivated_reaction}",
-                Constraint(
-                    expr=getattr(optimization_model, deactivated_reaction) == 0.0
-                ),
-            )
-        except AttributeError:
-            continue
-
-    optimization_model = apply_variability_dict(
-        optimization_model,
-        cobrak_model,
-        variability_dict,
-        correction_config.error_scenario,
-        abs_epsilon=var_data_abs_epsilon,
+    return _optimize_lp(
+        optimization_model, objective_target, objective_sense, solver, verbose
     )
-    optimization_model.obj = get_objective(
-        optimization_model, objective_target, objective_sense
-    )
-
-    pyomo_solver = get_solver(solver)
-    results = pyomo_solver.solve(
-        optimization_model, tee=verbose, **solver.solve_extra_options
-    )
-
-    fba_dict = get_pyomo_solution_as_dict(optimization_model)
-
-    return add_statuses_to_optimziation_dict(fba_dict, results)
 
 
 @validate_call(validate_return=True)
@@ -2287,162 +2307,74 @@ def perform_lp_variability_analysis(
         with_enzyme_constraints=with_enzyme_constraints,
         with_thermodynamic_constraints=with_thermodynamic_constraints,
         with_loop_constraints=True,
+        with_flux_sum_var=True,
         min_mdf=min_mdf,
         strict_kappa_products_equality=True,
-        ignore_nonlinear_terms=False,
-    )
-    model_var_names = get_model_var_names(model)
-
-    min_values: dict[str, float] = {}
-    max_values: dict[str, float] = {}
-    objective_targets: list[tuple[int, str]] = []
-
-    max_flux_sum_result = perform_lp_optimization(
-        cobrak_model,
-        objective_target=FLUX_SUM_VAR_ID,
-        objective_sense=+1,
-        with_enzyme_constraints=with_enzyme_constraints,
-        with_thermodynamic_constraints=with_thermodynamic_constraints,
-        with_loop_constraints=True,
-        with_flux_sum_var=True,
-        solver=solver,
-        ignore_nonlinear_terms=False,
-    )
-    min_flux_sum_result = perform_lp_optimization(
-        cobrak_model,
-        objective_target=FLUX_SUM_VAR_ID,
-        objective_sense=-1,
-        with_enzyme_constraints=with_enzyme_constraints,
-        with_thermodynamic_constraints=with_thermodynamic_constraints,
-        with_loop_constraints=True,
-        with_flux_sum_var=True,
-        solver=solver,
         ignore_nonlinear_terms=ignore_nonlinear_terms,
     )
+    model.VARIABILITY_OBJECTIVE = Objective(expr=0.0, sense=minimize)
+    model_var_names = get_model_var_names(model)
 
-    if (calculate_concs or calculate_rest) and with_thermodynamic_constraints:
-        min_mdf_result = perform_lp_optimization(
-            cobrak_model,
-            objective_target=MDF_VAR_ID,
-            objective_sense=-1,
-            with_enzyme_constraints=with_enzyme_constraints,
-            with_thermodynamic_constraints=with_thermodynamic_constraints,
-            with_loop_constraints=True,
-            solver=solver,
-            ignore_nonlinear_terms=ignore_nonlinear_terms,
-        )
-        max_mdf_result = perform_lp_optimization(
-            cobrak_model,
-            objective_target=MDF_VAR_ID,
-            objective_sense=+1,
-            with_enzyme_constraints=with_enzyme_constraints,
-            with_thermodynamic_constraints=with_thermodynamic_constraints,
-            with_loop_constraints=True,
-            solver=solver,
-            ignore_nonlinear_terms=ignore_nonlinear_terms,
-        )
-
+    # Collect all variables to be minimized (True) and maximized (False)
+    target_ids: list[str] = []
     if calculate_concs:
-        for met_id, metabolite in cobrak_model.metabolites.items():
-            met_var_name = f"{LNCONC_VAR_PREFIX}{met_id}"
-            if met_var_name in model_var_names:
-                min_mdf_conc = min_mdf_result[met_var_name]
-                max_mdf_conc = min_mdf_result[met_var_name]
-                if metabolite.log_min_conc in (min_mdf_conc, max_mdf_conc):
-                    min_values[met_var_name] = metabolite.log_min_conc
-                else:
-                    objective_targets.append((-1, met_var_name))
-                if metabolite.log_max_conc in (min_mdf_conc, max_mdf_conc):
-                    max_values[met_var_name] = metabolite.log_max_conc
-                else:
-                    objective_targets.append((+1, met_var_name))
-
+        target_ids.extend(
+            f"{LNCONC_VAR_PREFIX}{met_id}" for met_id in cobrak_model.metabolites
+        )
     for reac_id, reaction in cobrak_model.reactions.items():
-        min_flux_sum_flux = min_flux_sum_result[reac_id]
-        max_flux_sum_flux = max_flux_sum_result[reac_id]
-
         if calculate_reacs:
-            if reaction.min_flux in (min_flux_sum_flux, max_flux_sum_flux):
-                min_values[reac_id] = (
-                    reaction.min_flux if reaction.min_flux >= min_flux_cutoff else 0.0
-                )
-            else:
-                objective_targets.append((-1, reac_id))
-            if reaction.max_flux in (min_flux_sum_flux, max_flux_sum_flux):
-                max_values[reac_id] = reaction.max_flux
-            else:
-                objective_targets.append((+1, reac_id))
-
+            target_ids.append(reac_id)
         if not calculate_rest:
             continue
-
-        f_var_name = f"{DF_VAR_PREFIX}{reac_id}"
-        kappa_substrates_var_name = f"{KAPPA_SUBSTRATES_VAR_PREFIX}{reac_id}"
-        kappa_products_var_name = f"{KAPPA_PRODUCTS_VAR_PREFIX}{reac_id}"
-        if f_var_name in model_var_names:
-            if min_mdf in (min_mdf_result[f_var_name], max_mdf_result[f_var_name]):
-                min_values[f_var_name] = min_mdf
-            else:
-                objective_targets.append((-1, f_var_name))
-            objective_targets.append((+1, f_var_name))
-        if kappa_substrates_var_name in model_var_names:
-            objective_targets.extend(
-                ((-1, kappa_substrates_var_name), (+1, kappa_substrates_var_name))
+        target_ids.extend(
+            (
+                f"{DF_VAR_PREFIX}{reac_id}",
+                f"{KAPPA_SUBSTRATES_VAR_PREFIX}{reac_id}",
+                f"{KAPPA_PRODUCTS_VAR_PREFIX}{reac_id}",
             )
-        if kappa_products_var_name in model_var_names:
-            objective_targets.extend(
-                ((-1, kappa_products_var_name), (+1, kappa_products_var_name))
-            )
+        )
         if (
             reaction.enzyme_reaction_data is not None
             and with_enzyme_constraints
             and reaction.enzyme_reaction_data.k_cat < 1e20
+            and get_full_enzyme_id(reaction.enzyme_reaction_data.identifiers)
         ):
-            full_enzyme_id = get_full_enzyme_id(
-                reaction.enzyme_reaction_data.identifiers
-            )
-            if full_enzyme_id:
-                enzyme_delivery_var_name = get_reaction_enzyme_var_id(reac_id, reaction)
-                if 0.0 in (min_flux_sum_flux, max_flux_sum_flux):
-                    min_values[enzyme_delivery_var_name] = 0.0
-                else:
-                    objective_targets.append((-1, enzyme_delivery_var_name))
-                objective_targets.append((+1, enzyme_delivery_var_name))
+            target_ids.append(get_reaction_enzyme_var_id(reac_id, reaction))
+    target_ids.extend(further_tested_vars)
+    targets: list[tuple[bool, str]] = []
+    for target_id in dict.fromkeys(target_ids):  # Unique, but ordered
+        if target_id in model_var_names:
+            targets.extend(((True, target_id), (False, target_id)))
 
-    for further_tested_var in further_tested_vars:
-        objective_targets.extend(((+1, further_tested_var), (-1, further_tested_var)))
+    min_values: dict[str, float] = {}
+    max_values: dict[str, float] = {}
 
-    objectives_data: list[tuple[str, str]] = []
-    for obj_sense, target_id in objective_targets:
-        if obj_sense == -1:
-            objective_name = f"MIN_OBJ_{target_id}"
-            pyomo_sense = minimize
-        else:
-            objective_name = f"MAX_OBJ_{target_id}"
-            pyomo_sense = maximize
-        setattr(
-            model,
-            objective_name,
-            Objective(expr=getattr(model, target_id), sense=pyomo_sense),
+    # Preliminary optimizations on the same model: Every target that already
+    # sits at its variable bound in one of their solutions needs no own optimization.
+    pyomo_solver = _get_variability_solver(solver, model)
+    preliminary_targets = [(True, FLUX_SUM_VAR_ID), (False, FLUX_SUM_VAR_ID)]
+    if (calculate_concs or calculate_rest) and with_thermodynamic_constraints:
+        preliminary_targets.extend(((True, MDF_VAR_ID), (False, MDF_VAR_ID)))
+    for is_minimization, target_id in preliminary_targets:
+        result = _optimize_variability_target(
+            pyomo_solver, model, target_id, is_minimization, solver.solve_extra_options
         )
-        getattr(model, objective_name).deactivate()
-        objectives_data.append((objective_name, target_id))
+        if result is None:
+            continue
+        for (is_min, at_bound_id), bound in _pop_variability_targets_at_bounds(
+            model, targets
+        ).items():
+            (min_values if is_min else max_values)[at_bound_id] = bound
 
-    objectives_data_batches = split_list(objectives_data, cpu_count())
-    pyomo_solver = get_solver(solver)
-
+    # Optimize the remaining targets in parallel
+    targets_batches = split_list(targets, cpu_count())
     results_list = Parallel(
         n_jobs=num_used_cpu_cores, verbose=parallel_verbosity_level
     )(
-        delayed(_batch_variability_optimization)(
-            pyomo_solver, model, batch, solver.solve_extra_options, verbose
-        )
-        for batch in objectives_data_batches
+        delayed(_batch_variability_optimization)(solver, model, batch, verbose)
+        for batch in targets_batches
     )
-    for result in chain(*results_list):
-        is_minimization = result[0]
-        target_id = result[1]
-        result_value = result[2]
+    for is_minimization, target_id, result_value in chain(*results_list):
         if is_minimization:
             min_values[target_id] = result_value
         else:
@@ -2468,16 +2400,9 @@ def perform_lp_variability_analysis(
         if key.startswith(DF_VAR_PREFIX):
             max_values[key] = max_value if abs(max_value) >= abs_df_cutoff else 0.0
 
-    all_target_ids = sorted(
-        set(
-            list(min_values.keys())
-            + list(max_values.keys())
-            + [obj_target[1] for obj_target in objective_targets]
-        )
-    )
     variability_dict: dict[str, tuple[float, float]] = {
         target_id: (min_values[target_id], max_values[target_id])
-        for target_id in all_target_ids
+        for target_id in sorted(min_values.keys() | max_values.keys())
     }
 
     return variability_dict

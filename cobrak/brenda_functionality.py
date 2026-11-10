@@ -81,7 +81,7 @@ def _brenda_get_all_enzyme_kinetic_data_for_model(
         if "ec-code" not in reaction.annotation:
             continue
 
-        ec_numbers_of_reaction = reaction.annotation["ec-code"]
+        ec_numbers_of_reaction = copy.deepcopy(reaction.annotation["ec-code"])
         if isinstance(ec_numbers_of_reaction, str):
             if ec_numbers_of_reaction.startswith(
                 "["
@@ -179,7 +179,7 @@ def _brenda_parse_full_json(
     <pre>
         {
             "$EC_NUMBER": {
-                "$SUBSTRATE_WITH_BIGG_ID_1": {
+                "$SUBSTRATE_BIGG_ID": {
                     "$ORGANISM_1": [
                         $kcat_1,
                         (...)
@@ -187,18 +187,10 @@ def _brenda_parse_full_json(
                     ]
                 },
                 (...),
-                "REST": {
-                    "$ORGANISM_1": [
-                        $kcat_1,
-                        (...)
-                        $kcat_n,
-                    ]
-                }
             }
             (...),
         }
     </pre>
-    'REST' stands for a substrate without found BIGG ID.
     """
     # Load BIGG ID <-> metabolite name mapping :D
     name_to_bigg_id_dict: dict[str, str] = json_load(
@@ -296,7 +288,9 @@ def _brenda_parse_full_json(
 
                 substrate_raw = (
                     kinetics_entry["value"]
-                    .split(" ")[1]
+                    # .split(" ")[1]
+                    .split("{")[1]
+                    .split("}")[0]
                     .replace("{", "")
                     .replace("}", "")
                     .lower()
@@ -358,7 +352,7 @@ def _brenda_parse_full_json(
                         ("deamido-nad+", "nad"),
                         ("itaconate", "itacon"),
                         ("butyrate", "but"),
-                        ("propionate", "but"),
+                        ("propionate", "ppa"),
                         ("n na+/in", "na1"),
                         ("butanal", "btal"),
                         ("butanol", "btoh"),
@@ -369,7 +363,6 @@ def _brenda_parse_full_json(
                         ("l-arabinitol", "abt"),
                         ("d-galactosamine", "galam"),
                         ("lactose", "lcts"),
-                        ("xylitol", "xylt"),
                         ("l-sorbose", "srb__L"),
                         ("3',5'-cgmp", "35cgmp"),
                     ]
@@ -379,10 +372,7 @@ def _brenda_parse_full_json(
                             found = True
 
                     if not found:
-                        if target_entry == "kcat_km":
-                            substrate = "REST"
-                        else:
-                            continue
+                        continue
                 if substrate not in result_json[ec_number]:
                     result_json[ec_number][substrate] = {}
 
@@ -623,7 +613,10 @@ def brenda_select_enzyme_kinetic_data_for_sbml(
 
         reaction_ec_codes = reaction.annotation["ec-code"]
         if isinstance(reaction_ec_codes, str):
-            reaction_ec_codes = [reaction_ec_codes]
+            if reaction_ec_codes.startswith("[") and reaction_ec_codes.endswith("]"):
+                reaction_ec_codes = literal_eval(reaction_ec_codes)
+            else:
+                reaction_ec_codes = [reaction_ec_codes]
         eligible_reaction_ec_codes = [
             ec_code
             for ec_code in reaction_ec_codes
@@ -670,7 +663,11 @@ def brenda_select_enzyme_kinetic_data_for_sbml(
         reaction_compartments = [met.compartment for met in reaction.metabolites]
         for metabolite in cobra_model.metabolites:
             idx_last_underscore = metabolite.id.rfind("_")
-            met_id = metabolite.id[:idx_last_underscore]
+            met_id = (
+                metabolite.id[:idx_last_underscore]
+                if idx_last_underscore > 0
+                else metabolite.id
+            )
             if (metabolite.id in kinetic_ignored_metabolites) and (
                 (reaction.id, metabolite.id)
                 not in kinetic_ignored_metabolite_exceptions
@@ -688,7 +685,7 @@ def brenda_select_enzyme_kinetic_data_for_sbml(
             highest_taxonomy_level = max(taxonomy_similarities.values())
             for taxonomy_level in range(highest_taxonomy_level + 1):
                 if taxonomy_level > max_taxonomy_level:
-                    continue
+                    break
 
                 level_organisms = [
                     organism
@@ -716,6 +713,7 @@ def brenda_select_enzyme_kinetic_data_for_sbml(
                                 best_kcat_taxonomy_level > taxonomy_level
                             ):  # "Erase" if we find a better level
                                 taxonomically_best_kcats = []
+                                k_cat_references = []
                             best_kcat_taxonomy_level = min(
                                 taxonomy_level, best_kcat_taxonomy_level
                             )
@@ -753,6 +751,7 @@ def brenda_select_enzyme_kinetic_data_for_sbml(
                                 best_km_taxonomy_levels[metabolite.id] > taxonomy_level
                             ):  # "Erase" if we find a better level
                                 taxonomically_best_kms[metabolite.id] = []
+                                k_m_references[metabolite.id] = []
                             best_km_taxonomy_levels[metabolite.id] = min(
                                 taxonomy_level, best_km_taxonomy_levels[metabolite.id]
                             )
@@ -790,6 +789,7 @@ def brenda_select_enzyme_kinetic_data_for_sbml(
                                 best_ki_taxonomy_levels[metabolite.id] > taxonomy_level
                             ):  # "Erase" if we find a better level
                                 taxonomically_best_kis[metabolite.id] = []
+                                k_i_references[metabolite.id] = []
                             best_ki_taxonomy_levels[metabolite.id] = min(
                                 taxonomy_level, best_ki_taxonomy_levels[metabolite.id]
                             )
@@ -833,11 +833,9 @@ def brenda_select_enzyme_kinetic_data_for_sbml(
 
         reaction_kis = {}
         for met_id, values in taxonomically_best_kis.items():
-            if met_id not in taxonomically_best_kis:
-                continue
             if len(taxonomically_best_kis[met_id]) == 0:
                 continue
-            reaction_kis[met_id] = median(taxonomically_best_kis[met_id])
+            reaction_kis[met_id] = median(values)
 
         enzyme_identifiers = reaction.gene_reaction_rule.split(" and ")
         has_found_ignored_enzyme = False
@@ -847,11 +845,8 @@ def brenda_select_enzyme_kinetic_data_for_sbml(
                 break
 
         if (
-            taxonomically_best_kcats
-            or reaction_kms
-            or reaction_kis
-            and not has_found_ignored_enzyme
-        ):
+            taxonomically_best_kcats or reaction_kms or reaction_kis
+        ) and not has_found_ignored_enzyme:
             if len(taxonomically_best_kcats) > 0:
                 reaction_kcat = median(taxonomically_best_kcats)  # or max(), min(), ...
             else:

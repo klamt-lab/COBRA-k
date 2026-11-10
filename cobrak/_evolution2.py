@@ -1,8 +1,10 @@
 """Experimental! Not for usage currently"""
 
+import pickle
 import random
+import tempfile
 from ast import literal_eval
-from copy import deepcopy
+from copy import copy, deepcopy
 from math import ceil, floor
 from random import choice, choices, randint, sample, uniform
 
@@ -10,12 +12,18 @@ from joblib import Parallel, delayed, parallel_config
 from pydantic import NonNegativeFloat, PositiveFloat, PositiveInt
 from pydantic.dataclasses import Field, dataclass
 from pyomo.common.errors import ApplicationError
+from pyomo.environ import ConcreteModel
 
 from cobrak.constants import ALL_OK_KEY, BIG_M, OBJECTIVE_VAR_NAME, Z_VAR_PREFIX
 from cobrak.dataclasses import CorrectionConfig, ExtraLinearConstraint, Model, Solver
 from cobrak.evolution import is_objsense_maximization
 from cobrak.io import json_write
-from cobrak.lps import perform_lp_optimization
+from cobrak.lps import (
+    _add_extra_variables_and_watches_and_constraints_to_lp,
+    _get_lp_for_optimization,
+    _optimize_lp,
+    perform_lp_optimization,
+)
 from cobrak.nlps import (
     perform_nlp_irreversible_optimization,
     perform_nlp_irreversible_optimization_with_active_reacs_only,
@@ -24,6 +32,9 @@ from cobrak.utilities import (
     delete_orphaned_metabolites_and_enzymes,
     get_stoichiometrically_coupled_reactions,
 )
+
+_worker_data_cache: dict[str, tuple] = {}
+"""Parallel workers' data of the currently running evolution (path of the data file -> data), see _load_worker_data"""
 
 
 # DATACLASSES #
@@ -187,6 +198,21 @@ def _external_to_internal_evolution_result(
 
 # PUBLIC FUNCTIONS #
 # @validate_call(validate_return=True)
+def _get_model_with_copied_containers(cobrak_model: Model) -> Model:
+    """Returns a copy of the model in which all its lists and dicts are copied, but not their content.
+
+    Entries can thereby be added to or deleted from the copy's lists and dicts without changing
+    the original model, which is much faster than a deepcopy. The entries themselves (e.g.
+    the reactions) are shared with the original model, i.e. they must never be modified. This
+    is only used for functions in this file, which only read the model's entries.
+    """
+    model_copy = copy(cobrak_model)
+    for field_name, value in vars(cobrak_model).items():
+        if isinstance(value, list | dict):
+            setattr(model_copy, field_name, copy(value))
+    return model_copy
+
+
 def delete_unused_reactions_in_optimization_dict_2(
     cobrak_model: Model,
     optimization_dict: dict[str, float],
@@ -198,7 +224,7 @@ def delete_unused_reactions_in_optimization_dict_2(
 ) -> Model:
     """Delete unused reactions in a COBRAk model based on an optimization dictionary.
 
-    This function creates a deep copy of the provided COBRAk model and removes reactions that are either not present
+    This function creates a copy of the provided COBRAk model (see _get_model_with_copied_containers) and removes reactions that are either not present
     in the optimization dictionary or have flux values below a specified threshold. Optionally,
     reactions with a specific prefix can be excluded from deletion.
     Additionally, orphaned metabolites (those not used in any remaining reactions) are also removed.
@@ -213,7 +239,7 @@ def delete_unused_reactions_in_optimization_dict_2(
     Returns:
         Model: A new COBRAk model with unused reactions and orphaned metabolites removed.
     """
-    cobrak_model = deepcopy(cobrak_model)
+    cobrak_model = _get_model_with_copied_containers(cobrak_model)
     reacs_to_delete: list[str] = []
     for reac_id in cobrak_model.reactions:
         to_delete = False
@@ -248,6 +274,20 @@ def delete_unused_reactions_in_optimization_dict_2(
 
 
 ######## PRIVATE FUNCTIONS ########
+def _get_model_with_deletions(
+    cobrak_model: Model,
+    binaries: tuple[int, ...],
+    reac_couples_list: tuple[tuple[str, ...], ...],
+) -> Model:
+    """Returns a copy of the model (see _get_model_with_copied_containers) without the reactions of all reaction couples with a binary of 0."""
+    model_copy = _get_model_with_copied_containers(cobrak_model)
+    for couple_idx, binary in enumerate(binaries):
+        if binary == 0:
+            for reac_id in reac_couples_list[couple_idx]:
+                del model_copy.reactions[reac_id]
+    return model_copy
+
+
 # @validate_call(validate_return=True)
 def _get_binaries_from_opt_result(
     opt_result: dict[str, float],
@@ -273,29 +313,30 @@ def _ectfba_block(
     reac_couples_list: tuple[tuple[str, ...], ...],
     do_reac_deletions: bool = True,
     verbose: bool = False,
+    lp_model: ConcreteModel | None = None,
 ) -> tuple[dict[str, float], tuple[int, ...]]:
-    with cobrak_model as cobrak_model_with_deletions:
-        if do_reac_deletions:
-            for couple_idx, binary in enumerate(binaries):
-                if binary == 0:
-                    for reac_id in reac_couples_list[couple_idx]:
-                        del cobrak_model_with_deletions.reactions[reac_id]
-        try:
-            ectfba_dict: dict[str, int | float] = perform_lp_optimization(
+    """Runs an ecTFBA. If an already built LP for exactly this ecTFBA is given as lp_model, it is re-used instead of building a new one."""
+    cobrak_model_with_deletions = (
+        _get_model_with_deletions(cobrak_model, binaries, reac_couples_list)
+        if do_reac_deletions
+        else cobrak_model
+    )
+    try:
+        if lp_model is None:
+            lp_model = _get_lp_for_optimization(
                 cobrak_model=cobrak_model_with_deletions,
-                objective_target=objective_target,
-                objective_sense=objective_sense,
                 with_enzyme_constraints=True,
                 with_thermodynamic_constraints=True,
                 with_loop_constraints=True,
                 variability_dict=variability_dict,
-                solver=lp_solver,
-                correction_config=correction_config,
                 ignore_nonlinear_terms=ignore_nonlinear_extra_terms_in_ectfbas,
-                verbose=verbose,
+                correction_config=correction_config,
             )
-        except (ApplicationError, AttributeError, ValueError):
-            return {}, binaries
+        ectfba_dict: dict[str, int | float] = _optimize_lp(
+            lp_model, objective_target, objective_sense, lp_solver, verbose
+        )
+    except (ApplicationError, AttributeError, ValueError):
+        return {}, binaries
     if not ectfba_dict[ALL_OK_KEY] or None in ectfba_dict.values():
         return {}, binaries
     return ectfba_dict, binaries
@@ -370,47 +411,52 @@ def _ectfba_nlp_block(
     approximation_value: float,
     verbose: bool = False,
     lp_extra_binary_vars: list[str] = [],
+    lp_model: ConcreteModel | None = None,
 ) -> LpNlpBlockResult:
-    with cobrak_model as cobrak_model_with_deletions_and_extra_constraints:
-        for couple_idx, binary in enumerate(binaries):
-            if binary == 0:
-                for reac_id in reac_couples_list[couple_idx]:
-                    del cobrak_model_with_deletions_and_extra_constraints.reactions[
-                        reac_id
-                    ]
-        cobrak_model_with_deletions_and_extra_constraints.extra_linear_constraints += (
-            lp_extra_linear_constraints
-        )
-        cobrak_model_with_deletions_and_extra_constraints.extra_binary_vars += (
-            lp_extra_binary_vars
-        )
-        if lp_objective_target == "MAXZ" or lp_objective_target == "MINZ":
-            lp_objective_sense = +1 if lp_objective_target == "MAXZ" else -1
-            lp_objective_target = {
-                f"{Z_VAR_PREFIX}{reac_id}": 1.0
-                for (
-                    reac_id,
-                    reac_data,
-                ) in cobrak_model_with_deletions_and_extra_constraints.reactions.items()
-                if (reac_data.dG0 is not None) and (variability_dict[reac_id][1] > 0.0)
-            } | {
-                binvar: 1.0
-                for binvar in lp_extra_binary_vars
-                if binvar.startswith("PPBIN_")
-            }
-        ectfba_dict: dict[str, float] = _ectfba_block(
-            cobrak_model=cobrak_model_with_deletions_and_extra_constraints,
-            objective_target=lp_objective_target,
-            objective_sense=lp_objective_sense,
-            variability_dict=variability_dict,
-            lp_solver=lp_solver,
-            correction_config=correction_config,
-            ignore_nonlinear_extra_terms_in_ectfbas=ignore_nonlinear_extra_terms_in_ectfbas,
-            binaries=binaries,
-            reac_couples_list=reac_couples_list,
-            do_reac_deletions=False,
-            verbose=verbose,
-        )[0]
+    """Runs an ecTFBA with extra constraints and then, if feasible, an NLP.
+
+    If lp_model is given, it is used instead of building the ecTFBA's LP. It must already
+    contain the given extra linear constraints and binary variables.
+    """
+    cobrak_model_with_deletions_and_extra_constraints = _get_model_with_deletions(
+        cobrak_model, binaries, reac_couples_list
+    )
+    cobrak_model_with_deletions_and_extra_constraints.extra_linear_constraints = [
+        *cobrak_model.extra_linear_constraints,
+        *lp_extra_linear_constraints,
+    ]
+    cobrak_model_with_deletions_and_extra_constraints.extra_binary_vars = [
+        *cobrak_model.extra_binary_vars,
+        *lp_extra_binary_vars,
+    ]
+    if lp_objective_target == "MAXZ" or lp_objective_target == "MINZ":
+        lp_objective_sense = +1 if lp_objective_target == "MAXZ" else -1
+        lp_objective_target = {
+            f"{Z_VAR_PREFIX}{reac_id}": 1.0
+            for (
+                reac_id,
+                reac_data,
+            ) in cobrak_model_with_deletions_and_extra_constraints.reactions.items()
+            if (reac_data.dG0 is not None) and (variability_dict[reac_id][1] > 0.0)
+        } | {
+            binvar: 1.0
+            for binvar in lp_extra_binary_vars
+            if binvar.startswith("PPBIN_")
+        }
+    ectfba_dict: dict[str, float] = _ectfba_block(
+        cobrak_model=cobrak_model_with_deletions_and_extra_constraints,
+        objective_target=lp_objective_target,
+        objective_sense=lp_objective_sense,
+        variability_dict=variability_dict,
+        lp_solver=lp_solver,
+        correction_config=correction_config,
+        ignore_nonlinear_extra_terms_in_ectfbas=ignore_nonlinear_extra_terms_in_ectfbas,
+        binaries=binaries,
+        reac_couples_list=reac_couples_list,
+        do_reac_deletions=False,
+        verbose=verbose,
+        lp_model=lp_model,
+    )[0]
 
     error_target_missing: bool = any(
         errortarget not in ectfba_dict
@@ -738,6 +784,120 @@ def _get_binaries_to_test(
     return binaries
 
 
+def _load_worker_data(
+    worker_data_path: str,
+) -> tuple[EvolutionSettings, tuple[tuple[str, ...], ...], dict[str, int | float]]:
+    """Loads the data that is the same for all tasks of an evolution, which is stored in a file.
+
+    The data (with the whole COBRAk model) is thereby only loaded once per parallel worker, instead of
+    being sent to the workers (again) for each single task.
+    """
+    if worker_data_path not in _worker_data_cache:
+        _worker_data_cache.clear()
+        with open(worker_data_path, "rb") as worker_data_file:
+            _worker_data_cache[worker_data_path] = pickle.load(worker_data_file)  # noqa: S301
+    return _worker_data_cache[worker_data_path]
+
+
+def _ectfba_and_nlp_blocks(
+    worker_data_path: str,
+    binaries: tuple[int, ...],
+) -> list[LpNlpBlockResult]:
+    """Runs the ecTFBA of the given binaries and, if it is feasible, the ecTFBA+NLP blocks for each inner LP objective.
+
+    Doing both in one task (instead of two consecutive parallelized steps) means that no
+    worker waits for the slowest ecTFBA. Furthermore, the LP is only built once and then
+    just extended by the objective value constraint for the second optimization.
+    """
+    settings, reac_couples_list, objective_target_as_dict = _load_worker_data(
+        worker_data_path
+    )
+    no_result = [
+        LpNlpBlockResult(original_binaries=binaries, lp_binaries=(), nlp_binaries=())
+    ]
+    cobrak_model_with_deletions = _get_model_with_deletions(
+        settings.cobrak_model, binaries, reac_couples_list
+    )
+    try:
+        lp_model = _get_lp_for_optimization(
+            cobrak_model=cobrak_model_with_deletions,
+            with_enzyme_constraints=True,
+            with_thermodynamic_constraints=True,
+            with_loop_constraints=True,
+            variability_dict=settings.variability_dict,
+            ignore_nonlinear_terms=settings.ignore_nonlinear_extra_terms_in_lps,
+            correction_config=settings.correction_config,
+        )
+    except (ApplicationError, AttributeError, ValueError):
+        return no_result
+    ectfba_dict, _ = _ectfba_block(
+        cobrak_model_with_deletions,
+        settings.objective_target,
+        settings.objective_sense,
+        settings.variability_dict,
+        settings.lp_solver,
+        settings.correction_config,
+        settings.ignore_nonlinear_extra_terms_in_lps,
+        binaries,
+        reac_couples_list,
+        do_reac_deletions=False,
+        lp_model=lp_model,
+    )
+    if not ectfba_dict or not ectfba_dict.get(ALL_OK_KEY, False):
+        return no_result
+
+    objvalue = ectfba_dict[OBJECTIVE_VAR_NAME]
+    objvalue_constraint = ExtraLinearConstraint(
+        stoichiometries=objective_target_as_dict,
+        lower_value=objvalue - 1e-8,
+        upper_value=objvalue + 1e-8,
+    )
+    # Add the constraint to the already built LP
+    model_with_only_new_extras = _get_model_with_copied_containers(
+        cobrak_model_with_deletions
+    )
+    model_with_only_new_extras.extra_binary_vars = []
+    model_with_only_new_extras.extra_linear_watches = {}
+    model_with_only_new_extras.extra_linear_constraints = [objvalue_constraint]
+    model_with_only_new_extras.extra_nonlinear_watches = {}
+    model_with_only_new_extras.extra_nonlinear_constraints = []
+    try:
+        _add_extra_variables_and_watches_and_constraints_to_lp(
+            model=lp_model,
+            cobrak_model=model_with_only_new_extras,
+            ignore_nonlinear_terms=settings.ignore_nonlinear_extra_terms_in_lps,
+        )
+    except (ApplicationError, AttributeError, ValueError):
+        return no_result
+    return [
+        _ectfba_nlp_block(
+            settings.cobrak_model,
+            binaries,
+            reac_couples_list,
+            inner_lp_objective,
+            +1,
+            [objvalue_constraint],
+            settings.objective_target,
+            settings.objective_sense,
+            settings.variability_dict,
+            settings.with_kappa,
+            settings.with_gamma,
+            settings.with_iota,
+            settings.with_alpha,
+            settings.lp_solver,
+            settings.nlp_solver,
+            settings.nlp_strict_mode,
+            settings.nlp_single_strict_reacs,
+            settings.correction_config,
+            settings.ignore_nonlinear_extra_terms_in_lps,
+            False,
+            settings.approximation_value,
+            lp_model=lp_model,
+        )
+        for inner_lp_objective in settings.inner_lp_objectives
+    ]
+
+
 # @validate_call(validate_return=True)
 def _evolution(
     settings: EvolutionSettings,
@@ -770,6 +930,15 @@ def _evolution(
             else float("inf")
         )
 
+    # All tasks use the same settings, which is why they are only given by a file to the workers
+    # (this file is deleted when the function ends)
+    worker_data_file = tempfile.NamedTemporaryFile()  # noqa: SIM115
+    pickle.dump(
+        (settings, existing_result.reac_couples_list, objective_target_as_dict),
+        worker_data_file,
+    )
+    worker_data_file.flush()
+
     num_rounds_with_same_objvalue = 0
     for current_round in range(settings.num_gens):
         if (
@@ -798,68 +967,20 @@ def _evolution(
             num_rounds_with_same_objvalue=num_rounds_with_same_objvalue,
             use_original_ectfba_nlp_binaries_as_template=settings.use_original_ectfba_nlp_binaries_as_template,
         )
-        ectfba_results: list[tuple[dict[str, float], tuple[int, ...]]] = Parallel(
-            n_jobs=settings.num_used_cpu_cores, verbose=0
-        )(
-            delayed(_ectfba_block)(
-                settings.cobrak_model,
-                settings.objective_target,
-                settings.objective_sense,
-                settings.variability_dict,
-                settings.lp_solver,
-                settings.correction_config,
-                settings.ignore_nonlinear_extra_terms_in_lps,
-                tested_binary,
-                existing_result.reac_couples_list,
-            )
-            for tested_binary in tested_binaries
-        )
-        eligible_binaries_with_objvalue: dict[tuple[int, ...], float] = {}
-        for ectfba_result, original_binaries in ectfba_results:
-            if not ectfba_result or not ectfba_result.get(ALL_OK_KEY, False):
-                existing_result.original_binary_results.setdefault(
-                    original_binaries, []
-                ).append(None)
-            elif original_binaries not in existing_result.original_binary_results:
-                eligible_binaries_with_objvalue[original_binaries] = ectfba_result[
-                    OBJECTIVE_VAR_NAME
-                ]
+        # Binaries that were already tested (or occur twice) can't give new results
+        tested_binaries = [
+            binaries
+            for binaries in dict.fromkeys(tested_binaries)
+            if binaries not in existing_result.original_binary_results
+        ]
         with parallel_config(backend="loky", inner_max_num_threads=1):
-            results: list[LpNlpBlockResult] = Parallel(
+            results_per_binary: list[list[LpNlpBlockResult]] = Parallel(
                 n_jobs=settings.num_used_cpu_cores, verbose=0
             )(
-                delayed(_ectfba_nlp_block)(
-                    settings.cobrak_model,
-                    eligible_binary,
-                    existing_result.reac_couples_list,
-                    inner_lp_objective,
-                    +1,
-                    [
-                        ExtraLinearConstraint(
-                            stoichiometries=objective_target_as_dict,
-                            lower_value=objvalue - 1e-8,
-                            upper_value=objvalue + 1e-8,
-                        )
-                    ],
-                    settings.objective_target,
-                    settings.objective_sense,
-                    settings.variability_dict,
-                    settings.with_kappa,
-                    settings.with_gamma,
-                    settings.with_iota,
-                    settings.with_alpha,
-                    settings.lp_solver,
-                    settings.nlp_solver,
-                    settings.nlp_strict_mode,
-                    settings.nlp_single_strict_reacs,
-                    settings.correction_config,
-                    settings.ignore_nonlinear_extra_terms_in_lps,
-                    False,
-                    settings.approximation_value,
-                )
-                for eligible_binary, objvalue in eligible_binaries_with_objvalue.items()
-                for inner_lp_objective in settings.inner_lp_objectives
+                delayed(_ectfba_and_nlp_blocks)(worker_data_file.name, tested_binary)
+                for tested_binary in tested_binaries
             )
+        results = [result for results in results_per_binary for result in results]
         existing_result = _add_eligible_binaries_and_get_best_nlp_solution(
             evolution_result=existing_result,
             lpnlpblock_results=results,
@@ -1434,7 +1555,6 @@ def _simple_postprocessing_block(
                 continue
             if value > 0.99:
                 pp_optdict[key[len("EXTRAZ_") :]] = 1.0
-                print("AAA", key[len("EXTRAZ_") :])
     try:
         nlp_result = perform_nlp_irreversible_optimization_with_active_reacs_only(
             cobrak_model=evo_settings.cobrak_model,

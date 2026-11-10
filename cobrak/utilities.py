@@ -413,18 +413,19 @@ def combine_enzyme_reaction_datasets(
                     identifiers=enzyme_reaction_data.identifiers,
                 )
 
-            if not combined_data[reac_id].k_cat_references or (
+            combined = combined_data[reac_id]
+            if (
                 enzyme_reaction_data.k_cat < 1e20
-                and (
-                    combined_data[reac_id].k_cat_references[0].tax_distance
-                    > enzyme_reaction_data.k_cat_references[0].tax_distance
-                )
+                and enzyme_reaction_data.k_cat_references
             ):
-                combined_data[reac_id] = EnzymeReactionData(
-                    identifiers=enzyme_reaction_data.identifiers,
-                    k_cat=enzyme_reaction_data.k_cat,
-                    k_cat_references=enzyme_reaction_data.k_cat_references,
-                )
+                if not combined.k_cat_references or (
+                    combined.k_cat_references[0].tax_distance
+                    > enzyme_reaction_data.k_cat_references[0].tax_distance
+                ):
+                    combined.k_cat = enzyme_reaction_data.k_cat
+                    combined.k_cat_references = list(
+                        enzyme_reaction_data.k_cat_references
+                    )
 
             for met_id, k_m in enzyme_reaction_data.k_ms.items():
                 if met_id not in combined_data[reac_id].k_ms or (
@@ -2548,7 +2549,7 @@ def get_stoichiometrically_coupled_reactions(
     # Calculate nullspace and convert each row to rounded tuples
     null_space_matrix = null_space(get_stoichiometric_matrix(cobrak_model))
     null_space_tuples = [
-        tuple(round(value, rounding) for value in row) for row in null_space_matrix
+        tuple(row) for row in null_space_matrix.round(rounding).tolist()
     ]
 
     # Map the null space tuples to reaction indices
@@ -2721,7 +2722,6 @@ def get_unoptimized_reactions_in_nlp_solution(
         if reaction.enzyme_reaction_data.identifiers == [""]:
             continue
 
-        nlp_flux = solution[reac_id]
         has_problem = False
 
         # Kappa check

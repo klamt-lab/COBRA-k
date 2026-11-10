@@ -183,10 +183,16 @@ def get_fullsplit_cobra_model(
                 if single_enzyme_block:
                     new_reaction_2.gene_reaction_rule = single_enzyme_block
                 new_reaction_1.id += fwd_suffix
-                new_reaction_1.lower_bound = 0
                 new_reaction_2.id += rev_suffix
-                new_reaction_2.lower_bound = 0
-                new_reaction_2.upper_bound = min(reac_lb_ub_cap, abs(original_lb))
+                original_ub = new_reaction_1.upper_bound
+                if original_ub <= 0:
+                    new_reaction_1.bounds = (0.0, 0.0)
+                    rev_ub = min(reac_lb_ub_cap, abs(original_lb))
+                    rev_lb = min(rev_ub, abs(original_ub))
+                    new_reaction_2.bounds = (rev_lb, rev_ub)
+                else:
+                    new_reaction_1.bounds = (0.0, original_ub)
+                    new_reaction_2.bounds = (0.0, min(reac_lb_ub_cap, abs(original_lb)))
 
                 new_reaction_2_met_addition = {}
                 for met, stoichiometry in new_reaction_1.metabolites.items():

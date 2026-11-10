@@ -7,9 +7,6 @@ shutdown of user-induced shutdowns is enabled.
 """
 
 import logging
-import signal
-import sys
-from types import FrameType
 from typing import Any
 
 from rich.console import Console
@@ -18,22 +15,6 @@ from rich.traceback import install
 
 
 # PUBLIC FUNCTIONS SECTION #
-def exit_signal_handler(
-    sig: int,  # noqa: ARG001
-    frame: FrameType | None,  # noqa: ARG001
-) -> None:  # pragma: no cover
-    """Handles the exit signal by printing a shutdown message and exiting the program.
-
-    Args:
-        sig (int): The signal number.
-        frame (Optional[FrameType]): The current frame.
-    """
-    print(
-        "COBRAk received user signal to terminate (this message may appear multiple times in parallelized contexts). Shutting down..."
-    )
-    sys.exit(0)
-
-
 def setup_rich_tracebacks(show_locals: bool) -> None:
     """Sets up rich tracebacks with the given options.
 
@@ -86,9 +67,6 @@ def set_logging_handler(
 
 
 # ACTIVE SCRIPT SECTION #
-signal.signal(signal.SIGINT, exit_signal_handler)
-signal.signal(signal.SIGTERM, exit_signal_handler)
-
 setup_rich_tracebacks(False)
 
 # Create a logger
